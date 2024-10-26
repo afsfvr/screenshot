@@ -5,7 +5,12 @@
 #include <QMenu>
 
 #include "BaseWindow.h"
+#ifdef Q_OS_LINUX
 #include "KeyMouseEvent.h"
+#endif
+#ifdef Q_OS_WINDOWS
+#include <windows.h>
+#endif
 
 class MainWindow : public BaseWindow
 {
@@ -33,6 +38,9 @@ protected:
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
     void hideEvent(QHideEvent *event);
+#ifdef Q_OS_WINDOWS
+    bool nativeEvent(const QByteArray &eventType, void *message, long *result);
+#endif
     void start();
     void showTool();
 private slots:
@@ -40,8 +48,16 @@ private slots:
     void save(const QString &path);
 private:
     bool contains(const QPoint &point);
-private:
+#ifdef Q_OS_WINDOWS
+    void updateWindows();
+    void addRect(HWND hwnd);
+    QVector<QRect> m_windows;
+    int m_index;
+#endif
+
+#ifdef Q_OS_LINUX
     KeyMouseEvent *m_monitor;
+#endif
     QSystemTrayIcon *m_tray;
     QMenu *m_menu;
     States m_state;

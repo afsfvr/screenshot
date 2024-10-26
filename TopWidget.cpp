@@ -162,7 +162,7 @@ void TopWidget::moveEvent(QMoveEvent *event) {
 
 void TopWidget::focusOutEvent(QFocusEvent *event) {
     Q_UNUSED(event);
-    if (! m_tool->hasFocus()) {
+    if (QApplication::focusWidget() == nullptr) {
         m_tool->hide();
     }
 }
@@ -198,12 +198,12 @@ void TopWidget::topChange(bool top) {
     this->hide();
     setWindowFlag(Qt::WindowStaysOnTopHint, top);
     m_tool->setWindowFlag(Qt::WindowStaysOnTopHint, top);
-    this->show();
-    showTool();
-    QTimer::singleShot(100, this, &TopWidget::moveTop);
+    QTimer::singleShot(10, this, &TopWidget::moveTop);
 }
 
 void TopWidget::moveTop() {
+    this->show();
+    showTool();
     this->activateWindow();
     this->raise();
 }

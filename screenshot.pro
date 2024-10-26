@@ -1,4 +1,12 @@
-QT       += core gui x11extras
+QT       += core gui
+
+unix: {
+    QT += x11extras
+    LIBS += -lX11 -lXext -lXtst
+    SOURCES += KeyMouseEvent.cpp
+    HEADERS += KeyMouseEvent.h
+    aaa
+}
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -10,7 +18,6 @@ CONFIG += c++17
 
 SOURCES += \
     BaseWindow.cpp \
-    KeyMouseEvent.cpp \
     Shape.cpp \
     Tool.cpp \
     TopWidget.cpp \
@@ -19,17 +26,16 @@ SOURCES += \
 
 HEADERS += \
     BaseWindow.h \
-    KeyMouseEvent.h \
     Shape.h \
     Tool.h \
     TopWidget.h \
     mainwindow.h
 
-DESTDIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
-UI_DIR  = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
-MOC_DIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
-RCC_DIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
-OBJECTS_DIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
+# DESTDIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
+# UI_DIR  = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
+# MOC_DIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
+# RCC_DIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
+# OBJECTS_DIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -38,8 +44,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 FORMS += \
     Tool.ui
-
-LIBS += -lX11 -lXext -lXtst
 
 RESOURCES += \
     res.qrc
