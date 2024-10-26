@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/cancel.png</file>
+        <file>images/ok.png</file>
+        <file>images/pencil.png</file>
+        <file>images/save.png</file>
+        <file>images/pin.png</file>
+        <file>images/ellipse.png</file>
+        <file>images/rectangle.png</file>
+        <file>images/straightline.png</file>
+        <file>images/curve.png</file>
+        <file>images/screenshot.png</file>
+    </qresource>
+</RCC>
