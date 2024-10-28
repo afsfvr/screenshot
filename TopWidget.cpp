@@ -97,10 +97,7 @@ void TopWidget::paintEvent(QPaintEvent *event) {
 void TopWidget::hideEvent(QHideEvent *event) {
     m_tool->hide();
     BaseWindow::hideEvent(event);
-    if (m_close) {
-        this->close();
-    }
-    m_close = true;
+    this->close();
 }
 
 void TopWidget::mousePressEvent(QMouseEvent *event) {
@@ -192,8 +189,12 @@ void TopWidget::save(const QString &path) {
     this->close();
 }
 
+void TopWidget::end() {
+    m_tool->close();
+    this->close();
+}
+
 void TopWidget::topChange(bool top) {
-    m_close = false;
     m_tool->hide();
     this->hide();
     setWindowFlag(Qt::WindowStaysOnTopHint, top);
@@ -209,7 +210,6 @@ void TopWidget::moveTop() {
 }
 
 void TopWidget::init() {
-    m_close = true;
     setFocusPolicy(Qt::ClickFocus);
 
     m_tool->topChange();

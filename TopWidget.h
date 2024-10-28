@@ -25,6 +25,7 @@ protected:
     void focusOutEvent(QFocusEvent *event);
 private slots:
     void save(const QString &path);
+    void end();
     void topChange(bool top);
     void moveTop();
 private:
@@ -33,7 +34,6 @@ private:
 private:
     QMenu *tray_menu;
     QMenu *m_menu;
-    bool m_close;
 };
 
 #endif // TOPWIDGET_H

@@ -37,7 +37,6 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
-    void hideEvent(QHideEvent *event);
 #ifdef Q_OS_WINDOWS
     bool nativeEvent(const QByteArray &eventType, void *message, long *result);
 #endif
@@ -46,6 +45,7 @@ protected:
 private slots:
     void quit();
     void save(const QString &path);
+    void end();
 private:
     bool contains(const QPoint &point);
 #ifdef Q_OS_WINDOWS

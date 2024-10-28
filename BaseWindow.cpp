@@ -6,6 +6,7 @@ BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press(false), m_shap
 
     connect(m_tool, &Tool::save, this, &BaseWindow::save);
     connect(m_tool, &Tool::cancel, this, &BaseWindow::hide);
+    connect(this, &BaseWindow::choosePath, m_tool, &Tool::choosePath);
 }
 
 BaseWindow::~BaseWindow() {
@@ -18,7 +19,7 @@ BaseWindow::~BaseWindow() {
 void BaseWindow::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Escape) {
         if (! m_press) {
-            this->hide();
+            end();
         }
     } else if (event->key() == Qt::Key_C) {
         if (event->modifiers() == Qt::ControlModifier) {
@@ -27,14 +28,7 @@ void BaseWindow::keyPressEvent(QKeyEvent *event) {
             saveColor();
         }
     } else if (event->key() == Qt::Key_S && event->modifiers() == Qt::ControlModifier) {
-        QString path = QFileDialog::getSaveFileName(this, "选择文件", QDir::homePath(), "Images(*.png, *.jpg, *.jpeg)");
-        if (path.length() != 0) {
-            QString suffix = QFileInfo(path).suffix();
-            if (suffix != "png" && suffix != "jpg" && suffix != "jpeg") {
-                path += ".png";
-                save(path);
-            }
-        }
+        emit choosePath();
     } else if (event->key() == Qt::Key_Z && event->modifiers() == Qt::ControlModifier) {
         undo();
     } else if (event->key() == Qt::Key_Y && event->modifiers() == Qt::ControlModifier) {

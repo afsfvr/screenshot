@@ -32,10 +32,12 @@ protected slots:
     virtual void undo();
     virtual void redo();
     virtual void save(const QString &path) = 0;
+    virtual void end() = 0;
     virtual void saveColor();
     void clearDraw();
     void clearStack();
-
+signals:
+    void choosePath();
 protected:
     QImage m_image;
     QVector<Shape*> m_vector;

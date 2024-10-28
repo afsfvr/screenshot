@@ -3,6 +3,8 @@
 
 #include <QShortcut>
 #include <QMessageBox>
+#include <QTimer>
+
 MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_menu = new QMenu(this);
     m_menu->addAction("截图", this, &MainWindow::start);
@@ -45,14 +47,14 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
             painter.fillPath(m_path, m_image);
             painter.end();
             new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
-            this->hide();
+            end();
         } else if (m_state & State::Rect) {
             QPoint point = m_rect.topLeft();
             for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
                 (*iter)->translate(- point);
             }
             new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
-            this->hide();
+            end();
         } else {
             return;
         }
@@ -60,7 +62,12 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
 }
 
 MainWindow::~MainWindow() {
+#ifdef Q_OS_LINUX
+    delete m_monitor;
+#endif
+#ifdef Q_OS_WINDOWS
     UnregisterHotKey((HWND)this->winId(), 1);
+#endif
 }
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
@@ -105,19 +112,21 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 
 void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
-        if (event->pos() == m_point) {
+        if (m_state == State::RectScreen) {
+            if (event->pos() == m_point) {
 #if defined(Q_OS_WINDOWS)
-            if (m_index >= 0 && m_index < m_windows.size()) {
-                m_rect = m_windows[m_index];
-            }
+                if (m_index >= 0 && m_index < m_windows.size()) {
+                    m_rect = m_windows[m_index];
+                }
 #else
-            m_rect = geometry();
+                m_rect = geometry();
 #endif
-        } else if (m_state == State::RectScreen) {
-            m_rect = getRect(m_point, event->pos());
-            m_state = State::RectEdit;
-            showTool();
-            repaint();
+            } else {
+                m_rect = getRect(m_point, event->pos());
+                m_state = State::RectEdit;
+                showTool();
+                repaint();
+            }
         } else if (m_state & State::Edit) {
             if (cursor().shape() == Qt::BitmapCursor) {
                 if (m_shape == nullptr) {
@@ -145,7 +154,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
         m_press = false;
         unsetCursor();
         if (event->pos() == m_point && event->button() == Qt::RightButton) {
-            this->hide();
+            end();
         }
     }
 }
@@ -208,7 +217,11 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
 
 void MainWindow::paintEvent(QPaintEvent *event) {
     BaseWindow::paintEvent(event);
-    if (m_image.isNull() || m_gray_image.isNull()) return;
+    if (m_image.isNull() || m_gray_image.isNull()) {
+        m_tool->hide();
+        this->hide();
+        return;
+    }
     QPainter painter(this);
     painter.setPen(Qt::blue);
     painter.drawImage(geometry(), m_gray_image);
@@ -264,17 +277,6 @@ void MainWindow::paintEvent(QPaintEvent *event) {
 void MainWindow::closeEvent(QCloseEvent *event) {
     m_tool->close();
     BaseWindow::closeEvent(event);
-}
-
-void MainWindow::hideEvent(QHideEvent *event) {
-    m_tool->hide();
-    m_state = State::Null;
-    m_path.clear();
-    m_image = m_gray_image = QImage();
-    clearDraw();
-    safeDelete(m_shape);
-    resize(1, 1);
-    BaseWindow::hideEvent(event);
 }
 
 #ifdef Q_OS_WINDOWS
@@ -386,10 +388,22 @@ void MainWindow::save(const QString &path) {
         if (clipboard) {
             clipboard->setImage(image);
         }
+        qDebug() << QString("保存图片到剪贴板%1").arg(clipboard ? "成功" : "失败");
     } else {
-        image.save(path);
+        qDebug() << QString("保存图片到%1%2").arg(path, image.save(path) ? "成功" : "失败");
     }
-    this->hide();
+    end();
+}
+
+void MainWindow::end() {
+    setWindowState((windowState() & ~(Qt::WindowMinimized | Qt::WindowMaximized | Qt::WindowFullScreen)));
+    m_state = State::Null;
+    m_path.clear();
+    m_image = m_gray_image = QImage();
+    clearDraw();
+    safeDelete(m_shape);
+    resize(1, 1);
+    repaint();
 }
 
 bool MainWindow::contains(const QPoint &point) {
