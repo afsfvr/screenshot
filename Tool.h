@@ -44,6 +44,7 @@ private:
     Ui::Tool *ui;
     QPen m_pen;
     Shape *m_shape;
+    QString m_path;
 };
 
 #endif // TOOL_H

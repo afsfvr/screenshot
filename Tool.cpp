@@ -3,6 +3,8 @@
 
 #include <QDebug>
 #include <QDir>
+#include <QStandardPaths>
+#include <QImageWriter>
 
 Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_pen(Qt::black, 2), m_shape(nullptr) {
     ui->setupUi(this);
@@ -32,6 +34,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_pen(Qt::black,
     });
 
     setDraw(ShapeEnum::Null);
+    m_path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 }
 
 Tool::~Tool()
@@ -57,13 +60,53 @@ void Tool::showEvent(QShowEvent *event) {
 }
 
 void Tool::choosePath() {
-    QString path = QFileDialog::getSaveFileName(this, "选择文件", QDir::homePath(), "Images(*.png, *.jpg, *.jpeg)");
-    if (path.length() != 0) {
-        QString suffix = QFileInfo(path).suffix();
-        if (suffix != "png" && suffix != "jpg" && suffix != "jpeg") {
-            path += ".png";
-            emit save(path);
+
+    const QString format = "png";
+    if (m_path.isEmpty())
+        m_path = QDir::currentPath();
+    // m_path += tr("/untitled.") + format;
+
+    QFileDialog fileDialog(this, tr("选择文件"), m_path);
+    fileDialog.setAcceptMode(QFileDialog::AcceptSave);
+    fileDialog.setFileMode(QFileDialog::AnyFile);
+    fileDialog.setDirectory(m_path);
+    QStringList mimeTypes;
+    const QList<QByteArray> baMimeTypes = QImageWriter::supportedMimeTypes();
+    for (const QByteArray &bf : baMimeTypes)
+        mimeTypes.append(QLatin1String(bf));
+    fileDialog.setMimeTypeFilters(mimeTypes);
+    fileDialog.setFileMode(QFileDialog::AnyFile);
+    fileDialog.selectMimeTypeFilter("image/" + format);
+    // fileDialog.setDefaultSuffix(format);
+    if (fileDialog.exec() != QDialog::Accepted)
+        return;
+
+    const QString &filter = fileDialog.selectedNameFilter();
+    QRegExp regex("\\(([^)]+)\\)");
+    QStringList extensions;
+    if (regex.indexIn(filter) != -1) {
+        QString matchedString = regex.cap(1);
+        QStringList parts = matchedString.split(QRegExp("\\s+"), Qt::SkipEmptyParts);
+        QRegExp alphaRegex("[a-zA-Z]+");
+        for (const QString &part : parts) {
+            if (alphaRegex.indexIn(part) != -1) {
+                extensions.append(alphaRegex.cap(0));
+            }
         }
+    }
+    if (extensions.empty()) {
+        extensions.append(format);
+    }
+
+    QString path = fileDialog.selectedFiles().value(0);
+    if (path.length() != 0) {
+        QFileInfo fileinfo{path};
+        m_path = fileinfo.absolutePath();
+        QString suffix = fileinfo.suffix();
+        if (! QImageWriter::supportedImageFormats().contains(suffix.toUtf8())) {
+            path += "." + extensions.value(0);
+        }
+        emit save(path);
     }
 }
 
