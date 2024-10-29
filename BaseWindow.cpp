@@ -12,7 +12,6 @@ BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press(false), m_shap
 BaseWindow::~BaseWindow() {
     clearDraw();
     m_path.clear();
-    safeDelete(m_shape);
     delete m_tool;
 }
 
@@ -47,8 +46,8 @@ QImage BaseWindow::fullScreenshot() {
     QSize size;
     for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
         QRect rect = (*iter)->geometry();
-        size.setWidth(std::max(rect.right(), size.width()));
-        size.setHeight(std::max(rect.bottom(), size.height()));
+        size.setWidth(std::max(rect.right() + 1, size.width()));
+        size.setHeight(std::max(rect.bottom() + 1, size.height()));
     }
 
     QImage image(size, QImage::Format_ARGB32);
@@ -106,6 +105,7 @@ void BaseWindow::clearDraw()
     }
     m_vector.clear();
     clearStack();
+    safeDelete(m_shape);
 }
 
 void BaseWindow::clearStack()
