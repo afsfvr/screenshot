@@ -24,6 +24,19 @@ int main(int argc, char *argv[])
     const QString &tmpFile = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     QLockFile file(tmpFile + "/61fd13c5-539c-4db3-8acd-139f0e9a6beb");
     if (! file.tryLock()) {
+        switch (file.error()) {
+        case QLockFile::LockFailedError:
+            qInfo() << "无法获取锁，因为另一个进程持有它";
+            break;
+        case QLockFile::PermissionError:
+            qInfo() << "由于在父目录中没有权限，无法创建文件";
+            break;
+        case QLockFile::UnknownError:
+            qInfo() << "另一个错误发生了，例如，一个完整的分区阻止写出文件";
+            break;
+        default: break;
+        }
+
         return 2;
     }
 
