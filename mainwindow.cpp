@@ -31,8 +31,8 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     if (! RegisterHotKey((HWND)this->winId(), 1, MOD_ALT | MOD_CONTROL, 'A')) {
         QMessageBox::warning(this, "注册热键失败", "注册热键失败");
     }
-    setMouseTracking(true);
 #endif
+    setMouseTracking(true);
 
     connect(m_tool, &Tool::clickTop, this, [=](){
         if (m_state & State::Free) {
@@ -77,8 +77,10 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     }
     if (m_state == State::Null) {
         if (event->button() == Qt::LeftButton) {
+            setCursor(Qt::CrossCursor);
             m_state = State::RectScreen;
         } else if (event->button() == Qt::RightButton) {
+            setCursor(Qt::CrossCursor);
             m_state = State::FreeScreen;
             m_path.moveTo(event->pos());
         }
@@ -99,8 +101,12 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
             }
         } else {
             if (event->button() == Qt::LeftButton) {
+                setCursor(Qt::CrossCursor);
+                clearDraw();
                 m_state = State::RectScreen;
             } else if (event->button() == Qt::RightButton) {
+                setCursor(Qt::CrossCursor);
+                clearDraw();
                 m_state = State::FreeScreen;
                 m_path.clear();
                 m_path.moveTo(event->pos());
@@ -199,8 +205,8 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
             repaint();
         }
     } else if (event->buttons() == Qt::NoButton) {
-#ifdef Q_OS_WINDOWS
         if (m_state == State::Null) {
+#ifdef Q_OS_WINDOWS
             for (int i = 0; i < m_windows.size(); ++i) {
                 if (m_windows[i].contains(event->pos())) {
                     if (i != m_index) {
@@ -209,9 +215,9 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                     break;
                 }
             }
+#endif
             repaint();
         }
-#endif
     }
 }
 
@@ -222,25 +228,26 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         this->hide();
         return;
     }
+    QRect rect;
     QPainter painter(this);
-    painter.setPen(Qt::blue);
+    painter.setPen(QPen(Qt::red, 2));
     painter.drawImage(geometry(), m_gray_image);
     if (m_state & State::Free) {
-        painter.fillPath(m_path, m_image);
+        rect = m_path.boundingRect().toRect();
         painter.drawPath(m_path);
+        painter.fillPath(m_path, m_image);
         painter.setClipPath(m_path);
     } else if (m_state & State::Rect) {
+        rect = m_rect;
         painter.drawImage(m_rect, m_image, m_rect);
-        painter.drawRect(m_rect);
+        painter.drawRect(m_rect.adjusted(- 1, - 1, 1, 1));
     } else {
 #if defined(Q_OS_WINDOWS)
         if (m_index >= 0 && m_index < m_windows.size()) {
-            const QRect &rect = m_windows[m_index];
+            rect = m_windows[m_index];
             painter.drawImage(rect, m_image, rect);
             painter.drawRect(rect);
         }
-#else
-        return;
 #endif
     }
     for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
@@ -250,27 +257,31 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         m_shape->draw(painter);
     }
 
-    painter.setPen(Qt::white);
     painter.setClipping(false);
 
-#if defined(Q_OS_WINDOWS)
-    if (m_state == State::Null && m_index >= 0 && m_index < m_windows.size()) {
-        const QRect &rect = m_windows[m_index];
-        QPoint point = QCursor::pos() + QPoint(0, 25);
-        painter.fillRect(point.x(), point.y(), 120, 20, QColor(0x33, 0x33, 0x33));
-        point.rx() += 5;
-        point.ry() += 12;
-        painter.drawText(point, QString("(%1,%2 %3x%4)").arg(rect.x()).arg(rect.y()).arg(rect.width()).arg(rect.height()));
-    }
-#endif
-
-    if (m_state & State::Screen) {
-        QRect rect = (m_state & State::Free) ? m_path.boundingRect().toRect() : m_rect;
-        QPoint point = QCursor::pos() + QPoint(0, 25);
-        painter.fillRect(point.x(), point.y(), 120, 20, QColor(0x33, 0x33, 0x33));
-        point.rx() += 5;
-        point.ry() += 12;
-        painter.drawText(point, QString("(%1,%2 %3x%4)").arg(rect.x()).arg(rect.y()).arg(rect.width()).arg(rect.height()));
+    if (m_state == State::Null || (m_state & State::Screen)) {
+        const QPoint &cursor = QCursor::pos();
+        QPoint point;
+        if (cursor.x() + 85 + 10 <= this->width()) {
+            point.setX(cursor.x() + 10);
+        } else {
+            point.setX(cursor.x() - 85 - 10);
+        }
+        if (cursor.y() + 110 + 25 <= this->height()) {
+            point.setY(cursor.y() + 25);
+        } else {
+            point.setY(cursor.y() - 110 - 20);
+        }
+        painter.drawRect(point.x() - 1, point.y() - 1, 84 + 2, 84 + 2);
+        painter.drawImage(QRect(point.x(), point.y(), 84, 84), m_image, QRect(cursor.x() - 10, cursor.y() - 10, 21, 21));
+        painter.drawLine(point.x(), point.y() + 42, point.x() + 84, point.y() + 42);
+        painter.drawLine(point.x() + 42, point.y(), point.x() + 42, point.y() + 84);
+        QColor color = m_image.pixelColor(cursor);
+        QFont font = painter.font();
+        font.setPixelSize(13);
+        painter.setFont(font);
+        painter.drawText(point.x(), point.y() + 97, QString("RGB: %1").arg(color.name().toUpper()));
+        painter.drawText(point.x(), point.y() + 110, QString("(%1 x %2)").arg(rect.width()).arg(rect.height()));
     }
 }
 
@@ -325,7 +336,6 @@ void MainWindow::start() {
 void MainWindow::showTool() {
     if (! this->isVisible()) return;
     QPoint point;
-
     QRect rect;
     if (m_state & State::Free) {
         rect = m_path.boundingRect().toRect();
@@ -333,20 +343,27 @@ void MainWindow::showTool() {
         rect = m_rect;
     }
 
-    if (rect.bottom() + m_tool->height() < this->height()) {
+    if (rect.bottom() + m_tool->height() + 2 <= this->height()) {
+        if (rect.right() + 2 >= m_tool->width()) {
+            point.setX(rect.right() - m_tool->width() + 2);
+        } else {
+            point.setX(rect.right() + 2);
+        }
+        point.setY(rect.bottom() + 2);
+    } else if (rect.top() >= m_tool->height() + 2) {
+        if (rect.right() >= m_tool->width()) {
+            point.setX(rect.right() - m_tool->width() + 2);
+        } else {
+            point.setX(rect.right() + 2);
+        }
+        point.setY(rect.top() - m_tool->height() - 2);
+    } else {
         if (rect.right() >= m_tool->width()) {
             point.setX(rect.right() - m_tool->width());
         } else {
             point.setX(rect.right());
         }
-        point.setY(rect.bottom());
-    } else if (rect.top() >= m_tool->height()) {
-        if (rect.right() >= m_tool->width()) {
-            point.setX(rect.right() - m_tool->width());
-        } else {
-            point.setX(rect.right());
-        }
-        point.setY(rect.top() - m_tool->height());
+        point.setY(rect.bottom() - m_tool->height());
     }
     m_tool->show();
     m_tool->move(point);
@@ -362,12 +379,15 @@ void MainWindow::save(const QString &path) {
     QImage image;
     QPainter painter;
     if (m_state & State::Free) {
-        image = QImage(m_path.boundingRect().size().toSize(), QImage::Format_ARGB32);
+        QRect rect = m_path.boundingRect().toRect();
+        if (rect.width() <= 0 || rect.height() <= 0) return;
+        image = QImage(rect.size(), QImage::Format_ARGB32);
         painter.begin(&image);
-        painter.translate(- m_path.boundingRect().topLeft());
+        painter.translate(- rect.topLeft());
         painter.fillPath(m_path, m_image);
         painter.setClipPath(m_path);
     } else if (m_state & State::Rect) {
+        if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
         image = m_image.copy(m_rect);
         painter.begin(&image);
         painter.translate(- m_rect.topLeft());
