@@ -10,6 +10,7 @@
 #endif
 #ifdef Q_OS_WINDOWS
 #include <windows.h>
+#include <dwmapi.h>
 #endif
 
 class MainWindow : public BaseWindow
@@ -46,6 +47,7 @@ private slots:
     void quit();
     void save(const QString &path);
     void end();
+    void top();
 private:
     bool contains(const QPoint &point);
 #ifdef Q_OS_WINDOWS

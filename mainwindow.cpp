@@ -28,37 +28,13 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     });
 #endif
 #ifdef Q_OS_WINDOWS
-    if (! RegisterHotKey((HWND)this->winId(), 1, MOD_ALT | MOD_CONTROL, 'A')) {
+    if (! RegisterHotKey((HWND)this->winId(), 1,  MOD_ALT | MOD_CONTROL, 'A')) {
         QMessageBox::warning(this, "注册热键失败", "注册热键失败");
     }
 #endif
     setMouseTracking(true);
 
-    connect(m_tool, &Tool::clickTop, this, [=](){
-        if (m_state & State::Free) {
-            QRect rect = m_path.boundingRect().toRect();
-            QPoint point = rect.topLeft();
-            for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
-                (*iter)->translate(- point);
-            }
-            QImage image = QImage(rect.size(), QImage::Format_ARGB32);
-            QPainter painter(&image);
-            painter.translate(- point);
-            painter.fillPath(m_path, m_image);
-            painter.end();
-            new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
-            end();
-        } else if (m_state & State::Rect) {
-            QPoint point = m_rect.topLeft();
-            for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
-                (*iter)->translate(- point);
-            }
-            new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
-            end();
-        } else {
-            return;
-        }
-    });
+    connect(m_tool, &Tool::clickTop, this, &MainWindow::top);
 }
 
 MainWindow::~MainWindow() {
@@ -129,10 +105,10 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
 #endif
             } else {
                 m_rect = getRect(m_point, event->pos());
-                m_state = State::RectEdit;
-                showTool();
-                repaint();
             }
+            m_state = State::RectEdit;
+            showTool();
+            repaint();
         } else if (m_state & State::Edit) {
             if (cursor().shape() == Qt::BitmapCursor) {
                 if (m_shape == nullptr) {
@@ -426,6 +402,32 @@ void MainWindow::end() {
     repaint();
 }
 
+void MainWindow::top() {
+    if (m_state & State::Free) {
+        QRect rect = m_path.boundingRect().toRect();
+        if (rect.width() <= 0 || rect.height() <= 0) return;
+        QPoint point = rect.topLeft();
+        for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
+            (*iter)->translate(- point);
+        }
+        QImage image = QImage(rect.size(), QImage::Format_ARGB32);
+        QPainter painter(&image);
+        painter.translate(- point);
+        painter.fillPath(m_path, m_image);
+        painter.end();
+        new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
+        end();
+    } else if (m_state & State::Rect) {
+        if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
+        QPoint point = m_rect.topLeft();
+        for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
+            (*iter)->translate(- point);
+        }
+        new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
+        end();
+    }
+}
+
 bool MainWindow::contains(const QPoint &point) {
     if (m_state & State::Rect) {
         return m_rect.contains(point);
@@ -456,7 +458,7 @@ void MainWindow::updateWindows() {
         }
     }
 }
-#include <dwmapi.h>
+
 void MainWindow::addRect(HWND hwnd) {
     if (IsWindow(hwnd) && IsWindowVisible(hwnd)) {
         QRect qrect;
