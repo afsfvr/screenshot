@@ -5,6 +5,7 @@
 
 #include "mainwindow.h"
 
+#ifdef Q_OS_LINUX
 void signal_handler(int x) {
     switch (x) {
     case SIGINT:  qInfo() << QString("收到信号SIGINT，退出程序");    break;
@@ -15,6 +16,7 @@ void signal_handler(int x) {
 
     QApplication::quit();
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -40,9 +42,6 @@ int main(int argc, char *argv[])
         return 2;
     }
 
-    signal(SIGINT, signal_handler);
-    signal(SIGQUIT, signal_handler);
-    signal(SIGTERM, signal_handler);
 
     QApplication a(argc, argv);
 #ifdef Q_OS_LINUX
@@ -50,6 +49,9 @@ int main(int argc, char *argv[])
         qCritical() << "不支持xcb";
         return 1;
     }
+    signal(SIGINT, signal_handler);
+    signal(SIGQUIT, signal_handler);
+    signal(SIGTERM, signal_handler);
 #endif
 
     QApplication::setQuitOnLastWindowClosed(false);
