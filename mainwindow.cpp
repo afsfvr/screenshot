@@ -456,12 +456,21 @@ void MainWindow::updateWindows() {
         }
     }
 }
-
+#include <dwmapi.h>
 void MainWindow::addRect(HWND hwnd) {
     if (IsWindow(hwnd) && IsWindowVisible(hwnd)) {
         QRect qrect;
         RECT rect;
-        if (GetClientRect(hwnd, &rect)) {
+
+        if (DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, (void*)&rect, sizeof(rect)) == S_OK) {
+            if (rect.bottom > rect.top && rect.right > rect.left) {
+                qrect.setTop(rect.top);
+                qrect.setLeft(rect.left);
+                qrect.setRight(rect.right);
+                qrect.setBottom(rect.bottom);
+            }
+        }
+        if (! qrect.isValid() && GetClientRect(hwnd, &rect)) {
             if (rect.bottom > rect.top && rect.right > rect.left) {
                 POINT topLeft = { rect.top, rect.left };
                 if (ClientToScreen(hwnd, &topLeft)) {
