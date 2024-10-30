@@ -1,5 +1,7 @@
 #include "Shape.h"
 
+#include <cmath>
+
 Shape::Shape(const QPen &pen): m_pen(pen) {
 }
 
@@ -16,7 +18,7 @@ void Shape::draw(QPainter &painter) {
     }
 }
 
-Rectangle::Rectangle(const QPoint &point, const QPen &pen): Shape(pen), p1(point) {
+Rectangle::Rectangle(const QPoint &point, const QPen &pen): Shape(pen), p1(point), p2(-1, -1) {
 }
 
 void Rectangle::addPoint(const QPoint &point) {
@@ -24,7 +26,7 @@ void Rectangle::addPoint(const QPoint &point) {
 }
 
 bool Rectangle::isNull() {
-    return p2.isNull() || p1.isNull();
+    return (p2.x() == -1 && p2.y() == -1) || p1 == p2;
 }
 
 void Rectangle::translate(const QPoint &point) {
@@ -48,7 +50,7 @@ void Rectangle::paint(QPainter &painter) {
     painter.drawRect(x, y, width, height);
 }
 
-Ellipse::Ellipse(const QPoint &point, const QPen &pen): Shape(pen), p1(point) {
+Ellipse::Ellipse(const QPoint &point, const QPen &pen): Shape(pen), p1(point), p2(-1, -1) {
 }
 
 void Ellipse::addPoint(const QPoint &point) {
@@ -56,7 +58,7 @@ void Ellipse::addPoint(const QPoint &point) {
 }
 
 bool Ellipse::isNull() {
-    return p2.isNull() || p1.isNull();
+    return (p2.x() == -1 && p2.y() == -1) || p1 == p2;
 }
 
 void Ellipse::translate(const QPoint &point) {
@@ -80,7 +82,7 @@ void Ellipse::paint(QPainter &painter) {
     painter.drawEllipse(x, y, width, height);
 }
 
-StraightLine::StraightLine(const QPoint &point, const QPen &pen): Shape(pen), p1(point) {
+StraightLine::StraightLine(const QPoint &point, const QPen &pen): Shape(pen), p1(point), p2(-1, -1) {
 }
 
 void StraightLine::addPoint(const QPoint &point) {
@@ -88,7 +90,7 @@ void StraightLine::addPoint(const QPoint &point) {
 }
 
 bool StraightLine::isNull() {
-    return p2.isNull() || p1.isNull();
+    return (p2.x() == -1 && p2.y() == -1) || p1 == p2;
 }
 
 void StraightLine::translate(const QPoint &point) {
