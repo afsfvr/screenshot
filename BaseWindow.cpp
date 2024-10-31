@@ -91,10 +91,12 @@ void BaseWindow::redo() {
 }
 
 void BaseWindow::saveColor() {
-    QPoint point = QCursor::pos();
-    QClipboard *clipboard = QApplication::clipboard();
-    if (clipboard) {
-        clipboard->setText(this->grab().toImage().pixelColor(point).name());
+    if (! m_image.isNull()) {
+        QPoint point = QCursor::pos();
+        QClipboard *clipboard = QApplication::clipboard();
+        if (clipboard) {
+            clipboard->setText(m_image.pixelColor(point).name().toUpper());
+        }
     }
 }
 
