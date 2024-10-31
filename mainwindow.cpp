@@ -125,7 +125,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
             showTool();
         }
     } else if (event->button() == Qt::RightButton) {
-        if (m_state == State::FreeScreen) {
+        if (m_state == State::FreeScreen && m_path.elementCount() > 2) {
             m_state = State::FreeEdit;
             m_path.closeSubpath();
             showTool();
@@ -268,7 +268,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 
 #ifdef Q_OS_WINDOWS
 bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result) {
-    if (eventType == "windows_generic_MSG") {
+    if (! this->isVisible() && eventType == "windows_generic_MSG") {
         MSG *msg = static_cast<MSG *>(message);
         if (msg->message == WM_HOTKEY && msg->wParam == 1) {
             start();
@@ -384,9 +384,9 @@ void MainWindow::save(const QString &path) {
         if (clipboard) {
             clipboard->setImage(image);
         }
-        qDebug() << QString("保存图片到剪贴板%1").arg(clipboard ? "成功" : "失败");
+        qInfo() << QString("保存图片到剪贴板%1").arg(clipboard ? "成功" : "失败");
     } else {
-        qDebug() << QString("保存图片到%1%2").arg(path, image.save(path) ? "成功" : "失败");
+        qInfo() << QString("保存图片到%1%2").arg(path, image.save(path) ? "成功" : "失败");
     }
     end();
 }
