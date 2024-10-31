@@ -5,7 +5,9 @@ unix: {
     LIBS += -lX11 -lXext -lXtst
     SOURCES += KeyMouseEvent.cpp
     HEADERS += KeyMouseEvent.h
-    aaa
+}
+win32: {
+    LIBS += -lDwmapi
 }
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
