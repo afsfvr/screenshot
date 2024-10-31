@@ -70,7 +70,8 @@ void TopWidget::showTool() {
     m_tool->move(point);
 }
 
-void TopWidget::closeEvent(QCloseEvent *event) {qDebug() << "closeEvent";
+void TopWidget::closeEvent(QCloseEvent *event) {
+    qInfo() << QString("关闭置顶窗口:(%1,%2 %3x%4)").arg(x()).arg(y()).arg(m_image.width()).arg(m_image.height());
     m_tool->close();
     QWidget::closeEvent(event);
     this->deleteLater();
@@ -97,7 +98,6 @@ void TopWidget::paintEvent(QPaintEvent *event) {
 void TopWidget::hideEvent(QHideEvent *event) {
     m_tool->hide();
     BaseWindow::hideEvent(event);
-    this->close();
 }
 
 void TopWidget::mousePressEvent(QMouseEvent *event) {
@@ -199,7 +199,7 @@ void TopWidget::topChange(bool top) {
     this->hide();
     setWindowFlag(Qt::WindowStaysOnTopHint, top);
     m_tool->setWindowFlag(Qt::WindowStaysOnTopHint, top);
-    QTimer::singleShot(10, this, &TopWidget::moveTop);
+    QTimer::singleShot(100, this, &TopWidget::moveTop);
 }
 
 void TopWidget::moveTop() {
