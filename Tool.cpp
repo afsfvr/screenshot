@@ -6,6 +6,7 @@
 #include <QStandardPaths>
 #include <QImageWriter>
 
+#include <QTimer>
 Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_pen(Qt::black, 2), m_shape(nullptr) {
     ui->setupUi(this);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
@@ -17,20 +18,19 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_pen(Qt::black,
     connect(ui->btn_top,    SIGNAL(clicked()),         this, SIGNAL(clickTop()));
 
     connect(ui->btn_rectangle, &QPushButton::clicked, this, [=](){
-        ui->btn_rectangle->setFlat(! ui->btn_rectangle->isFlat());
-        setDraw(ui->btn_rectangle->isFlat() ? ShapeEnum::Rectangle : ShapeEnum::Null);
+        setDraw(! ui->btn_rectangle->isFlat() ? ShapeEnum::Rectangle : ShapeEnum::Null);
     });
     connect(ui->btn_ellipse, &QPushButton::clicked, this, [=](){
-        ui->btn_ellipse->setFlat(! ui->btn_ellipse->isFlat());
-        setDraw(ui->btn_ellipse->isFlat() ? ShapeEnum::Ellipse : ShapeEnum::Null);
-    });
-    connect(ui->btn_line, &QPushButton::clicked, this, [=](){
-        ui->btn_line->setFlat(! ui->btn_line->isFlat());
-        setDraw(ui->btn_line->isFlat() ? ShapeEnum::Line : ShapeEnum::Null);
+        setDraw(! ui->btn_ellipse->isFlat() ? ShapeEnum::Ellipse : ShapeEnum::Null);
     });
     connect(ui->btn_straightline, &QPushButton::clicked, this, [=](){
-        ui->btn_straightline->setFlat(! ui->btn_straightline->isFlat());
-        setDraw(ui->btn_straightline->isFlat() ? ShapeEnum::StraightLine : ShapeEnum::Null);
+        setDraw(! ui->btn_straightline->isFlat() ? ShapeEnum::StraightLine : ShapeEnum::Null);
+    });
+    connect(ui->btn_line, &QPushButton::clicked, this, [=](){
+        setDraw(! ui->btn_line->isFlat() ? ShapeEnum::Line : ShapeEnum::Null);
+    });
+    connect(ui->btn_arrow, &QPushButton::clicked, this, [=](){
+        setDraw(! ui->btn_arrow->isFlat() ? ShapeEnum::Arrow : ShapeEnum::Null);
     });
 
     setDraw(ShapeEnum::Null);
@@ -55,8 +55,8 @@ Shape *Tool::getShape(const QPoint &point) {
 }
 
 void Tool::showEvent(QShowEvent *event) {
-    Q_UNUSED(event);
     setDraw(ShapeEnum::Null);
+    QWidget::showEvent(event);
 }
 
 void Tool::choosePath() {
@@ -129,6 +129,7 @@ void Tool::setDraw(ShapeEnum shape) {
     ui->btn_ellipse->setFlat(false);
     ui->btn_straightline->setFlat(false);
     ui->btn_line->setFlat(false);
+    ui->btn_arrow->setFlat(false);
     if (shape != ShapeEnum::Null) {
         ui->pen_widget->setVisible(true);
         setMinimumHeight(52);
@@ -158,6 +159,11 @@ void Tool::setDraw(ShapeEnum shape) {
         ui->btn_line->setFlat(true);
         ui->pen_widget->move(ui->btn_line->x(), 26);
         m_shape = new Line({}, {});
+        break;
+    case ShapeEnum::Arrow:
+        ui->btn_arrow->setFlat(true);
+        ui->pen_widget->move(ui->btn_arrow->x(), 26);
+        m_shape = new Arrow({}, {});
         break;
     default:
         ui->pen_widget->setVisible(false);

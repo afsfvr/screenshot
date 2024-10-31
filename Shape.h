@@ -84,4 +84,18 @@ private:
     QPainterPath m_path;
 };
 
+class Arrow: public Shape {
+    SHAPE(Arrow)
+public:
+    Arrow(const QPoint &point, const QPen &pen);
+    virtual void addPoint(const QPoint &point);
+    virtual bool isNull();
+    virtual void translate(const QPoint &point);
+protected:
+    virtual void paint(QPainter &painter);
+private:
+    QPoint m_p1, m_p2;
+    QPainterPath m_path;
+};
+
 #endif // SHAPE_H
