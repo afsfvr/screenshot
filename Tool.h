@@ -20,7 +20,8 @@ class Tool : public QWidget
         Rectangle,
         Ellipse,
         StraightLine,
-        Line
+        Line,
+        Arrow
     };
 
 public:
