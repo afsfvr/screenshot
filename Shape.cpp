@@ -147,7 +147,7 @@ void Arrow::paint(QPainter &painter) {
         // 计算箭头的方向
         QLine line(m_p1, m_p2);
         double angle = std::atan2(-line.dy(), line.dx()); // 计算角度
-        double arrowSize = std::min(distance < 40 ? distance / 4 : std::max(distance / 8, 10.0), 30.); // 箭头大小
+        double arrowSize = 0.1 * m_pen.width() * std::min(distance < 40 ? distance / 4 : std::max(distance / 8, 10.0), 30.); // 箭头大小
 
         // 计算箭头的两个边
         QPointF arrow1 = m_p2 + QPointF(- std::sin(angle + M_PI / 3) * arrowSize,
