@@ -7,7 +7,7 @@
 #include <QImageWriter>
 
 #include <QTimer>
-Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_pen(Qt::black, 2), m_shape(nullptr) {
+Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr) {
     ui->setupUi(this);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     connect(ui->pen_color,  SIGNAL(clicked()),         this, SLOT(penChange()));
@@ -35,6 +35,14 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_pen(Qt::black,
 
     setDraw(ShapeEnum::Null);
     m_path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+
+    m_pen.setWidth(ui->pen_size->value());
+    int index = ui->pen_color->styleSheet().indexOf("#");
+    if (index != -1 && ui->pen_color->styleSheet().length() >= index + 7) {
+        m_pen.setColor(ui->pen_color->styleSheet().mid(index, 7));
+    } else {
+        m_pen.setColor(Qt::black);
+    }
 }
 
 Tool::~Tool()
