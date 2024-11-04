@@ -13,9 +13,6 @@ public: \
         return new Class(point, pen); \
     }
 
-#define Q_DISABLE_COPY(Class) \
-Class(const Class &) = delete;\
-    Class &operator=(const Class &) = delete;
 class Shape: public QObject {
     Q_OBJECT
 public:

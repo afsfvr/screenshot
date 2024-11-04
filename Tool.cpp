@@ -6,7 +6,6 @@
 #include <QStandardPaths>
 #include <QImageWriter>
 
-#include <QTimer>
 Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr) {
     ui->setupUi(this);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
