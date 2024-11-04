@@ -6,6 +6,8 @@
 #include <QStandardPaths>
 #include <QImageWriter>
 
+QString Tool::savePath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+
 Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr) {
     ui->setupUi(this);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
@@ -33,7 +35,6 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     });
 
     setDraw(ShapeEnum::Null);
-    m_path = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 
     m_pen.setWidth(ui->pen_size->value());
     int index = ui->pen_color->styleSheet().indexOf("#");
@@ -69,14 +70,14 @@ void Tool::showEvent(QShowEvent *event) {
 void Tool::choosePath() {
 
     const QString format = "png";
-    if (m_path.isEmpty())
-        m_path = QDir::currentPath();
-    // m_path += tr("/untitled.") + format;
+    if (savePath.isEmpty())
+        savePath = QDir::currentPath();
+    // savePath += tr("/untitled.") + format;
 
-    QFileDialog fileDialog(this, tr("选择文件"), m_path);
+    QFileDialog fileDialog(this, tr("选择文件"), savePath);
     fileDialog.setAcceptMode(QFileDialog::AcceptSave);
     fileDialog.setFileMode(QFileDialog::AnyFile);
-    fileDialog.setDirectory(m_path);
+    fileDialog.setDirectory(savePath);
     QStringList mimeTypes;
     const QList<QByteArray> baMimeTypes = QImageWriter::supportedMimeTypes();
     for (const QByteArray &bf : baMimeTypes)
@@ -108,7 +109,7 @@ void Tool::choosePath() {
     QString path = fileDialog.selectedFiles().value(0);
     if (path.length() != 0) {
         QFileInfo fileinfo{path};
-        m_path = fileinfo.absolutePath();
+        savePath = fileinfo.absolutePath();
         QString suffix = fileinfo.suffix();
         if (! QImageWriter::supportedImageFormats().contains(suffix.toUtf8())) {
             path += "." + extensions.value(0);
