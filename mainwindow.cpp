@@ -359,6 +359,7 @@ void MainWindow::save(const QString &path) {
         if (rect.width() <= 0 || rect.height() <= 0) return;
         image = QImage(rect.size(), QImage::Format_ARGB32);
         painter.begin(&image);
+        painter.fillRect(image.rect(), QColor(0, 0, 0, 0));
         painter.translate(- rect.topLeft());
         painter.fillPath(m_path, m_image);
         painter.setClipPath(m_path);
@@ -412,6 +413,7 @@ void MainWindow::top() {
         }
         QImage image = QImage(rect.size(), QImage::Format_ARGB32);
         QPainter painter(&image);
+        painter.fillRect(rect, QColor(0, 0, 0, 0));
         painter.translate(- point);
         painter.fillPath(m_path, m_image);
         painter.end();
