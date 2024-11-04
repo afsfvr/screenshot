@@ -36,7 +36,9 @@ int main(int argc, char *argv[])
         case QLockFile::UnknownError:
             qInfo() << "另一个错误发生了，例如，一个完整的分区阻止写出文件";
             break;
-        default: break;
+        default:
+            qInfo() << "未知错误";
+            break;
         }
 
         return 2;
