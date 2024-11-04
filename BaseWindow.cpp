@@ -5,7 +5,7 @@ BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press(false), m_shap
     setAttribute(Qt::WA_TranslucentBackground);
 
     connect(m_tool, &Tool::save, this, &BaseWindow::save);
-    connect(m_tool, &Tool::cancel, this, &BaseWindow::hide);
+    connect(m_tool, &Tool::cancel, this, &BaseWindow::end);
     connect(this, &BaseWindow::choosePath, m_tool, &Tool::choosePath);
 }
 
