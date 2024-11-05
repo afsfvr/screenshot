@@ -28,10 +28,11 @@ protected:
 
     QImage fullScreenshot();
     QRect getRect(const QPoint &p1, const QPoint &p2);
+    virtual bool isValid() = 0;
 protected slots:
     virtual void undo();
     virtual void redo();
-    virtual void save(const QString &path) = 0;
+    virtual void save(const QString &path="") = 0;
     virtual void end() = 0;
     virtual void saveColor();
     void clearDraw();

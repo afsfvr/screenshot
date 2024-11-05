@@ -25,6 +25,7 @@ class Tool : public QWidget
     };
 
 public:
+    static QString savePath;
     explicit Tool(QWidget *parent = nullptr);
     ~Tool();
     bool isDraw();
@@ -45,7 +46,6 @@ private:
     Ui::Tool *ui;
     QPen m_pen;
     Shape *m_shape;
-    static QString savePath;
 };
 
 #endif // TOOL_H

@@ -1,6 +1,6 @@
 #include "mainwindow.h"
 #include "TopWidget.h"
-
+#include "GifWidget.h"
 #include <QShortcut>
 #include <QMessageBox>
 #include <QTimer>
@@ -8,6 +8,10 @@
 MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_menu = new QMenu(this);
     m_menu->addAction("截图", this, &MainWindow::start);
+    m_menu->addAction("录制GIF", this, [=](){
+        m_gif = true;
+        start();
+    });
     m_menu->addAction("退出", this, &MainWindow::quit);
     m_tray = new QSystemTrayIcon(this);
     m_tray->setContextMenu(m_menu);
@@ -16,6 +20,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_tray->show();
 
     m_state = State::Null;
+    m_gif = false;
 
 #ifdef Q_OS_LINUX
     m_monitor = new KeyMouseEvent;
@@ -55,7 +60,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         if (event->button() == Qt::LeftButton) {
             setCursor(Qt::CrossCursor);
             m_state = State::RectScreen;
-        } else if (event->button() == Qt::RightButton) {
+        } else if (! m_gif && event->button() == Qt::RightButton) {
             setCursor(Qt::CrossCursor);
             m_state = State::FreeScreen;
             m_path.moveTo(event->pos());
@@ -80,7 +85,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
                 setCursor(Qt::CrossCursor);
                 clearDraw();
                 m_state = State::RectScreen;
-            } else if (event->button() == Qt::RightButton) {
+            } else if (! m_gif && event->button() == Qt::RightButton) {
                 setCursor(Qt::CrossCursor);
                 clearDraw();
                 m_state = State::FreeScreen;
@@ -283,6 +288,12 @@ void MainWindow::start() {
 #ifdef Q_OS_WINDOWS
     updateWindows();
 #endif
+    disconnect(SIGNAL(choosePath()));
+    if (m_gif) {
+        connect(this, SIGNAL(choosePath()), this, SLOT(save()), static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::UniqueConnection));
+    } else {
+        connect(this, SIGNAL(choosePath()), m_tool, SLOT(choosePath()), static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::UniqueConnection));
+    }
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     m_image = fullScreenshot();
     m_gray_image = QImage(m_image.size(), QImage::Format_ARGB32);
@@ -292,9 +303,6 @@ void MainWindow::start() {
             int r = 0.4 * qRed(rgb);
             int g = 0.4 * qGreen(rgb);
             int b = 0.4 * qBlue(rgb);
-            // int r = qMax(qRed(rgb) - 100, 0);
-            // int g = qMax(qGreen(rgb) - 100, 0);
-            // int b = qMax(qBlue(rgb) - 100, 0);
             m_gray_image.setPixel(x, y, qRgb(r, g, b));
         }
     }
@@ -345,6 +353,21 @@ void MainWindow::showTool() {
     m_tool->move(point);
 }
 
+bool MainWindow::isValid() {
+    if (m_state == State::Rect) {
+        return m_rect.isValid();
+    } else if (m_state == State::Free) {
+        return m_path.elementCount() > 2;
+#ifdef Q_OS_WINDOWS
+    } else {
+        if (m_index >= 0 && m_index < m_windows.size()) {
+            return m_windows[m_index].isValid();
+        }
+#endif
+    }
+    return false;
+}
+
 void MainWindow::quit() {
     m_tray->hide();
     this->close();
@@ -352,42 +375,48 @@ void MainWindow::quit() {
 }
 
 void MainWindow::save(const QString &path) {
-    QImage image;
-    QPainter painter;
-    if (m_state & State::Free) {
-        QRect rect = m_path.boundingRect().toRect();
-        if (rect.width() <= 0 || rect.height() <= 0) return;
-        image = QImage(rect.size(), QImage::Format_ARGB32);
-        painter.begin(&image);
-        painter.fillRect(image.rect(), QColor(0, 0, 0, 0));
-        painter.translate(- rect.topLeft());
-        painter.fillPath(m_path, m_image);
-        painter.setClipPath(m_path);
-    } else if (m_state & State::Rect) {
-        if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
-        image = m_image.copy(m_rect);
-        painter.begin(&image);
-        painter.translate(- m_rect.topLeft());
+    if (m_gif) {
+        if (m_rect.isValid()) {
+            new GifWidget{size(), m_rect, m_menu};
+        }
     } else {
-        return;
-    }
-    if (! m_vector.empty() || (m_shape != nullptr && ! m_shape->isNull())) {
-        for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
-            (*iter)->draw(painter);
+        QImage image;
+        QPainter painter;
+        if (m_state & State::Free) {
+            QRect rect = m_path.boundingRect().toRect();
+            if (rect.width() <= 0 || rect.height() <= 0) return;
+            image = QImage(rect.size(), QImage::Format_ARGB32);
+            painter.begin(&image);
+            painter.fillRect(image.rect(), QColor(0, 0, 0, 0));
+            painter.translate(- rect.topLeft());
+            painter.fillPath(m_path, m_image);
+            painter.setClipPath(m_path);
+        } else if (m_state & State::Rect) {
+            if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
+            image = m_image.copy(m_rect);
+            painter.begin(&image);
+            painter.translate(- m_rect.topLeft());
+        } else {
+            return;
         }
-        if (m_shape != nullptr && ! m_shape->isNull()) {
-            m_shape->draw(painter);
+        if (! m_vector.empty() || (m_shape != nullptr && ! m_shape->isNull())) {
+            for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+                (*iter)->draw(painter);
+            }
+            if (m_shape != nullptr && ! m_shape->isNull()) {
+                m_shape->draw(painter);
+            }
         }
-    }
-    painter.end();
-    if (path.length() == 0) {
-        QClipboard *clipboard = QApplication::clipboard();
-        if (clipboard) {
-            clipboard->setImage(image);
+        painter.end();
+        if (path.length() == 0) {
+            QClipboard *clipboard = QApplication::clipboard();
+            if (clipboard) {
+                clipboard->setImage(image);
+            }
+            qInfo() << QString("保存图片到剪贴板%1").arg(clipboard ? "成功" : "失败");
+        } else {
+            qInfo() << QString("保存图片到%1%2").arg(path, image.save(path) ? "成功" : "失败");
         }
-        qInfo() << QString("保存图片到剪贴板%1").arg(clipboard ? "成功" : "失败");
-    } else {
-        qInfo() << QString("保存图片到%1%2").arg(path, image.save(path) ? "成功" : "失败");
     }
     end();
 }
@@ -397,6 +426,7 @@ void MainWindow::end() {
     m_state = State::Null;
     m_path.clear();
     m_image = m_gray_image = QImage();
+    m_gif = false;
     clearDraw();
     safeDelete(m_shape);
     resize(1, 1);

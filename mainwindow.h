@@ -43,9 +43,10 @@ protected:
 #endif
     void start();
     void showTool();
+    bool isValid();
 private slots:
     void quit();
-    void save(const QString &path);
+    void save(const QString &path="");
     void end();
     void top();
 private:
@@ -64,6 +65,7 @@ private:
     QMenu *m_menu;
     States m_state;
     QImage m_gray_image;
+    bool m_gif;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(MainWindow::States)

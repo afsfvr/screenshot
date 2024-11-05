@@ -6,7 +6,7 @@ BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press(false), m_shap
 
     connect(m_tool, &Tool::save, this, &BaseWindow::save);
     connect(m_tool, &Tool::cancel, this, &BaseWindow::end);
-    connect(this, &BaseWindow::choosePath, m_tool, &Tool::choosePath);
+    connect(this, &BaseWindow::choosePath, m_tool, &Tool::choosePath, static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::UniqueConnection));
 }
 
 BaseWindow::~BaseWindow() {
@@ -22,12 +22,16 @@ void BaseWindow::keyPressEvent(QKeyEvent *event) {
         }
     } else if (event->key() == Qt::Key_C) {
         if (event->modifiers() == Qt::ControlModifier) {
-            save("");
+            if (isValid()) {
+                save("");
+            }
         } else {
             saveColor();
         }
     } else if (event->key() == Qt::Key_S && event->modifiers() == Qt::ControlModifier) {
-        emit choosePath();
+        if (isValid()) {
+            emit choosePath();
+        }
     } else if (event->key() == Qt::Key_Z && event->modifiers() == Qt::ControlModifier) {
         undo();
     } else if (event->key() == Qt::Key_Y && event->modifiers() == Qt::ControlModifier) {
