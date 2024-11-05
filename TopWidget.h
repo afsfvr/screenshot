@@ -23,8 +23,9 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void moveEvent(QMoveEvent *event);
     void focusOutEvent(QFocusEvent *event);
+    inline bool isValid() { return true; }
 private slots:
-    void save(const QString &path);
+    void save(const QString &path="");
     void end();
     void topChange(bool top);
     void moveTop();

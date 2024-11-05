@@ -20,17 +20,21 @@ CONFIG += c++17
 
 SOURCES += \
     BaseWindow.cpp \
+    GifWidget.cpp \
     Shape.cpp \
     Tool.cpp \
     TopWidget.cpp \
+    gif.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
     BaseWindow.h \
+    GifWidget.h \
     Shape.h \
     Tool.h \
     TopWidget.h \
+    gif.h \
     mainwindow.h
 
 # DESTDIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
