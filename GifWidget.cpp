@@ -11,7 +11,7 @@
 #include <QScreen>
 #include <QDateTime>
 
-GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent): QWidget{parent}, m_size{screenSize} {
+GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent): QWidget{parent}, m_size{screenSize}, m_timerId{0} {
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
@@ -127,7 +127,7 @@ void GifWidget::initUI() {
 
     m_spin = new QSpinBox{m_widget};
     m_spin->setMinimum(1);
-    m_spin->setMaximum(100);
+    m_spin->setMaximum(50);
     m_spin->setValue(10);
     m_layout->addWidget(m_spin);
 
