@@ -11,7 +11,7 @@
 #include <QScreen>
 #include <QDateTime>
 
-GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent): QWidget{parent}, m_size{screenSize}, m_timerId{0} {
+GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent): QWidget{parent}, m_timerId{0}, m_size{screenSize} {
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
