@@ -10,8 +10,22 @@
 #include <QHBoxLayout>
 #include <QMenu>
 #include <QAction>
-
+#include <QQueue>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 #include "gif.h"
+
+struct GifFrameData {
+    GifWriter* writer;
+    uint8_t* image;
+    int width;
+    int height;
+    int delay;
+};
+
+void func(std::atomic<bool> *run, std::mutex *mutex, std::condition_variable *cond, QQueue<GifFrameData> *queue);
 
 class GifWidget : public QWidget
 {
@@ -25,18 +39,21 @@ protected:
 private slots:
     void buttonClicked();
 private:
-    void initUI();
+    void init();
     QImage screenshot();
     void start();
 
     QString m_tmp;
+    QString m_path;
     GifWriter *m_writer;
     int m_timerId;
     int m_delay;
     QRect m_screen;
     QSize m_size;
     qint64 m_startTime;
+    qint64 m_preTime;
     QMenu *m_menu;
+    QMenu *system_menu;
     QAction *m_action;
 
     QWidget *m_widget;
@@ -44,6 +61,12 @@ private:
     QPushButton *m_button;
     QSpinBox *m_spin;
     QLabel *m_label;
+
+    std::atomic<bool> m_run;
+    std::thread *m_thread;
+    std::mutex m_mutex;
+    std::condition_variable m_cond;
+    QQueue<GifFrameData> m_queue;
 };
 
 #endif // GIFWIDGET_H
