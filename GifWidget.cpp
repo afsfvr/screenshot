@@ -6,11 +6,10 @@
 #include <QPainter>
 #include <QDebug>
 #include <QFileDialog>
-#include <QInputDialog>
 #include <QApplication>
 #include <QScreen>
 #include <QDateTime>
-#include <QThread>
+#include <malloc.h>
 
 GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent): QWidget{parent}, m_writer{nullptr}, m_timerId{0}, m_size{screenSize}, m_preTime{0} {
     m_tmp = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + QUuid::createUuid().toString();
@@ -55,7 +54,7 @@ GifWidget::~GifWidget() {
         while (! m_queue.empty()) {
             action->setText(str + QString::number(m_queue.size()));
             QApplication::processEvents();
-            QThread::msleep(20);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
         m_thread->join();
         delete m_thread;
@@ -72,6 +71,7 @@ GifWidget::~GifWidget() {
         QFile::rename(m_tmp, m_path);
     }
     QFile::remove(m_tmp);
+    malloc_trim(0);
 }
 
 void GifWidget::paintEvent(QPaintEvent *event) {
