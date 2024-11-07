@@ -68,7 +68,6 @@ void Tool::showEvent(QShowEvent *event) {
 }
 
 void Tool::choosePath() {
-
     const QString format = "png";
     if (savePath.isEmpty())
         savePath = QDir::currentPath();
@@ -123,7 +122,7 @@ void Tool::penChange(int value) {
         QColor color = QColorDialog::getColor(m_pen.color(), this);
         if (color.isValid()) {
             m_pen.setColor(color);
-            ui->pen_color->setStyleSheet(QString("background-color: %1;").arg(color.name()));
+            ui->pen_color->setStyleSheet(QString("QPushButton { background-color: %1; }").arg(color.name()));
             emit penChanged(m_pen, true);
         }
     } else {
@@ -184,5 +183,6 @@ void Tool::setDraw(ShapeEnum shape) {
 void Tool::topChange() {
     bool top = ! ui->btn_top->isFlat();
     ui->btn_top->setFlat(top);
+    ui->btn_top->setToolTip(top ? "取消置顶" : "置顶");
     emit topChanged(top);
 }

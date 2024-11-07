@@ -48,6 +48,9 @@
          <height>24</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>矩形</string>
+       </property>
        <property name="text">
         <string/>
        </property>
@@ -70,6 +73,9 @@
          <width>24</width>
          <height>24</height>
         </size>
+       </property>
+       <property name="toolTip">
+        <string>椭圆</string>
        </property>
        <property name="text">
         <string/>
@@ -94,6 +100,9 @@
          <height>24</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>直线</string>
+       </property>
        <property name="text">
         <string/>
        </property>
@@ -116,6 +125,9 @@
          <width>24</width>
          <height>24</height>
         </size>
+       </property>
+       <property name="toolTip">
+        <string>画笔</string>
        </property>
        <property name="text">
         <string/>
@@ -140,6 +152,9 @@
          <height>24</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>箭头</string>
+       </property>
        <property name="text">
         <string/>
        </property>
@@ -162,6 +177,9 @@
          <width>24</width>
          <height>24</height>
         </size>
+       </property>
+       <property name="toolTip">
+        <string>置顶</string>
        </property>
        <property name="text">
         <string/>
@@ -186,6 +204,9 @@
          <height>24</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>保存到文件</string>
+       </property>
        <property name="text">
         <string/>
        </property>
@@ -209,6 +230,9 @@
          <height>24</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>关闭</string>
+       </property>
        <property name="text">
         <string/>
        </property>
@@ -231,6 +255,9 @@
          <width>24</width>
          <height>24</height>
         </size>
+       </property>
+       <property name="toolTip">
+        <string>保存到剪贴板</string>
        </property>
        <property name="text">
         <string/>
@@ -287,6 +314,9 @@
           <height>26</height>
          </size>
         </property>
+        <property name="toolTip">
+         <string>画笔大小</string>
+        </property>
         <property name="maximum">
          <number>200</number>
         </property>
@@ -309,8 +339,11 @@
           <height>24</height>
          </size>
         </property>
+        <property name="toolTip">
+         <string>画笔颜色</string>
+        </property>
         <property name="styleSheet">
-         <string notr="true">background-color: #FF0000;</string>
+         <string notr="true">QPushButton { background-color: #FF0000; }</string>
         </property>
         <property name="text">
          <string/>
