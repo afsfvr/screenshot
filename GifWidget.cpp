@@ -71,7 +71,9 @@ GifWidget::~GifWidget() {
         QFile::rename(m_tmp, m_path);
     }
     QFile::remove(m_tmp);
+#ifdef Q_OS_LINUX
     malloc_trim(0);
+#endif
 }
 
 void GifWidget::paintEvent(QPaintEvent *event) {
