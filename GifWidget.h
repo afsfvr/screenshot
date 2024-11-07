@@ -2,7 +2,6 @@
 #define GIFWIDGET_H
 
 #include <QWidget>
-#include <QMouseEvent>
 #include <QPushButton>
 #include <QTimerEvent>
 #include <QSpinBox>
@@ -15,6 +14,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+
 #include "gif.h"
 
 struct GifFrameData {

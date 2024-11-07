@@ -87,7 +87,10 @@ void GifWidget::timerEvent(QTimerEvent *event) {
     if (event->timerId() == m_timerId) {
         QImage &&image = screenshot();
         uint8_t *bits = new uint8_t[image.sizeInBytes()];
-        memcpy(bits, image.bits(), image.sizeInBytes());
+        memcpy(bits, image.constBits(), image.sizeInBytes());
+        if (m_widget != nullptr) {
+            m_label->setText(QString("%1s").arg((QDateTime::currentMSecsSinceEpoch() - m_startTime) / 1000.0, 0, 'f', 2));
+        }
         m_mutex.lock();
         if (m_queue.empty()) {
             m_cond.notify_one();
@@ -100,9 +103,6 @@ void GifWidget::timerEvent(QTimerEvent *event) {
         m_preTime = time;
         m_queue.append({m_writer, bits, image.width(), image.height(), delay});
         m_mutex.unlock();
-        if (m_widget != nullptr) {
-            m_label->setText(QString("%1s").arg((QDateTime::currentMSecsSinceEpoch() - m_startTime) / 1000.0, 0, 'f', 2));
-        }
     }
 }
 
@@ -212,11 +212,11 @@ QImage GifWidget::screenshot() {
         size.setWidth(std::max(rect.right() + 1, size.width()));
         size.setHeight(std::max(rect.bottom() + 1, size.height()));
         if (rect.contains(m_screen)) {
-            return (*iter)->grabWindow(0, m_screen.x(), m_screen.y(), m_screen.width(), m_screen.height()).toImage();
+            return (*iter)->grabWindow(0, m_screen.x(), m_screen.y(), m_screen.width(), m_screen.height()).toImage().convertToFormat(QImage::Format_RGBA8888);
         }
     }
 
-    QImage image(size, QImage::Format_RGB32);
+    QImage image(size, QImage::Format_RGBA8888);
     QPainter painter(&image);
     for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
         QScreen *screen = (*iter);
