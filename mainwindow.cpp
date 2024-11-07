@@ -57,6 +57,9 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         m_point = event->pos();
     }
     if (m_state == State::Null) {
+        clearDraw();
+        m_rect = QRect{};
+        m_path.clear();
         if (event->button() == Qt::LeftButton) {
             setCursor(Qt::CrossCursor);
             m_state = State::RectScreen;
@@ -140,8 +143,14 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
     if (event->buttons() == Qt::NoButton) {
         m_press = false;
         unsetCursor();
-        if (event->pos() == m_point && event->button() == Qt::RightButton) {
-            end();
+        if ((event->x() == m_point.x() || event->y() == m_point.y()) && event->button() == Qt::RightButton) {
+            if (isValid()) {
+                m_state = State::Null;
+                m_tool->hide();
+                repaint();
+            } else {
+                end();
+            }
         }
     }
 }
@@ -354,9 +363,9 @@ void MainWindow::showTool() {
 }
 
 bool MainWindow::isValid() {
-    if (m_state == State::Rect) {
+    if (m_state & State::Rect) {
         return m_rect.isValid();
-    } else if (m_state == State::Free) {
+    } else if (m_state & State::Free) {
         return m_path.elementCount() > 2;
 #ifdef Q_OS_WINDOWS
     } else {
