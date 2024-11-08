@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     });
 #endif
 #ifdef Q_OS_WINDOWS
-    if (! RegisterHotKey((HWND)this->winId(), 1,  MOD_ALT | MOD_CONTROL, 'A')) {
+    if (! RegisterHotKey((HWND)this->winId(), 1, MOD_ALT | MOD_CONTROL, 'A')) {
         QMessageBox::warning(this, "注册热键失败", "注册热键失败");
     }
 #endif
@@ -144,7 +144,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
         m_press = false;
         unsetCursor();
         if ((event->x() == m_point.x() || event->y() == m_point.y()) && event->button() == Qt::RightButton) {
-            if (isValid()) {
+            if (m_state != State::Null && isValid()) {
                 clearDraw();
                 m_state = State::Null;
                 m_tool->hide();
