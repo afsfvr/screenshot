@@ -32,6 +32,8 @@ public:
         RectEdit = Rect | Edit
     };
     Q_DECLARE_FLAGS(States, State)
+    Q_FLAG(States)
+    Q_ENUM(State)
 protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
