@@ -145,6 +145,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
         unsetCursor();
         if ((event->x() == m_point.x() || event->y() == m_point.y()) && event->button() == Qt::RightButton) {
             if (isValid()) {
+                clearDraw();
                 m_state = State::Null;
                 m_tool->hide();
                 repaint();
