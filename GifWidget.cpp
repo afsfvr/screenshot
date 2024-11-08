@@ -88,21 +88,39 @@ void GifWidget::paintEvent(QPaintEvent *event) {
 void GifWidget::timerEvent(QTimerEvent *event) {
     if (event->timerId() == m_timerId) {
         QImage &&image = screenshot();
-        uint8_t *bits = new uint8_t[image.sizeInBytes()];
-        memcpy(bits, image.constBits(), image.sizeInBytes());
+        uint8_t *bits = nullptr;
+        if (m_queue.size() > 100) {
+            QByteArray array = (QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + QUuid::createUuid().toString()).toUtf8();
+            QFile file{array};
+            if (file.open(QFile::WriteOnly | QFile::Truncate)) {
+                file.write(reinterpret_cast<const char*>(image.constBits()), image.sizeInBytes());
+                file.close();
+                bits = new uint8_t[array.size() + 2];
+                memcpy(bits + 1, array.constData(), array.size());
+                bits[0] = 'f';
+                bits[array.size() + 1] = '\0';
+            }
+        }
+        if (bits == nullptr) {
+            bits = new uint8_t[image.sizeInBytes() + 1];
+            memcpy(bits + 1, image.constBits(), image.sizeInBytes());
+            bits[0] = 'b';
+        }
+
+        qint64 time = QDateTime::currentMSecsSinceEpoch();
         if (m_widget != nullptr) {
             m_label->setText(QString("%1s").arg((QDateTime::currentMSecsSinceEpoch() - m_startTime) / 1000.0, 0, 'f', 2));
         }
-        m_mutex.lock();
-        if (m_queue.empty()) {
-            m_cond.notify_one();
-        }
-        qint64 time = QDateTime::currentMSecsSinceEpoch();
         int delay = m_delay;
         if (time - m_preTime > delay * 10) {
             delay = qRound((time - m_preTime) / 10.0);
         }
         m_preTime = time;
+
+        m_mutex.lock();
+        if (m_queue.empty()) {
+            m_cond.notify_one();
+        }
         m_queue.append({m_writer, bits, image.width(), image.height(), delay});
         m_mutex.unlock();
     }
@@ -133,6 +151,9 @@ void GifWidget::buttonClicked() {
         if (m_path.isEmpty()) {
             m_mutex.lock();
             for (auto iter = m_queue.begin(); iter != m_queue.end(); ++iter) {
+                if (iter->image[0] == 'f') {
+                    QFile::remove(reinterpret_cast<const char*>(iter->image + 1));
+                }
                 delete[] iter->image;
             }
             m_queue.clear();
@@ -237,7 +258,17 @@ void func(std::atomic<bool> *run, std::mutex *mutex, std::condition_variable *co
         }
         GifFrameData &&data = queue->dequeue();
         lock.unlock();
-        GifWriteFrame(data.writer, data.image, data.width, data.height, data.delay);
+        if (data.image[0] == 'b') {
+            GifWriteFrame(data.writer, data.image + 1, data.width, data.height, data.delay);
+        } else if (data.image[0] == 'f') {
+            const char *filename = reinterpret_cast<const char*>(data.image + 1);
+            QFile file{filename};
+            if (file.open(QFile::ReadOnly)) {
+                QByteArray array = file.readAll();
+                GifWriteFrame(data.writer, reinterpret_cast<const uint8_t*>(array.constData()), data.width, data.height, data.delay);
+            }
+            QFile::remove(filename);
+        }
         delete[] data.image;
         lock.lock();
     }
