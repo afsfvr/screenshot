@@ -4,6 +4,7 @@
 #include <QSystemTrayIcon>
 #include <QMenu>
 
+#include "HotKeyWidget.h"
 #include "BaseWindow.h"
 #ifdef Q_OS_LINUX
 #include "KeyMouseEvent.h"
@@ -47,11 +48,19 @@ protected:
     void showTool();
     bool isValid();
 private slots:
+#ifdef Q_OS_LINUX
+    void keyPress(int code, Qt::KeyboardModifiers modifiers);
+#endif
+    void updateHotkey();
+    void updateCapture();
+    void updateRecord();
     void quit();
     void save(const QString &path="");
     void end();
     void top();
 private:
+    void initHotKey();
+    void saveHotKey();
     bool contains(const QPoint &point);
 #ifdef Q_OS_WINDOWS
     void updateWindows();
@@ -68,6 +77,12 @@ private:
     States m_state;
     QImage m_gray_image;
     bool m_gif;
+
+    QAction *m_action1;
+    QAction *m_action2;
+    HotKeyWidget *m_hotkey;
+    HotKey m_capture;
+    HotKey m_record;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(MainWindow::States)
