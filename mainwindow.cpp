@@ -1,14 +1,20 @@
 #include "mainwindow.h"
 #include "TopWidget.h"
 #include "GifWidget.h"
+
 #include <QShortcut>
 #include <QMessageBox>
 #include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
+    m_hotkey = new HotKeyWidget{&m_capture, &m_record};
+    connect(m_hotkey, &HotKeyWidget::capture, this, &MainWindow::updateCapture);
+    connect(m_hotkey, &HotKeyWidget::record, this, &MainWindow::updateRecord);
+
     m_menu = new QMenu(this);
-    m_menu->addAction("截图", this, &MainWindow::start);
-    m_menu->addAction("录制GIF", this, [=](){
+    m_menu->addAction("修改快捷键", this, &MainWindow::updateHotkey);
+    m_action1 = m_menu->addAction("截图", this, &MainWindow::start);
+    m_action2 = m_menu->addAction("录制GIF", this, [=](){
         m_gif = true;
         start();
     });
@@ -22,32 +28,22 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_state = State::Null;
     m_gif = false;
 
-#ifdef Q_OS_LINUX
-    m_monitor = new KeyMouseEvent;
-    m_monitor->start();
-    m_monitor->resume();
-    connect(m_monitor, &KeyMouseEvent::keyPress, this, [=](int code, Qt::KeyboardModifiers modifiers){
-        if (! this->isVisible() && code == 38 && modifiers == (Qt::ControlModifier | Qt::AltModifier)) {
-            start();
-        }
-    });
-#endif
-#ifdef Q_OS_WINDOWS
-    if (! RegisterHotKey((HWND)this->winId(), 1, MOD_ALT | MOD_CONTROL, 'A')) {
-        QMessageBox::warning(this, "注册热键失败", "注册热键失败");
-    }
-#endif
+    initHotKey();
     setMouseTracking(true);
 
     connect(m_tool, &Tool::clickTop, this, &MainWindow::top);
 }
 
 MainWindow::~MainWindow() {
+    saveHotKey();
+    safeDelete(m_hotkey);
+
 #ifdef Q_OS_LINUX
     delete m_monitor;
 #endif
 #ifdef Q_OS_WINDOWS
     UnregisterHotKey((HWND)this->winId(), 1);
+    UnregisterHotKey((HWND)this->winId(), 2);
 #endif
 }
 
@@ -285,9 +281,15 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result) {
     if (! this->isVisible() && eventType == "windows_generic_MSG") {
         MSG *msg = static_cast<MSG *>(message);
-        if (msg->message == WM_HOTKEY && msg->wParam == 1) {
-            start();
-            return true;
+        if (msg->message == WM_HOTKEY) {
+            if (msg->wParam == 1) {
+                start();
+                return true;
+            } else if (msg->wParam == 2) {
+                m_gif = true;
+                start();
+                return true;
+            }
         }
     }
     return QWidget::nativeEvent(eventType, message, result);
@@ -376,6 +378,112 @@ bool MainWindow::isValid() {
 #endif
     }
     return false;
+}
+
+void MainWindow::updateHotkey() {
+    if (m_hotkey->isMinimized()) {
+        m_hotkey->showNormal();
+    } else if (m_hotkey->isVisible()) {
+        m_hotkey->activateWindow();
+        m_hotkey->raise();
+    } else {
+        m_hotkey->show();
+    }
+}
+
+#ifdef Q_OS_LINUX
+void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
+    if (! this->isVisible()) {
+        if (m_capture.modifiers != Qt::NoModifier && m_capture.modifiers == modifiers && m_capture.key - 27 == code - 27) {
+            start();
+        } else if (m_record.modifiers != Qt::NoModifier && m_record.modifiers == modifiers && m_record.key - 27 == code - 27) {
+            m_gif = true;
+            start();
+        }
+    }
+}
+#endif
+
+void MainWindow::updateCapture() {
+#ifdef Q_OS_WINDOWS
+    UnregisterHotKey((HWND)this->winId(), 1);
+#endif
+    if (m_capture == m_record && m_capture.modifiers != Qt::NoModifier) {
+        QMessageBox::warning(this, "注册热键失败", "不能重复");
+        m_capture.modifiers = Qt::NoModifier;
+    }
+    if (m_capture.modifiers != Qt::NoModifier) {
+        quint32 fsModifiers = 0;
+        QString s{"截图("};
+        if (m_capture.modifiers & Qt::ControlModifier) {
+            fsModifiers |= MOD_CONTROL;
+            s.append("Ctrl+");
+        }
+        if (m_capture.modifiers & Qt::AltModifier) {
+            fsModifiers |= MOD_ALT;
+            s.append("Alt+");
+        }
+        if (m_capture.modifiers & Qt::ShiftModifier) {
+            fsModifiers |= MOD_SHIFT;
+            s.append("Shift+");
+        }
+#if defined(Q_OS_WINDOWS)
+        if (RegisterHotKey((HWND)this->winId(), 1, fsModifiers, m_capture.key)) {
+            s.append(static_cast<char>(m_capture.key)).append(")");
+            m_action1->setText(s);
+        } else {
+            QMessageBox::warning(this, "注册热键失败", "截图注册热键失败");
+            m_capture.modifiers = Qt::NoModifier;
+            m_action1->setText("截图");
+        }
+#else
+        s.append(static_cast<char>(m_capture.key)).append(")");
+        m_action1->setText(s);
+#endif
+    } else {
+        m_action1->setText("截图");
+    }
+}
+
+void MainWindow::updateRecord() {
+ #ifdef Q_OS_WINDOWS
+    UnregisterHotKey((HWND)this->winId(), 2);
+#endif
+    if (m_capture == m_record && m_capture.modifiers != Qt::NoModifier) {
+        QMessageBox::warning(this, "注册热键失败", "不能重复");
+        m_record.modifiers = Qt::NoModifier;
+    }
+    if (m_record.modifiers != Qt::NoModifier) {
+        quint32 fsModifiers = 0;
+        QString s{"录制GIF("};
+        if (m_record.modifiers & Qt::ControlModifier) {
+            fsModifiers |= MOD_CONTROL;
+            s.append("Ctrl+");
+        }
+        if (m_record.modifiers & Qt::AltModifier) {
+            fsModifiers |= MOD_ALT;
+            s.append("Alt+");
+        }
+        if (m_record.modifiers & Qt::ShiftModifier) {
+            fsModifiers |= MOD_SHIFT;
+            s.append("Shift+");
+        }
+#if defined(Q_OS_WINDOWS)
+        if (RegisterHotKey((HWND)this->winId(), 2, fsModifiers, m_record.key)) {
+            s.append(static_cast<char>(m_record.key)).append(")");
+            m_action2->setText(s);
+        } else {
+            QMessageBox::warning(this, "注册热键失败", "GIF注册热键失败");
+            m_record.modifiers = Qt::NoModifier;
+            m_action2->setText("录制GIF");
+        }
+#else
+        s.append(static_cast<char>(m_record.key)).append(")");
+        m_action2->setText(s);
+#endif
+    } else {
+        m_action2->setText("录制GIF");
+    }
 }
 
 void MainWindow::quit() {
@@ -467,6 +575,55 @@ void MainWindow::top() {
         }
         new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
         end();
+    }
+}
+
+void MainWindow::initHotKey() {
+    m_capture.modifiers = Qt::ControlModifier | Qt::AltModifier;
+    m_capture.key = 'A';
+    m_record.modifiers = Qt::NoModifier;
+    m_record.key = 'A';
+
+    QFile file{QApplication::applicationDirPath() + "/" + QApplication::applicationName() + ".data"};
+    if (file.exists() && file.open(QFile::ReadOnly) && file.size() == 16) {
+        QByteArray array = file.readAll();
+        const char *data = array.constData();
+        m_capture.modifiers = static_cast<Qt::KeyboardModifiers>(*reinterpret_cast<const quint32*>(data));
+        m_capture.key = *reinterpret_cast<const quint32*>(data + 4);
+        if ((m_capture.modifiers & (Qt::ControlModifier | Qt::AltModifier | Qt::ShiftModifier)) == Qt::NoModifier || m_capture.key < 'A' || m_capture.key > 'Z') {
+            m_capture.modifiers = Qt::NoModifier;
+        }
+
+        m_record.modifiers = static_cast<Qt::KeyboardModifiers>(*reinterpret_cast<const quint32*>(data + 8));
+        m_record.key = *reinterpret_cast<const quint32*>(data + 12);
+        if ((m_record.modifiers & (Qt::ControlModifier | Qt::AltModifier | Qt::ShiftModifier)) == Qt::NoModifier || m_record.key < 'A' || m_record.key > 'Z') {
+            m_record.modifiers = Qt::NoModifier;
+        }
+    } else {
+        saveHotKey();
+    }
+
+#ifdef Q_OS_LINUX
+    m_monitor = new KeyMouseEvent;
+    m_monitor->start();
+    m_monitor->resume();
+    connect(m_monitor, &KeyMouseEvent::keyPress, this, &MainWindow::keyPress);
+#endif
+
+    updateCapture();
+    updateRecord();
+}
+
+void MainWindow::saveHotKey() {
+    QFile file{QApplication::applicationDirPath() + "/" + QApplication::applicationName() + ".data"};
+    if (file.open(QFile::WriteOnly | QFile::Truncate)) {
+        quint32 arr[4];
+        arr[0] = m_capture.modifiers;
+        arr[1] = m_capture.key;
+        arr[2] = m_record.modifiers;
+        arr[3] = m_record.key;
+        file.write(reinterpret_cast<const char*>(arr), 16);
+        file.close();
     }
 }
 

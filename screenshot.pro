@@ -21,6 +21,7 @@ CONFIG += c++17
 SOURCES += \
     BaseWindow.cpp \
     GifWidget.cpp \
+    HotKeyWidget.cpp \
     Shape.cpp \
     Tool.cpp \
     TopWidget.cpp \
@@ -31,6 +32,7 @@ SOURCES += \
 HEADERS += \
     BaseWindow.h \
     GifWidget.h \
+    HotKeyWidget.h \
     Shape.h \
     Tool.h \
     TopWidget.h \
@@ -49,6 +51,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 FORMS += \
+    HotKeyWidget.ui \
     Tool.ui
 
 RESOURCES += \
