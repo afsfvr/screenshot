@@ -394,9 +394,22 @@ void MainWindow::updateHotkey() {
 #ifdef Q_OS_LINUX
 void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
     if (! this->isVisible()) {
-        if (m_capture.modifiers != Qt::NoModifier && m_capture.modifiers == modifiers && m_capture.key - 27 == code - 27) {
+        static const std::unordered_map<int, char> xEventcodeToChar = {
+            {24, 'Q'}, {25, 'W'}, {26, 'E'}, {27, 'R'}, {28, 'T'}, {29, 'Y'}, {30, 'U'},
+            {31, 'I'}, {32, 'O'}, {33, 'P'}, {38, 'A'}, {39, 'S'}, {40, 'D'}, {41, 'F'},
+            {42, 'G'}, {43, 'H'}, {44, 'J'}, {45, 'K'}, {46, 'L'}, {52, 'Z'}, {53, 'X'},
+            {54, 'C'}, {55, 'V'}, {56, 'B'}, {57, 'N'}, {58, 'M'}
+        };
+
+        std::unordered_map<int, char>::const_iterator it = xEventcodeToChar.find(code);
+        if (it == xEventcodeToChar.cend()) {
+            return;
+        } else {
+            code = it->second;
+        }
+        if (m_capture.modifiers != Qt::NoModifier && m_capture.modifiers == modifiers && m_capture.key == static_cast<quint32>(code)) {
             start();
-        } else if (m_record.modifiers != Qt::NoModifier && m_record.modifiers == modifiers && m_record.key - 27 == code - 27) {
+        } else if (m_record.modifiers != Qt::NoModifier && m_record.modifiers == modifiers && m_record.key == static_cast<quint32>(code)) {
             m_gif = true;
             start();
         }
@@ -407,24 +420,30 @@ void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
 void MainWindow::updateCapture() {
 #ifdef Q_OS_WINDOWS
     UnregisterHotKey((HWND)this->winId(), 1);
+    quint32 fsModifiers = 0;
 #endif
     if (m_capture == m_record && m_capture.modifiers != Qt::NoModifier) {
         QMessageBox::warning(this, "注册热键失败", "不能重复");
         m_capture.modifiers = Qt::NoModifier;
     }
     if (m_capture.modifiers != Qt::NoModifier) {
-        quint32 fsModifiers = 0;
         QString s{"截图("};
         if (m_capture.modifiers & Qt::ControlModifier) {
+#ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_CONTROL;
+#endif
             s.append("Ctrl+");
         }
         if (m_capture.modifiers & Qt::AltModifier) {
+#ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_ALT;
+#endif
             s.append("Alt+");
         }
         if (m_capture.modifiers & Qt::ShiftModifier) {
+#ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_SHIFT;
+#endif
             s.append("Shift+");
         }
 #if defined(Q_OS_WINDOWS)
@@ -448,24 +467,30 @@ void MainWindow::updateCapture() {
 void MainWindow::updateRecord() {
  #ifdef Q_OS_WINDOWS
     UnregisterHotKey((HWND)this->winId(), 2);
+    quint32 fsModifiers = 0;
 #endif
     if (m_capture == m_record && m_capture.modifiers != Qt::NoModifier) {
         QMessageBox::warning(this, "注册热键失败", "不能重复");
         m_record.modifiers = Qt::NoModifier;
     }
     if (m_record.modifiers != Qt::NoModifier) {
-        quint32 fsModifiers = 0;
         QString s{"录制GIF("};
         if (m_record.modifiers & Qt::ControlModifier) {
+#ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_CONTROL;
+#endif
             s.append("Ctrl+");
         }
         if (m_record.modifiers & Qt::AltModifier) {
+#ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_ALT;
+#endif
             s.append("Alt+");
         }
         if (m_record.modifiers & Qt::ShiftModifier) {
+#ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_SHIFT;
+#endif
             s.append("Shift+");
         }
 #if defined(Q_OS_WINDOWS)
@@ -592,12 +617,14 @@ void MainWindow::initHotKey() {
         m_capture.key = *reinterpret_cast<const quint32*>(data + 4);
         if ((m_capture.modifiers & (Qt::ControlModifier | Qt::AltModifier | Qt::ShiftModifier)) == Qt::NoModifier || m_capture.key < 'A' || m_capture.key > 'Z') {
             m_capture.modifiers = Qt::NoModifier;
+            m_capture.key = 'A';
         }
 
         m_record.modifiers = static_cast<Qt::KeyboardModifiers>(*reinterpret_cast<const quint32*>(data + 8));
         m_record.key = *reinterpret_cast<const quint32*>(data + 12);
         if ((m_record.modifiers & (Qt::ControlModifier | Qt::AltModifier | Qt::ShiftModifier)) == Qt::NoModifier || m_record.key < 'A' || m_record.key > 'Z') {
             m_record.modifiers = Qt::NoModifier;
+            m_record.key = 'A';
         }
     } else {
         saveHotKey();
@@ -624,6 +651,8 @@ void MainWindow::saveHotKey() {
         arr[3] = m_record.key;
         file.write(reinterpret_cast<const char*>(arr), 16);
         file.close();
+    } else {
+        qWarning() << "write config failed: " << file.errorString();
     }
 }
 
