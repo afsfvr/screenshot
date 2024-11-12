@@ -385,6 +385,7 @@ bool MainWindow::isValid() {
 }
 
 void MainWindow::updateHotkey() {
+    m_hotkey->setConfigPath(getConfigPath());
     if (m_hotkey->isMinimized()) {
         m_hotkey->showNormal();
     } else if (m_hotkey->isVisible()) {
@@ -607,13 +608,26 @@ void MainWindow::top() {
     }
 }
 
+QString MainWindow::getConfigPath() {
+    QString path = QApplication::applicationDirPath() + QDir::separator() + QApplication::applicationName() + ".data";
+    if (QFile::exists(path)) {
+        return path;
+    } else {
+        path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+        if (! QFile::exists(path)) {
+            qDebug() << QString("创建文件夹%1: %2").arg(path, QDir{}.mkdir(path) ? "成功" : "失败");
+        }
+        return path + QDir::separator() + QApplication::applicationName() + ".data";;
+    }
+}
+
 void MainWindow::initHotKey() {
     m_capture.modifiers = Qt::ControlModifier | Qt::AltModifier;
     m_capture.key = 'A';
     m_record.modifiers = Qt::NoModifier;
     m_record.key = 'A';
 
-    QFile file{QApplication::applicationDirPath() + "/" + QApplication::applicationName() + ".data"};
+    QFile file{getConfigPath()};
     if (file.exists() && file.open(QFile::ReadOnly) && file.size() == 16) {
         QByteArray array = file.readAll();
         const char *data = array.constData();
@@ -646,7 +660,7 @@ void MainWindow::initHotKey() {
 }
 
 void MainWindow::saveHotKey() {
-    QFile file{QApplication::applicationDirPath() + "/" + QApplication::applicationName() + ".data"};
+    QFile file{getConfigPath()};
     if (file.open(QFile::WriteOnly | QFile::Truncate)) {
         quint32 arr[4];
         arr[0] = m_capture.modifiers;

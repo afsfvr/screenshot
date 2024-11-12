@@ -59,6 +59,7 @@ private slots:
     void end();
     void top();
 private:
+    QString getConfigPath();
     void initHotKey();
     void saveHotKey();
     bool contains(const QPoint &point);
