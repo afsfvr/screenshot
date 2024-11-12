@@ -20,6 +20,7 @@ class HotKeyWidget : public QWidget {
 public:
     explicit HotKeyWidget(HotKey *capture, HotKey *record, QWidget *parent = nullptr);
     ~HotKeyWidget();
+    void setConfigPath(const QString &path);
 protected:
     void showEvent(QShowEvent *event);
 private slots:

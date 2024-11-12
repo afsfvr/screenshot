@@ -2,6 +2,7 @@
 #include "ui_HotKeyWidget.h"
 
 #include <QMessageBox>
+#include <QFileInfo>
 
 HotKeyWidget::HotKeyWidget(HotKey *capture, HotKey *record, QWidget *parent):
     QWidget(parent), ui(new Ui::HotKeyWidget), m_capture(capture), m_record(record) {
@@ -11,10 +12,25 @@ HotKeyWidget::HotKeyWidget(HotKey *capture, HotKey *record, QWidget *parent):
     connect(ui->radioButton, &QRadioButton::toggled, this, &HotKeyWidget::switchHotKey);
     connect(ui->cancel, &QPushButton::clicked, this, &HotKeyWidget::hide);
     connect(ui->ok, &QPushButton::clicked, this, &HotKeyWidget::updateHotKey);
+    connect(ui->label, &QLabel::linkActivated, this, [](const QString &link){
+#if defined(Q_OS_LINUX)
+        if (system(QString("nautilus %1 >/dev/null 2>&1").arg(link).toStdString().c_str()) != 0) {
+            if (system(QString("dolphin %1 >/dev/null 2>&1").arg(link).toStdString().c_str()) != 0) {
+                system(QString("thunar %1 >/dev/null 2>&1").arg(link).toStdString().c_str());
+            }
+        }
+#else
+        system(QString("explorer %1 >NUL 2>&1").arg(link).toStdString().c_str());
+#endif
+    });
 }
 
 HotKeyWidget::~HotKeyWidget() {
     delete ui;
+}
+
+void HotKeyWidget::setConfigPath(const QString &path) {
+    ui->label->setText(QString("<a href=\"%1\" style=\"color:black; text-decoration: none;\">配置路径: %2</a>").arg(path, QFileInfo{path}.absolutePath()));
 }
 
 void HotKeyWidget::showEvent(QShowEvent *event) {
