@@ -5,6 +5,7 @@
 #include <QShortcut>
 #include <QMessageBox>
 #include <QTimer>
+#include <QStandardPaths>
 
 MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_hotkey = new HotKeyWidget{&m_capture, &m_record};
@@ -228,12 +229,14 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         rect = m_rect;
         painter.drawImage(m_rect, m_image, m_rect);
         painter.drawRect(m_rect.adjusted(- 1, - 1, 1, 1));
+        painter.setClipRect(m_rect);
     } else {
 #if defined(Q_OS_WINDOWS)
         if (m_index >= 0 && m_index < m_windows.size()) {
             rect = m_windows[m_index];
             painter.drawImage(rect, m_image, rect);
             painter.drawRect(rect);
+            painter.setClipRect(rect);
         }
 #endif
     }
@@ -254,10 +257,10 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         } else {
             point.setX(cursor.x() - 85 - 10);
         }
-        if (cursor.y() + 110 + 25 <= this->height()) {
+        if (cursor.y() + 125 + 25 <= this->height()) {
             point.setY(cursor.y() + 25);
         } else {
-            point.setY(cursor.y() - 110 - 20);
+            point.setY(cursor.y() - 125 - 20);
         }
         painter.drawRect(point.x() - 1, point.y() - 1, 84 + 2, 84 + 2);
         painter.drawImage(QRect(point.x(), point.y(), 84, 84), m_image, QRect(cursor.x() - 10, cursor.y() - 10, 21, 21));
@@ -268,7 +271,8 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         font.setPixelSize(13);
         painter.setFont(font);
         painter.drawText(point.x(), point.y() + 97, QString("RGB: %1").arg(color.name().toUpper()));
-        painter.drawText(point.x(), point.y() + 110, QString("(%1 x %2)").arg(rect.width()).arg(rect.height()));
+        painter.drawText(point.x(), point.y() + 110, QString("%1, %2").arg(cursor.x()).arg(cursor.y()));
+        painter.drawText(point.x(), point.y() + 123, QString("(%1 x %2)").arg(rect.width()).arg(rect.height()));
     }
 }
 
