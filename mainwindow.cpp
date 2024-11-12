@@ -609,11 +609,11 @@ void MainWindow::top() {
 }
 
 QString MainWindow::getConfigPath() {
-    QString path = QApplication::applicationDirPath() + QDir::separator() + QApplication::applicationName() + ".data";
+    QString path = QDir::toNativeSeparators(QApplication::applicationDirPath() + QDir::separator() + QApplication::applicationName() + ".data");
     if (QFile::exists(path)) {
         return path;
     } else {
-        path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+        path = QDir::toNativeSeparators(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation));
         if (! QFile::exists(path)) {
             qDebug() << QString("创建文件夹%1: %2").arg(path, QDir{}.mkdir(path) ? "成功" : "失败");
         }
