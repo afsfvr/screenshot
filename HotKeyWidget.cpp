@@ -3,6 +3,7 @@
 
 #include <QMessageBox>
 #include <QFileInfo>
+#include <QProcess>
 
 HotKeyWidget::HotKeyWidget(HotKey *capture, HotKey *record, QWidget *parent):
     QWidget(parent), ui(new Ui::HotKeyWidget), m_capture(capture), m_record(record) {
@@ -20,7 +21,12 @@ HotKeyWidget::HotKeyWidget(HotKey *capture, HotKey *record, QWidget *parent):
             }
         }
 #else
-        system(QString("explorer %1 >NUL 2>&1").arg(link).toStdString().c_str());
+        QProcess process;
+        process.setProgram("cmd.exe");
+        process.setArguments({"/C", QString("explorer /select,%1 >NUL 2>&1").arg(link)});
+        process.start();
+        process.waitForFinished();
+        // system(QString("explorer /select,%1 >NUL 2>&1").arg(link).toStdString().c_str());
 #endif
     });
 }
