@@ -35,6 +35,22 @@ public:
     Q_DECLARE_FLAGS(States, State)
     Q_FLAG(States)
     Q_ENUM(State)
+
+    enum ResizeImage {
+        NoResize   = 0,
+        Top        = 1,
+        Left       = 2,
+        Right      = 4,
+        Bottom     = 8,
+        TopLeft    = Top | Left,
+        TopRight   = Top | Right,
+        BottomLeft = Bottom | Left,
+        BottomRight= Bottom | Right
+    };
+    Q_DECLARE_FLAGS(ResizeImages, ResizeImage)
+    Q_FLAG(ResizeImages)
+    Q_ENUM(ResizeImage)
+
 protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
@@ -76,6 +92,7 @@ private:
     QSystemTrayIcon *m_tray;
     QMenu *m_menu;
     States m_state;
+    ResizeImages m_resize;
     QImage m_gray_image;
     bool m_gif;
 
@@ -87,4 +104,5 @@ private:
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(MainWindow::States)
+Q_DECLARE_OPERATORS_FOR_FLAGS(MainWindow::ResizeImages)
 #endif // MAINWINDOW_H

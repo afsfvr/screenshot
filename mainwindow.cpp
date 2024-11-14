@@ -27,6 +27,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_tray->show();
 
     m_state = State::Null;
+    m_resize = ResizeImage::NoResize;
     m_gif = false;
 
     initHotKey();
@@ -58,35 +59,32 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         m_rect = QRect{};
         m_path.clear();
         if (event->button() == Qt::LeftButton) {
-            setCursor(Qt::CrossCursor);
             m_state = State::RectScreen;
         } else if (! m_gif && event->button() == Qt::RightButton) {
-            setCursor(Qt::CrossCursor);
             m_state = State::FreeScreen;
             m_path.moveTo(event->pos());
         }
         m_tool->hide();
     } else if (m_state & State::Edit) {
-        if (contains(event->pos())) {
+        if (m_resize != ResizeImage::NoResize) {
+            clearDraw();
+            m_tool->hide();
+        } else if (contains(event->pos())) {
             if (event->button() == Qt::LeftButton) {
                 if (m_tool->isDraw()) {
-                    setCursor(QCursor(QPixmap(":/images/pencil.png"), 0, 24));
                     if (m_shape != nullptr) {
                         qWarning() << "error" << m_shape;
                     }
                     m_shape = m_tool->getShape(event->pos());
                 } else {
-                    setCursor(Qt::SizeAllCursor);
                     m_tool->hide();
                 }
             }
         } else {
             if (event->button() == Qt::LeftButton) {
-                setCursor(Qt::CrossCursor);
                 clearDraw();
                 m_state = State::RectScreen;
             } else if (! m_gif && event->button() == Qt::RightButton) {
-                setCursor(Qt::CrossCursor);
                 clearDraw();
                 m_state = State::FreeScreen;
                 m_path.clear();
@@ -116,6 +114,9 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
             repaint();
         } else if (m_state & State::Edit) {
             if (cursor().shape() == Qt::BitmapCursor) {
+                if (! contains(event->pos())) {
+                    unsetCursor();
+                }
                 if (m_shape == nullptr) {
                     qWarning() << "error: shape is null";
                 } else if (! m_shape->isNull()){
@@ -139,14 +140,15 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
     }
     if (event->buttons() == Qt::NoButton) {
         m_press = false;
-        unsetCursor();
         if ((event->x() == m_point.x() || event->y() == m_point.y()) && event->button() == Qt::RightButton) {
             if (m_state != State::Null && isValid()) {
+                setCursor(Qt::CrossCursor);
                 clearDraw();
                 m_state = State::Null;
                 m_tool->hide();
                 repaint();
             } else {
+                unsetCursor();
                 end();
             }
         }
@@ -162,7 +164,48 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
         repaint();
     } else if ((m_state & State::Edit) && (event->buttons() & Qt::LeftButton)) {
         auto shape =  cursor().shape();
-        if (shape == Qt::SizeAllCursor) {
+        if (m_resize != ResizeImage::NoResize) {
+            QPoint point = event->pos();
+            if (m_resize & ResizeImage::Top) {
+                if (point.y() > m_rect.bottom()) {
+                    m_resize &= ~ResizeImage::Top;
+                    m_resize |= ResizeImage::Bottom;
+                    m_rect.setTop(m_rect.bottom());
+                    m_rect.setBottom(point.y());
+                } else {
+                    m_rect.setTop(point.y());
+                }
+            } else if (m_resize & ResizeImage::Bottom) {
+                if (point.y() < m_rect.top()) {
+                    m_resize &= ~ResizeImage::Bottom;
+                    m_resize |= ResizeImage::Top;
+                    m_rect.setBottom(m_rect.top());
+                    m_rect.setTop(point.y());
+                } else {
+                    m_rect.setBottom(point.y());
+                }
+            }
+            repaint();
+            if (m_resize & ResizeImage::Left) {
+                if (point.x() > m_rect.right()) {
+                    m_resize &= ~ResizeImage::Left;
+                    m_resize |= ResizeImage::Right;
+                    m_rect.setLeft(m_rect.right());
+                    m_rect.setRight(point.x());
+                } else {
+                    m_rect.setLeft(point.x());
+                }
+            } else if (m_resize & ResizeImage::Right) {
+                if (point.x() < m_rect.left()) {
+                    m_resize &= ~ResizeImage::Right;
+                    m_resize |= ResizeImage::Left;
+                    m_rect.setRight(m_rect.left());
+                    m_rect.setLeft(point.x());
+                } else {
+                    m_rect.setRight(point.x());
+                }
+            }
+        } if (shape == Qt::SizeAllCursor) {
             QPoint point = event->pos() - m_point;
             m_point = event->pos();
             QRect rect = (m_state & State::Free) ? m_path.boundingRect().toRect() : m_rect;
@@ -194,6 +237,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
         }
     } else if (event->buttons() == Qt::NoButton) {
         if (m_state == State::Null) {
+            setCursor(Qt::CrossCursor);
 #ifdef Q_OS_WINDOWS
             for (int i = 0; i < m_windows.size(); ++i) {
                 if (m_windows[i].contains(event->pos())) {
@@ -205,6 +249,52 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
             }
 #endif
             repaint();
+        } else if (m_state == State::RectEdit) {
+            m_resize = ResizeImage::NoResize;
+            QPoint point = event->pos();
+            if (m_rect.contains(point)) {
+                if (m_tool->isDraw()) {
+                    setCursor(QCursor(QPixmap(":/images/pencil.png"), 0, 24));
+                } else {
+                    setCursor(Qt::SizeAllCursor);
+                }
+            } else {
+                if (m_rect.left() - point.x() >= 0 && m_rect.left() - point.x() <= 3) {
+                    m_resize |= ResizeImage::Left;
+                } else if (point.x() - m_rect.right() >= 0 && point.x() - m_rect.right() <= 3) {
+                    m_resize |= ResizeImage::Right;
+                }
+                if (m_rect.top() - point.y() >= 0 && m_rect.top() - point.y() <= 3) {
+                    m_resize |= ResizeImage::Top;
+                } else if (point.y() - m_rect.bottom() >= 0 && point.y() - m_rect.bottom() <= 3) {
+                    m_resize |= ResizeImage::Bottom;
+                }
+                if (m_resize == ResizeImage::NoResize) {
+                    unsetCursor();
+                } else {
+                    if (m_resize == ResizeImage::TopLeft || m_resize == ResizeImage::BottomRight) {
+                        setCursor(Qt::SizeFDiagCursor);
+                    } else if (m_resize == ResizeImage::TopRight || m_resize == ResizeImage::BottomLeft) {
+                        setCursor(Qt::SizeBDiagCursor);
+                    } else if (m_resize == ResizeImage::Top || m_resize == ResizeImage::Bottom) {
+                        setCursor(Qt::SizeVerCursor);
+                    } else if (m_resize == ResizeImage::Left || m_resize == ResizeImage::Right) {
+                        setCursor(Qt::SizeHorCursor);
+                    } else {
+                        unsetCursor();
+                    }
+                }
+            }
+        } else if (m_state == State::FreeEdit) {
+            if (m_path.contains(event->pos())) {
+                if (m_tool->isDraw()) {
+                    setCursor(QCursor(QPixmap(":/images/pencil.png"), 0, 24));
+                } else {
+                    setCursor(Qt::SizeAllCursor);
+                }
+            } else {
+                unsetCursor();
+            }
         }
     }
 }
@@ -327,6 +417,7 @@ void MainWindow::start() {
     setCursor(Qt::CrossCursor);
     setVisible(true);
     m_state = State::Null;
+    m_resize = ResizeImage::NoResize;
     m_path.clear();
     m_press = false;
     activateWindow();
@@ -349,7 +440,7 @@ void MainWindow::showTool() {
         } else {
             point.setX(rect.right() + 2);
         }
-        point.setY(rect.bottom() + 2);
+        point.setY(rect.bottom() + 3);
     } else if (rect.top() >= m_tool->height() + 2) {
         if (rect.right() >= m_tool->width()) {
             point.setX(rect.right() - m_tool->width() + 2);
@@ -572,6 +663,7 @@ void MainWindow::save(const QString &path) {
 void MainWindow::end() {
     setWindowState((windowState() & ~(Qt::WindowMinimized | Qt::WindowMaximized | Qt::WindowFullScreen)));
     m_state = State::Null;
+    m_resize = ResizeImage::NoResize;
     m_path.clear();
     m_image = m_gray_image = QImage();
     m_gif = false;
