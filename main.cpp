@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QProcessEnvironment>
 #include <QStandardPaths>
 #include <QLockFile>
 #include <csignal>
@@ -44,7 +45,12 @@ int main(int argc, char *argv[])
         return 2;
     }
 
-
+#ifdef Q_OS_LINUX
+    if (QProcessEnvironment::systemEnvironment().value("DISPLAY").isEmpty()) {
+        qCritical() << "无图形环境";
+        return 1;
+    }
+#endif
     QApplication a(argc, argv);
 #ifdef Q_OS_LINUX
     if (QApplication::platformName() != "xcb") {
