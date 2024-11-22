@@ -22,7 +22,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void moveEvent(QMoveEvent *event);
-    inline void mouseDoubleClickEvent(QMouseEvent *event) { Q_UNUSED(event); }
+    void mouseDoubleClickEvent(QMouseEvent *event) { QWidget::mouseDoubleClickEvent(event); }
     void focusOutEvent(QFocusEvent *event);
     inline bool isValid() { return true; }
 private slots:
