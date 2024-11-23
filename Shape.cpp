@@ -1,5 +1,7 @@
+#if defined(_WIN32) || defined(_WIN64)
+#define _USE_MATH_DEFINES
+#endif
 #include "Shape.h"
-
 #include <cmath>
 
 Shape::Shape(const QPen &pen): m_pen(pen) {
