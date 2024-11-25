@@ -1,12 +1,25 @@
 #include "BaseWindow.h"
 
-BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press(false), m_shape(nullptr), m_tool(new Tool(this)) {
+BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shape{nullptr}, m_tool{new Tool{this}}, m_edit{nullptr} {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
 
     connect(m_tool, &Tool::save, this, &BaseWindow::save);
     connect(m_tool, &Tool::cancel, this, &BaseWindow::end);
     connect(this, &BaseWindow::choosePath, m_tool, &Tool::choosePath, static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::UniqueConnection));
+
+    m_edit = new QLineEdit{this};
+    m_edit->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
+    m_edit->setAttribute(Qt::WA_TranslucentBackground);
+    m_edit->setContextMenuPolicy(Qt::NoContextMenu);
+    m_edit->installEventFilter(this);
+    connect(m_edit, &QLineEdit::textEdited, this, [=](const QString &text) {
+        int width = m_edit->fontMetrics().horizontalAdvance(text) + 20;
+        int max = this->geometry().right() - m_edit->x();
+        if (width <= max) {
+            m_edit->setMinimumWidth(width);
+        }
+    });
 }
 
 BaseWindow::~BaseWindow() {
@@ -45,6 +58,27 @@ void BaseWindow::mouseDoubleClickEvent(QMouseEvent *event) {
     }
 }
 
+bool BaseWindow::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == m_edit && event->type() == QEvent::FocusOut) {
+        if (! m_vector.isEmpty()) {
+            Text *text = dynamic_cast<Text*>(m_vector.last());
+            if (text) {
+                const QString &s = m_edit->text();
+                if (s.isEmpty()) {
+                    delete m_vector.takeLast();
+                } else {
+                    text->setText(m_edit->text());
+                }
+            }
+        }
+        m_edit->clear();
+        m_edit->hide();
+        repaint();
+        return true;
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
 QImage BaseWindow::fullScreenshot() {
     QList<QScreen*> list = QApplication::screens();
     QSize size;
@@ -78,6 +112,32 @@ QRect BaseWindow::getRect(const QPoint &p1, const QPoint &p2) {
         height = -height;
     }
     return QRect(x, y, width, height);
+}
+
+void BaseWindow::setShape(const QPoint &point) {
+    if (m_shape != nullptr) {
+        qWarning() << "error" << m_shape;
+        safeDelete(m_shape);
+    }
+    m_shape = m_tool->getShape(point);
+    if (QString("Text") == m_shape->metaObject()->className()) {
+        const QPen &pen = m_shape->pen();
+        m_edit->setStyleSheet(QString("QLineEdit {"
+                                      " background: transparent;"
+                                      " border: 2px solid red;"
+                                      " color: %1;"
+                                      " font-size: %2px;"
+                                      " padding: 2px; }").arg(pen.color().name()).arg(pen.width()));
+        m_edit->move(mapToParent({point.x() - 4, point.y() - pen.width() - 3}));
+        int max = this->geometry().right() - m_edit->x();
+        if (m_edit->width() > max) {
+            m_edit->setMinimumWidth(max);
+        }
+        m_edit->setMaximumWidth(max);
+        m_edit->show();
+        m_edit->activateWindow();
+        m_edit->setFocus();
+    }
 }
 
 void BaseWindow::undo() {

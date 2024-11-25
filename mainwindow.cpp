@@ -22,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_menu->addAction("退出", this, &MainWindow::quit);
     m_tray = new QSystemTrayIcon(this);
     m_tray->setContextMenu(m_menu);
-    m_tray->setIcon(QIcon(":/images/screenshot.png"));
+    m_tray->setIcon(QIcon(":/images/screenshot.ico"));
     m_tray->setToolTip("截图");
     m_tray->show();
 
@@ -72,10 +72,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         } else if (contains(event->pos())) {
             if (event->button() == Qt::LeftButton) {
                 if (m_tool->isDraw()) {
-                    if (m_shape != nullptr) {
-                        qWarning() << "error" << m_shape;
-                    }
-                    m_shape = m_tool->getShape(event->pos());
+                    setShape(event->pos());
                 } else {
                     m_tool->hide();
                 }

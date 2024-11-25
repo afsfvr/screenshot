@@ -9,7 +9,8 @@
         <file>images/rectangle.png</file>
         <file>images/straightline.png</file>
         <file>images/curve.png</file>
-        <file>images/screenshot.png</file>
+        <file>images/screenshot.ico</file>
         <file>images/arrow.png</file>
+        <file>images/word.png</file>
     </qresource>
 </RCC>

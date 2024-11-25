@@ -60,3 +60,5 @@ FORMS += \
 
 RESOURCES += \
     res.qrc
+
+RC_ICONS = ./images/screenshot.ico

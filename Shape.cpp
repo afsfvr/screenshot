@@ -2,6 +2,7 @@
 #define _USE_MATH_DEFINES
 #endif
 #include "Shape.h"
+
 #include <cmath>
 
 Shape::Shape(const QPen &pen): m_pen(pen) {
@@ -19,6 +20,10 @@ void Shape::draw(QPainter &painter) {
         paint(painter);
         painter.restore();
     }
+}
+
+const QPen &Shape::pen() const {
+    return m_pen;
 }
 
 Rectangle::Rectangle(const QPoint &point, const QPen &pen): Shape(pen), p1(point), p2(-1, -1) {
@@ -169,4 +174,30 @@ void Arrow::paint(QPainter &painter) {
         m_path.closeSubpath();
     }
     painter.fillPath(m_path, m_pen.color());
+}
+
+Text::Text(const QPoint &point, const QPen &pen): Shape{pen}, m_point{point} {
+}
+
+void Text::addPoint(const QPoint &point) {
+    Q_UNUSED(point);
+}
+
+bool Text::isNull() {
+    return (! m_text.isNull() && m_text.isEmpty());
+}
+
+void Text::translate(const QPoint &point) {
+    m_point += point;
+}
+
+void Text::setText(const QString &text) {
+    m_text = text;
+}
+
+void Text::paint(QPainter &painter) {
+    QFont font = painter.font();
+    font.setPixelSize(m_pen.width());
+    painter.setFont(font);
+    painter.drawText(m_point, m_text);
 }

@@ -21,7 +21,8 @@ class Tool : public QWidget
         Ellipse,
         StraightLine,
         Line,
-        Arrow
+        Arrow,
+        Text,
     };
 
 public:
