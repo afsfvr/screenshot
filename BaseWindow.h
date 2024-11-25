@@ -53,6 +53,7 @@ protected:
     Shape *m_shape;
     Tool *m_tool;
     QLineEdit *m_edit;
+    bool m_ignore;
 };
 
 template<typename T>

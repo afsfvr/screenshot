@@ -118,7 +118,6 @@ void TopWidget::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         if (cursor().shape() == Qt::BitmapCursor) {
             if (m_shape == nullptr) {
-                qWarning() << "error: shape is null";
             } else if (! m_shape->isNull()){
                 m_vector.push_back(m_shape);
                 m_shape = nullptr;
@@ -138,7 +137,6 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
     auto shape =  cursor().shape();
     if (shape == Qt::BitmapCursor) {
         if (m_shape == nullptr) {
-            qWarning() << "error: shape is null";
         } else if (contains(event->pos())) {
             m_shape->addPoint(event->pos());
         }

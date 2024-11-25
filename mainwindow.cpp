@@ -115,7 +115,6 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
                     unsetCursor();
                 }
                 if (m_shape == nullptr) {
-                    qWarning() << "error: shape is null";
                 } else if (! m_shape->isNull()){
                     m_vector.push_back(m_shape);
                     m_shape = nullptr;
@@ -226,7 +225,6 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
             repaint();
         } else if (shape == Qt::BitmapCursor) {
             if (m_shape == nullptr) {
-                qWarning() << "error: shape is null";
             } else if (contains(event->pos())) {
                 m_shape->addPoint(event->pos());
             }
