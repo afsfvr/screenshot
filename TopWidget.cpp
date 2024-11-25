@@ -106,10 +106,7 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
         m_point = event->globalPos() - geometry().topLeft();
         if (m_tool->isDraw()) {
             setCursor(QCursor(QPixmap(":/images/pencil.png"), 0, 24));
-            if (m_shape != nullptr) {
-                qWarning() << "error" << m_shape;
-            }
-            m_shape = m_tool->getShape(event->pos());
+            setShape(event->pos());
         } else {
             setCursor(Qt::SizeAllCursor);
             m_tool->hide();

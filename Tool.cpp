@@ -33,6 +33,9 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     connect(ui->btn_arrow, &QPushButton::clicked, this, [=](){
         setDraw(! ui->btn_arrow->isFlat() ? ShapeEnum::Arrow : ShapeEnum::Null);
     });
+    connect(ui->btn_text, &QPushButton::clicked, this, [=](){
+        setDraw(! ui->btn_text->isFlat() ? ShapeEnum::Text : ShapeEnum::Null);
+    });
 
     setDraw(ShapeEnum::Null);
 
@@ -137,6 +140,7 @@ void Tool::setDraw(ShapeEnum shape) {
     ui->btn_straightline->setFlat(false);
     ui->btn_line->setFlat(false);
     ui->btn_arrow->setFlat(false);
+    ui->btn_text->setFlat(false);
     if (shape != ShapeEnum::Null) {
         ui->pen_widget->setVisible(true);
         setMinimumHeight(52);
@@ -171,6 +175,11 @@ void Tool::setDraw(ShapeEnum shape) {
         ui->btn_arrow->setFlat(true);
         ui->pen_widget->move(ui->btn_arrow->x(), 26);
         m_shape = new Arrow({}, {});
+        break;
+    case ShapeEnum::Text:
+        ui->btn_text->setFlat(true);
+        ui->pen_widget->move(ui->btn_text->x(), 26);
+        m_shape = new Text({}, {});
         break;
     default:
         ui->pen_widget->setVisible(false);

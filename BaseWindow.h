@@ -12,6 +12,7 @@
 #include <QStack>
 #include <QClipboard>
 #include <QPainterPath>
+#include <QLineEdit>
 
 #include "Shape.h"
 #include "Tool.h"
@@ -25,9 +26,11 @@ public:
 protected:
     virtual void keyPressEvent(QKeyEvent *event);
     virtual void mouseDoubleClickEvent(QMouseEvent *event);
+    virtual bool eventFilter(QObject *watched, QEvent *event);
 
     QImage fullScreenshot();
     QRect getRect(const QPoint &p1, const QPoint &p2);
+    void setShape(const QPoint &point);
     virtual bool isValid() = 0;
 protected slots:
     virtual void undo();
@@ -49,6 +52,7 @@ protected:
     QRect m_rect;
     Shape *m_shape;
     Tool *m_tool;
+    QLineEdit *m_edit;
 };
 
 template<typename T>
