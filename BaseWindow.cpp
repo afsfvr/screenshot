@@ -1,6 +1,6 @@
 #include "BaseWindow.h"
 
-BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shape{nullptr}, m_tool{new Tool{this}}, m_edit{nullptr} {
+BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shape{nullptr}, m_tool{new Tool{this}}, m_edit{nullptr}, m_ignore{false} {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
 
@@ -60,6 +60,7 @@ void BaseWindow::mouseDoubleClickEvent(QMouseEvent *event) {
 
 bool BaseWindow::eventFilter(QObject *watched, QEvent *event) {
     if (watched == m_edit && event->type() == QEvent::FocusOut) {
+        m_ignore = (QApplication::focusObject() == this);
         if (! m_vector.isEmpty()) {
             Text *text = dynamic_cast<Text*>(m_vector.last());
             if (text) {
@@ -115,6 +116,10 @@ QRect BaseWindow::getRect(const QPoint &p1, const QPoint &p2) {
 }
 
 void BaseWindow::setShape(const QPoint &point) {
+    if (m_ignore) {
+        m_ignore = false;
+        return;
+    }
     if (m_shape != nullptr) {
         qWarning() << "error" << m_shape;
         safeDelete(m_shape);
