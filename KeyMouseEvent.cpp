@@ -78,7 +78,7 @@ void KeyMouseEvent::run() {
     exec();
     XRecordDisableContext(display, context);
     XRecordFreeContext(display, context);
-    XFree(display);
+    XCloseDisplay(display);
 }
 
 void KeyMouseEvent::eventLoop() {

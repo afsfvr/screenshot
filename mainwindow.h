@@ -79,16 +79,16 @@ private:
     void initHotKey();
     void saveHotKey();
     bool contains(const QPoint &point);
-#ifdef Q_OS_WINDOWS
     void updateWindows();
+#ifdef Q_OS_WINDOWS
     void addRect(HWND hwnd);
-    QVector<QRect> m_windows;
-    int m_index;
 #endif
 
 #ifdef Q_OS_LINUX
     KeyMouseEvent *m_monitor;
 #endif
+    QVector<QRect> m_windows;
+    int m_index;
     QSystemTrayIcon *m_tray;
     QMenu *m_menu;
     States m_state;

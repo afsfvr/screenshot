@@ -96,13 +96,9 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         if (m_state == State::RectScreen) {
             if (event->pos() == m_point) {
-#if defined(Q_OS_WINDOWS)
                 if (m_index >= 0 && m_index < m_windows.size()) {
                     m_rect = m_windows[m_index];
                 }
-#else
-                m_rect = geometry();
-#endif
             } else {
                 m_rect = getRect(m_point, event->pos());
             }
@@ -233,7 +229,6 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
     } else if (event->buttons() == Qt::NoButton) {
         if (m_state == State::Null) {
             setCursor(Qt::CrossCursor);
-#ifdef Q_OS_WINDOWS
             for (int i = 0; i < m_windows.size(); ++i) {
                 if (m_windows[i].contains(event->pos())) {
                     if (i != m_index) {
@@ -242,7 +237,6 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                     break;
                 }
             }
-#endif
             repaint();
         } else if (m_state == State::RectEdit) {
             m_resize = ResizeImage::NoResize;
@@ -316,14 +310,12 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         painter.drawRect(m_rect.adjusted(- 1, - 1, 1, 1));
         painter.setClipRect(m_rect);
     } else {
-#if defined(Q_OS_WINDOWS)
         if (m_index >= 0 && m_index < m_windows.size()) {
             rect = m_windows[m_index];
             painter.drawImage(rect, m_image, rect);
             painter.drawRect(rect);
             painter.setClipRect(rect);
         }
-#endif
     }
     for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
         (*iter)->draw(painter);
@@ -386,9 +378,7 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *r
 #endif
 
 void MainWindow::start() {
-#ifdef Q_OS_WINDOWS
     updateWindows();
-#endif
     disconnect(SIGNAL(choosePath()));
     if (m_gif) {
         connect(this, SIGNAL(choosePath()), this, SLOT(save()), static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::UniqueConnection));
@@ -460,12 +450,10 @@ bool MainWindow::isValid() {
         return m_rect.isValid();
     } else if (m_state & State::Free) {
         return m_path.elementCount() > 2;
-#ifdef Q_OS_WINDOWS
     } else {
         if (m_index >= 0 && m_index < m_windows.size()) {
             return m_windows[m_index].isValid();
         }
-#endif
     }
     return false;
 }
@@ -770,18 +758,46 @@ bool MainWindow::contains(const QPoint &point) {
     return false;
 }
 
-#ifdef Q_OS_WINDOWS
 void MainWindow::updateWindows() {
     m_windows.clear();
     m_index = 0;
 
+#ifdef Q_OS_WINDOWS
     HWND hwnd = GetTopWindow(nullptr);
     addRect(hwnd);
 
     while ((hwnd = GetNextWindow(hwnd, GW_HWNDNEXT)) != nullptr) {
         addRect(hwnd);
     }
+#else
+    Display *display = XOpenDisplay(nullptr);
+    Window rootWindow = DefaultRootWindow(display);
+    Window parent;
+    Window* children;
+    unsigned int nChildren;
+    // 获取所有子窗口
+    if (XQueryTree(display, rootWindow, &rootWindow, &parent, &children, &nChildren)) {
+        for (int i = nChildren - 1; i >= 0; --i) {
+            XWindowAttributes attributes;
+            XGetWindowAttributes(display, children[i], &attributes);
 
+            if ((attributes.map_state != IsViewable) || (attributes.width == attributes.height && attributes.width <= 5)) {
+                continue;
+            }
+            char* windowName = nullptr;
+            if (XFetchName(display, children[i], &windowName) && strcmp(windowName, "No title") != 0) {
+                m_windows.push_back({attributes.x, attributes.y, attributes.width, attributes.height});
+            }
+            if (windowName) {
+                XFree(windowName);
+            }
+
+        }
+
+        XFree(children);
+    }
+    XCloseDisplay(display);
+#endif
 
     const QPoint &point = QCursor::pos();
     for (int i = 0; i < m_windows.size(); ++i) {
@@ -792,6 +808,7 @@ void MainWindow::updateWindows() {
     }
 }
 
+#ifdef Q_OS_WINDOWS
 void MainWindow::addRect(HWND hwnd) {
     if (IsWindow(hwnd) && IsWindowVisible(hwnd)) {
         QRect qrect;
