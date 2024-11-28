@@ -16,9 +16,7 @@ BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shap
     connect(m_edit, &QLineEdit::textEdited, this, [=](const QString &text) {
         int width = m_edit->fontMetrics().horizontalAdvance(text) + 20;
         int max = this->geometry().right() - m_edit->x();
-        if (width <= max) {
-            m_edit->setMinimumWidth(width);
-        }
+        m_edit->setMinimumWidth(std::min(width, max));
     });
 }
 
