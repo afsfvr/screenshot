@@ -784,14 +784,7 @@ void MainWindow::updateWindows() {
             if ((attributes.map_state != IsViewable) || (attributes.width == attributes.height && attributes.width <= 5)) {
                 continue;
             }
-            char* windowName = nullptr;
-            if (XFetchName(display, children[i], &windowName) && strcmp(windowName, "No title") != 0) {
-                m_windows.push_back({attributes.x, attributes.y, attributes.width, attributes.height});
-            }
-            if (windowName) {
-                XFree(windowName);
-            }
-
+            m_windows.push_back({attributes.x, attributes.y, attributes.width, attributes.height});
         }
 
         XFree(children);
