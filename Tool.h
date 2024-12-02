@@ -32,12 +32,17 @@ public:
     bool isDraw();
     Shape *getShape(const QPoint &point);
     void showEvent(QShowEvent *event);
+    bool eventFilter(QObject *watched, QEvent *event);
+    void focusOutEvent(QFocusEvent *event);
+    void keyPressEvent(QKeyEvent *event);
 public slots:
     void choosePath();
     void penChange(int value = -1);
     void setDraw(ShapeEnum shape);
     void topChange();
 signals:
+    void undo();
+    void redo();
     void save(const QString &path = "");
     void cancel();
     void penChanged(const QPen &pen, bool draw);
@@ -47,6 +52,7 @@ private:
     Ui::Tool *ui;
     QPen m_pen;
     Shape *m_shape;
+    bool m_ignore;
 };
 
 #endif // TOOL_H

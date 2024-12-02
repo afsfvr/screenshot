@@ -4,6 +4,8 @@ BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shap
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
 
+    connect(m_tool, &Tool::undo, this, &BaseWindow::undo);
+    connect(m_tool, &Tool::redo, this, &BaseWindow::redo);
     connect(m_tool, &Tool::save, this, &BaseWindow::save);
     connect(m_tool, &Tool::cancel, this, &BaseWindow::end);
     connect(this, &BaseWindow::choosePath, m_tool, &Tool::choosePath, static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::UniqueConnection));
