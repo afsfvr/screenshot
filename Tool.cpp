@@ -5,10 +5,11 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QImageWriter>
+#include <QKeyEvent>
 
 QString Tool::savePath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 
-Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr) {
+Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr), m_ignore{false} {
     ui->setupUi(this);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     connect(ui->pen_color,  SIGNAL(clicked()),         this, SLOT(penChange()));
@@ -46,6 +47,15 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     } else {
         m_pen.setColor(Qt::black);
     }
+
+    ui->btn_rectangle->installEventFilter(this);
+    ui->btn_ellipse->installEventFilter(this);
+    ui->btn_straightline->installEventFilter(this);
+    ui->btn_line->installEventFilter(this);
+    ui->btn_arrow->installEventFilter(this);
+    ui->btn_text->installEventFilter(this);
+    ui->btn_save->installEventFilter(this);
+    ui->pen_color->installEventFilter(this);
 }
 
 Tool::~Tool()
@@ -70,11 +80,42 @@ void Tool::showEvent(QShowEvent *event) {
     QWidget::showEvent(event);
 }
 
+bool Tool::eventFilter(QObject *watched, QEvent *event) {
+    if (event->type() == QEvent::FocusIn) {
+        setFocus();
+        return true;
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
+void Tool::focusOutEvent(QFocusEvent *event) {
+    Q_UNUSED(event);
+    if (QApplication::focusObject() == nullptr && ! m_ignore) {
+        this->setDraw(ShapeEnum::Null);
+        this->hide();
+    }
+}
+
+void Tool::keyPressEvent(QKeyEvent *event) {
+    if (event->modifiers() == Qt::ControlModifier) {
+        if (event->key() == Qt::Key_S) {
+            emit save();
+        } else if (event->key() == Qt::Key_Z) {
+            emit undo();
+        } else if (event->key() == Qt::Key_Y) {
+            emit redo();
+        }
+    } else if (event->key() == Qt::NoModifier) {
+        if (event->key() == Qt::Key_Escape) {
+            emit cancel();
+        }
+    }
+}
+
 void Tool::choosePath() {
     const QString format = "png";
     if (savePath.isEmpty())
         savePath = QDir::currentPath();
-    // savePath += tr("/untitled.") + format;
 
     QFileDialog fileDialog(this, tr("选择文件"), savePath);
     fileDialog.setAcceptMode(QFileDialog::AcceptSave);
@@ -122,7 +163,10 @@ void Tool::choosePath() {
 
 void Tool::penChange(int value) {
     if (value == -1) {
-        QColor color = QColorDialog::getColor(m_pen.color(), this);
+        m_ignore = true;
+        QColor color = QColorDialog::getColor(m_pen.color(), this, "请选择画笔颜色");
+        m_ignore = false;
+        setFocus();
         if (color.isValid()) {
             m_pen.setColor(color);
             ui->pen_color->setStyleSheet(QString("QPushButton { background-color: %1; }").arg(color.name()));
