@@ -16,8 +16,12 @@ HotKeyWidget::HotKeyWidget(HotKey *capture, HotKey *record, QWidget *parent):
     connect(ui->label, &QLabel::linkActivated, this, [](const QString &link){
 #if defined(Q_OS_LINUX)
         if (system(QString("nautilus %1 >/dev/null 2>&1").arg(link).toStdString().c_str()) != 0) {
-            if (system(QString("dolphin %1 >/dev/null 2>&1").arg(link).toStdString().c_str()) != 0) {
-                system(QString("thunar %1 >/dev/null 2>&1").arg(link).toStdString().c_str());
+            if (system(QString("thunar %1 >/dev/null 2>&1").arg(link).toStdString().c_str()) != 0) {
+                QFileInfo info{link};
+                QString path = info.path();
+                if (system(QString("dolphin %1 >/dev/null 2>&1").arg(path).toStdString().c_str()) != 0) {
+                    qDebug() << system(QString("xdg-open %1 >/dev/null 2>&1").arg(path).toStdString().c_str());
+                }
             }
         }
 #else
