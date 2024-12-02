@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
 #endif
     QApplication a(argc, argv);
 #ifdef Q_OS_LINUX
-    if (QApplication::platformName() != "xcb") {
-        qCritical() << "不支持xcb";
+    if (QApplication::platformName() != "xcb" || qgetenv("XDG_SESSION_TYPE") != "x11") {
+        qCritical() << "不是Xorg";
         return 1;
     }
     signal(SIGINT, signal_handler);
