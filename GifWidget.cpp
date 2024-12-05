@@ -174,13 +174,16 @@ void GifWidget::init() {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_DeleteOnClose);
+    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop);
 
     setVisible(true);
     activateWindow();
     repaint();
 
     m_widget = new QWidget;
+    m_widget->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     m_widget->setAttribute(Qt::WA_DeleteOnClose);
+    m_widget->setAttribute(Qt::WA_X11NetWmWindowTypeDesktop);
     m_layout = new QHBoxLayout{m_widget};
     m_layout->setSpacing(2);
     m_layout->setContentsMargins(0, 0, 0, 0);
@@ -204,7 +207,6 @@ void GifWidget::init() {
         m_widget = nullptr;
         this->close();
     });
-    m_widget->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     m_widget->setWindowOpacity(0.5);
     m_widget->setMinimumSize(105, 25);
     m_widget->setMaximumSize(105, 25);
@@ -214,6 +216,8 @@ void GifWidget::init() {
         point.setY(rect.bottom());
     } else if (rect.top() >= 25) {
         point.setY(rect.top() - 25);
+    } else {
+        point.setY(rect.top());
     }
     if (rect.left() + 105 <= m_size.width()) {
         point.setX(rect.left());
