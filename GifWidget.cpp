@@ -10,6 +10,7 @@
 #include <QScreen>
 #include <QDateTime>
 #include <malloc.h>
+#include <QTimer>
 
 GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent): QWidget{parent}, m_writer{nullptr}, m_timerId{0}, m_size{screenSize}, m_preTime{0} {
     m_tmp = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + QUuid::createUuid().toString();
@@ -226,6 +227,10 @@ void GifWidget::init() {
     }
     m_widget->move(point);
     m_widget->show();
+
+    QTimer *timer = new QTimer{this};
+    connect(timer, &QTimer::timeout, this, [=](){ if (m_widget != nullptr) { this->activateWindow(); m_widget->activateWindow(); } });
+    timer->start(500);
 
     m_run = true;
     m_thread = new std::thread{func, &m_run, &m_mutex, &m_cond, &m_queue};

@@ -95,15 +95,18 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         if (m_state == State::RectScreen) {
-            if (event->pos() == m_point) {
+            m_rect = getRect(m_point, event->pos());
+            if (m_rect.width() <= 0 || m_rect.height() <= 0) {
                 if (m_index >= 0 && m_index < m_windows.size()) {
                     m_rect = m_windows[m_index];
                 }
-            } else {
-                m_rect = getRect(m_point, event->pos());
             }
-            m_state = State::RectEdit;
-            showTool();
+            if (m_rect.width() <= 0 || m_rect.height() <= 0) {
+                m_state = State::Null;
+            } else {
+                m_state = State::RectEdit;
+                showTool();
+            }
             repaint();
         } else if (m_state & State::Edit) {
             if (cursor().shape() == Qt::BitmapCursor) {
@@ -644,7 +647,6 @@ void MainWindow::save(const QString &path) {
 }
 
 void MainWindow::end() {
-    setWindowState((windowState() & ~(Qt::WindowMinimized | Qt::WindowMaximized | Qt::WindowFullScreen)));
     m_state = State::Null;
     m_resize = ResizeImage::NoResize;
     m_path.clear();
