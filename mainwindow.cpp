@@ -99,6 +99,19 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
             if (m_rect.width() <= 0 || m_rect.height() <= 0) {
                 if (m_index >= 0 && m_index < m_windows.size()) {
                     m_rect = m_windows[m_index];
+                    const QRect &rect = this->geometry();
+                    if (m_rect.top() < rect.top()) {
+                        m_rect.setTop(rect.top());
+                    }
+                    if (m_rect.left() < rect.left()) {
+                        m_rect.setLeft(rect.left());
+                    }
+                    if (m_rect.right() > rect.right()) {
+                        m_rect.setRight(rect.right());
+                    }
+                    if (m_rect.bottom() > rect.bottom()) {
+                        m_rect.setBottom(rect.bottom());
+                    }
                 }
             }
             if (m_rect.width() <= 0 || m_rect.height() <= 0) {
