@@ -355,6 +355,7 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         } else {
             point.setY(cursor.y() - 125 - 20);
         }
+        painter.fillRect(point.x() - 3, point.y() - 3 ,90, 130, QColor(0, 0, 0, 150));
         painter.drawRect(point.x() - 1, point.y() - 1, 84 + 2, 84 + 2);
         painter.drawImage(QRect(point.x(), point.y(), 84, 84), m_image, QRect(cursor.x() - 10, cursor.y() - 10, 21, 21));
         painter.drawLine(point.x(), point.y() + 42, point.x() + 84, point.y() + 42);
