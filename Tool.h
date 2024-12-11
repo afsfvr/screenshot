@@ -32,6 +32,7 @@ public:
     bool isDraw();
     Shape *getShape(const QPoint &point);
     void showEvent(QShowEvent *event);
+    void hideEvent(QHideEvent *event);
     bool eventFilter(QObject *watched, QEvent *event);
     void focusOutEvent(QFocusEvent *event);
     void keyPressEvent(QKeyEvent *event);

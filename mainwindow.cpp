@@ -139,7 +139,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
             showTool();
         }
     } else if (event->button() == Qt::RightButton) {
-        if (m_state == State::FreeScreen && m_path.elementCount() > 2) {
+        if (m_state == State::FreeScreen && m_path.elementCount() > 1) {
             m_state = State::FreeEdit;
             m_path.closeSubpath();
             showTool();

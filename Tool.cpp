@@ -77,8 +77,17 @@ Shape *Tool::getShape(const QPoint &point) {
 }
 
 void Tool::showEvent(QShowEvent *event) {
-    setDraw(ShapeEnum::Null);
+    if (m_shape != nullptr) {
+        setDraw(ShapeEnum::Null);
+    }
     QWidget::showEvent(event);
+}
+
+void Tool::hideEvent(QHideEvent *event) {
+    if (m_shape != nullptr) {
+        setDraw(ShapeEnum::Null);
+    }
+    QWidget::hideEvent(event);
 }
 
 bool Tool::eventFilter(QObject *watched, QEvent *event) {
