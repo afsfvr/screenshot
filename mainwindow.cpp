@@ -397,6 +397,7 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *r
 void MainWindow::start() {
     updateWindows();
     disconnect(SIGNAL(choosePath()));
+    m_tool->setEditShow(! m_gif);
     if (m_gif) {
         connect(this, SIGNAL(choosePath()), this, SLOT(save()), static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::UniqueConnection));
     } else {

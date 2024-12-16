@@ -36,6 +36,7 @@ public:
     bool eventFilter(QObject *watched, QEvent *event);
     void focusOutEvent(QFocusEvent *event);
     void keyPressEvent(QKeyEvent *event);
+    void setEditShow(bool show);
 public slots:
     void choosePath();
     void penChange(int value = -1);
