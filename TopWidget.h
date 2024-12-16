@@ -24,7 +24,8 @@ protected:
     void moveEvent(QMoveEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event) { QWidget::mouseDoubleClickEvent(event); }
     void focusOutEvent(QFocusEvent *event);
-    inline bool isValid() { return true; }
+    bool isValid() const { return true; }
+    QRect getGeometry() const;
 private slots:
     void save(const QString &path="");
     void end();

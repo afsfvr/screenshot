@@ -31,7 +31,8 @@ protected:
     QImage fullScreenshot();
     QRect getRect(const QPoint &p1, const QPoint &p2);
     void setShape(const QPoint &point);
-    virtual bool isValid() = 0;
+    virtual bool isValid() const = 0;
+    virtual QRect getGeometry() const = 0;
 protected slots:
     virtual void undo();
     virtual void redo();

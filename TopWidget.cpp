@@ -159,6 +159,10 @@ void TopWidget::focusOutEvent(QFocusEvent *event) {
     }
 }
 
+QRect TopWidget::getGeometry() const {
+    return this->geometry();
+}
+
 void TopWidget::save(const QString &path) {
     if (m_path.isEmpty()) {
         m_image = this->grab().toImage();

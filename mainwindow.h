@@ -62,7 +62,8 @@ protected:
 #endif
     void start();
     void showTool();
-    bool isValid();
+    bool isValid() const;
+    QRect getGeometry() const;
 private slots:
 #ifdef Q_OS_LINUX
     void keyPress(int code, Qt::KeyboardModifiers modifiers);
