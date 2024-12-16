@@ -122,6 +122,35 @@ void Tool::keyPressEvent(QKeyEvent *event) {
     }
 }
 
+void Tool::setEditShow(bool show) {
+    if (show) {
+        this->setMinimumWidth(260);
+        this->setMaximumWidth(260);
+        ui->btn_rectangle->setVisible(true);
+        ui->btn_ellipse->setVisible(true);
+        ui->btn_straightline->setVisible(true);
+        ui->btn_line->setVisible(true);
+        ui->btn_arrow->setVisible(true);
+        ui->btn_text->setVisible(true);
+        ui->btn_top->setVisible(true);
+        ui->btn_save->setVisible(true);
+    } else {
+        if (m_shape != nullptr) {
+            setDraw(ShapeEnum::Null);
+        }
+        ui->btn_rectangle->setVisible(false);
+        ui->btn_ellipse->setVisible(false);
+        ui->btn_straightline->setVisible(false);
+        ui->btn_line->setVisible(false);
+        ui->btn_arrow->setVisible(false);
+        ui->btn_text->setVisible(false);
+        ui->btn_top->setVisible(false);
+        ui->btn_save->setVisible(false);
+        this->setMinimumWidth(52);
+        this->setMaximumWidth(52);
+    }
+}
+
 void Tool::choosePath() {
     const QString format = "png";
     if (savePath.isEmpty())
