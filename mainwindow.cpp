@@ -216,7 +216,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
         } if (shape == Qt::SizeAllCursor) {
             QPoint point = event->pos() - m_point;
             m_point = event->pos();
-            QRect rect = (m_state & State::Free) ? m_path.boundingRect().toRect() : m_rect;
+            const QRect &rect = getGeometry();
             if (point.x() + rect.left() < 0 || point.x() + rect.right() > width()) {
                 point.setX(0);
             }
@@ -430,12 +430,7 @@ void MainWindow::start() {
 void MainWindow::showTool() {
     if (! this->isVisible()) return;
     QPoint point;
-    QRect rect;
-    if (m_state & State::Free) {
-        rect = m_path.boundingRect().toRect();
-    } else {
-        rect = m_rect;
-    }
+    const QRect &rect = getGeometry();
 
     if (rect.bottom() + m_tool->height() + 2 <= this->height()) {
         if (rect.right() + 2 >= m_tool->width()) {
@@ -463,7 +458,7 @@ void MainWindow::showTool() {
     m_tool->move(point);
 }
 
-bool MainWindow::isValid() {
+bool MainWindow::isValid() const {
     if (m_state & State::Rect) {
         return m_rect.isValid();
     } else if (m_state & State::Free) {
@@ -474,6 +469,16 @@ bool MainWindow::isValid() {
         }
     }
     return false;
+}
+
+QRect MainWindow::getGeometry() const {
+    if (m_state & State::Free) {
+        return m_path.boundingRect().toRect();
+    } else if (m_state & State::Rect) {
+        return m_rect;
+    } else {
+        return {};
+    }
 }
 
 void MainWindow::updateHotkey() {
@@ -562,7 +567,7 @@ void MainWindow::updateCapture() {
 }
 
 void MainWindow::updateRecord() {
- #ifdef Q_OS_WINDOWS
+#ifdef Q_OS_WINDOWS
     UnregisterHotKey((HWND)this->winId(), 2);
     quint32 fsModifiers = 0;
 #endif
