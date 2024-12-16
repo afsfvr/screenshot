@@ -229,7 +229,14 @@ void GifWidget::init() {
     m_widget->show();
 
     QTimer *timer = new QTimer{this};
-    connect(timer, &QTimer::timeout, this, [=](){ if (m_widget != nullptr) { this->activateWindow(); m_widget->activateWindow(); } });
+    connect(timer, &QTimer::timeout, this, [=](){
+        if (m_widget) {
+            QWidget *w = QApplication::focusWidget();
+            if (! m_widget->isAncestorOf(w)) {
+                m_widget->activateWindow();
+            }
+        }
+    });
     timer->start(500);
 
     m_run = true;
