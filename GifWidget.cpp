@@ -228,17 +228,6 @@ void GifWidget::init() {
     m_widget->move(point);
     m_widget->show();
 
-    QTimer *timer = new QTimer{this};
-    connect(timer, &QTimer::timeout, this, [=](){
-        if (m_widget) {
-            QWidget *w = QApplication::focusWidget();
-            if (! m_widget->isAncestorOf(w)) {
-                m_widget->activateWindow();
-            }
-        }
-    });
-    timer->start(500);
-
     m_run = true;
     m_thread = new std::thread{func, &m_run, &m_mutex, &m_cond, &m_queue};
 }
