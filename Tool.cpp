@@ -56,6 +56,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     ui->btn_arrow->installEventFilter(this);
     ui->btn_text->installEventFilter(this);
     ui->btn_save->installEventFilter(this);
+    ui->pen_size->installEventFilter(this);
     ui->pen_color->installEventFilter(this);
 }
 
@@ -91,8 +92,14 @@ void Tool::hideEvent(QHideEvent *event) {
 }
 
 bool Tool::eventFilter(QObject *watched, QEvent *event) {
-    if (event->type() == QEvent::FocusIn) {
+    if (event->type() == QEvent::FocusIn && watched != ui->pen_size) {
         setFocus();
+        return true;
+    } else if (event->type() == QEvent::FocusOut && watched == ui->pen_size) {
+        if (QApplication::focusObject() == nullptr && ! m_ignore) {
+            this->setDraw(ShapeEnum::Null);
+            this->hide();
+        }
         return true;
     }
     return QWidget::eventFilter(watched, event);
