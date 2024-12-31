@@ -41,6 +41,43 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
         setDraw(! ui->btn_text->isFlat() ? ShapeEnum::Text : ShapeEnum::Null);
     });
 
+    connect(ui->bold, &QPushButton::clicked, this, [=]() {
+        if (ui->bold->isFlat()) {
+            ui->bold->setFlat(false);
+            m_font.setBold(false);
+        } else {
+            ui->bold->setFlat(true);
+            m_font.setBold(true);
+        }
+    });
+    connect(ui->italic, &QPushButton::clicked, this, [=]() {
+        if (ui->italic->isFlat()) {
+            ui->italic->setFlat(false);
+            m_font.setItalic(false);
+        } else {
+            ui->italic->setFlat(true);
+            m_font.setItalic(true);
+        }
+    });
+    connect(ui->underline, &QPushButton::clicked, this, [=]() {
+        if (ui->underline->isFlat()) {
+            ui->underline->setFlat(false);
+            m_font.setUnderline(false);
+        } else {
+            ui->underline->setFlat(true);
+            m_font.setUnderline(true);
+        }
+    });
+    connect(ui->strikeout, &QPushButton::clicked, this, [=]() {
+        if (ui->strikeout->isFlat()) {
+            ui->strikeout->setFlat(false);
+            m_font.setStrikeOut(false);
+        } else {
+            ui->strikeout->setFlat(true);
+            m_font.setStrikeOut(true);
+        }
+    });
+
     setDraw(ShapeEnum::Null);
 
     m_pen.setWidth(ui->pen_size->value());
@@ -74,7 +111,11 @@ Shape *Tool::getShape(const QPoint &point) {
     if (m_shape == nullptr) {
         return nullptr;
     } else {
-        return m_shape->getInstance(point, m_pen);
+        if (ui->btn_text->isFlat()) {
+            return new Text(point, m_pen, m_font, ui->transparency->value(), ui->fill->isChecked());
+        } else {
+            return m_shape->getInstance(point, m_pen, ui->transparency->value(), ui->fill->isChecked());
+        }
     }
 }
 
@@ -220,6 +261,21 @@ void Tool::penChange(int value) {
 }
 
 void Tool::setDraw(ShapeEnum shape) {
+    QString s = QString("%1,%2,%3,%4").arg(m_pen.width()).arg(ui->fill->isChecked()).arg(m_pen.color().name()).arg(ui->transparency->value());
+    if (ui->btn_rectangle->isFlat()) {
+        ui->btn_rectangle->setStatusTip(s);
+    } else if (ui->btn_ellipse->isFlat()) {
+        ui->btn_ellipse->setStatusTip(s);
+    } else if (ui->btn_straightline->isFlat()) {
+        ui->btn_straightline->setStatusTip(s);
+    } else if (ui->btn_line->isFlat()) {
+        ui->btn_line->setStatusTip(s);
+    } else if (ui->btn_arrow->isFlat()) {
+        ui->btn_arrow->setStatusTip(s);
+    } else if (ui->btn_text->isFlat()) {
+        ui->btn_text->setStatusTip(s);
+    }
+
     ui->btn_rectangle->setFlat(false);
     ui->btn_ellipse->setFlat(false);
     ui->btn_straightline->setFlat(false);
@@ -228,8 +284,20 @@ void Tool::setDraw(ShapeEnum shape) {
     ui->btn_text->setFlat(false);
     if (shape != ShapeEnum::Null) {
         ui->pen_widget->setVisible(true);
+        ui->fill->setVisible(true);
         setMinimumHeight(52);
         setMaximumHeight(52);
+        if (shape == ShapeEnum::Text) {
+            ui->bold->setVisible(true);
+            ui->italic->setVisible(true);
+            ui->underline->setVisible(true);
+            ui->strikeout->setVisible(true);
+        } else {
+            ui->bold->setVisible(false);
+            ui->italic->setVisible(false);
+            ui->underline->setVisible(false);
+            ui->strikeout->setVisible(false);
+        }
     }
     if (m_shape != nullptr) {
         delete m_shape;
@@ -237,40 +305,53 @@ void Tool::setDraw(ShapeEnum shape) {
     }
     switch (shape) {
     case ShapeEnum::Rectangle:
+        s = ui->btn_rectangle->statusTip();
         ui->btn_rectangle->setFlat(true);
-        ui->pen_widget->move(ui->btn_rectangle->x(), 26);
         m_shape = new Rectangle({}, {});
         break;
     case ShapeEnum::Ellipse:
+        s = ui->btn_ellipse->statusTip();
         ui->btn_ellipse->setFlat(true);
-        ui->pen_widget->move(ui->btn_ellipse->x(), 26);
         m_shape = new Ellipse({}, {});
         break;
     case ShapeEnum::StraightLine:
+        ui->fill->setVisible(false);
+        s = ui->btn_straightline->statusTip();
         ui->btn_straightline->setFlat(true);
-        ui->pen_widget->move(ui->btn_straightline->x(), 26);
         m_shape = new StraightLine({}, {});
         break;
     case ShapeEnum::Line:
+        s = ui->btn_line->statusTip();
         ui->btn_line->setFlat(true);
-        ui->pen_widget->move(ui->btn_line->x(), 26);
         m_shape = new Line({}, {});
         break;
     case ShapeEnum::Arrow:
+        s = ui->btn_arrow->statusTip();
         ui->btn_arrow->setFlat(true);
-        ui->pen_widget->move(ui->btn_arrow->x(), 26);
         m_shape = new Arrow({}, {});
         break;
     case ShapeEnum::Text:
+        ui->fill->setVisible(false);
+        s = ui->btn_text->statusTip();
         ui->btn_text->setFlat(true);
-        ui->pen_widget->move(ui->btn_text->x(), 26);
         m_shape = new Text({}, {});
         break;
     default:
+        s = "";
         ui->pen_widget->setVisible(false);
         setMinimumHeight(26);
         setMaximumHeight(26);
         break;
+    }
+
+    QStringList list = s.split(",");
+    if (list.size() == 4) {
+        ui->pen_size->setValue(list[0].toInt());
+        ui->fill->setChecked(list[1].toInt());
+        QColor color{list[2]};
+        ui->pen_color->setStyleSheet(QString("QPushButton { background-color: %1; }").arg(color.name()));
+        m_pen.setColor(color);
+        ui->transparency->setValue(list[3].toFloat());
     }
 }
 

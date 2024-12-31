@@ -70,6 +70,30 @@ void TopWidget::showTool() {
     m_tool->move(point);
 }
 
+void TopWidget::keyPressEvent(QKeyEvent *event) {
+    BaseWindow::keyPressEvent(event);
+    if (event->modifiers() == Qt::NoModifier) {
+        switch (event->key()) {
+        case Qt::Key_Left:
+            move(this->x() - 1, this->y());
+            showTool();
+            break;
+        case Qt::Key_Right:
+            move(this->x() + 1, this->y());
+            showTool();
+            break;
+        case Qt::Key_Up:
+            move(this->x(), this->y() - 1);
+            showTool();
+            break;
+        case Qt::Key_Down:
+            move(this->x(), this->y() + 1);
+            showTool();
+            break;
+        }
+    }
+}
+
 void TopWidget::closeEvent(QCloseEvent *event) {
     qInfo() << QString("关闭置顶窗口:(%1,%2 %3x%4)").arg(x()).arg(y()).arg(m_image.width()).arg(m_image.height());
     m_tool->close();

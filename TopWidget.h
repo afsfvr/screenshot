@@ -15,6 +15,7 @@ public:
     void showTool();
 
 protected:
+    void keyPressEvent(QKeyEvent *event);
     void closeEvent(QCloseEvent *event);
     void paintEvent(QPaintEvent *event);
     void hideEvent(QHideEvent *event);
