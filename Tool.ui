@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>260</width>
+    <width>312</width>
     <height>52</height>
    </rect>
   </property>
@@ -217,6 +217,58 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btn_undo">
+       <property name="minimumSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>撤销(Ctrl+Z)</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="res.qrc">
+         <normaloff>:/images/undo.png</normaloff>:/images/undo.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_redo">
+       <property name="minimumSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>恢复(Ctrl+Z)</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="res.qrc">
+         <normaloff>:/images/redo.png</normaloff>:/images/redo.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btn_save">
        <property name="minimumSize">
         <size>
@@ -231,7 +283,7 @@
         </size>
        </property>
        <property name="toolTip">
-        <string>保存到文件</string>
+        <string>保存到文件(Ctrl+S)</string>
        </property>
        <property name="text">
         <string/>
@@ -257,7 +309,7 @@
         </size>
        </property>
        <property name="toolTip">
-        <string>关闭</string>
+        <string>关闭(Esc)</string>
        </property>
        <property name="text">
         <string/>
@@ -283,7 +335,7 @@
         </size>
        </property>
        <property name="toolTip">
-        <string>保存到剪贴板</string>
+        <string>保存到剪贴板(Ctrl+C)</string>
        </property>
        <property name="text">
         <string/>
