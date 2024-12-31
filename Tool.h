@@ -55,6 +55,7 @@ private:
     QPen m_pen;
     Shape *m_shape;
     bool m_ignore;
+    QFont m_font;
 };
 
 #endif // TOOL_H

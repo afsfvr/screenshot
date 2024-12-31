@@ -62,7 +62,7 @@ bool BaseWindow::eventFilter(QObject *watched, QEvent *event) {
     if (watched == m_edit && event->type() == QEvent::FocusOut) {
         m_ignore = (QApplication::focusObject() == this);
         if (! m_vector.isEmpty()) {
-            Text *text = dynamic_cast<Text*>(m_vector.last());
+            Text *text = qobject_cast<Text*>(m_vector.last());
             if (text) {
                 const QString &s = m_edit->text();
                 if (s.isEmpty()) {
@@ -125,9 +125,12 @@ void BaseWindow::setShape(const QPoint &point) {
         safeDelete(m_shape);
     }
     m_shape = m_tool->getShape(point);
-    if (QString("Text") == m_shape->metaObject()->className()) {
-        m_edit->setMinimumWidth(50);
-        m_edit->setMaximumWidth(50);
+    Text *text = qobject_cast<Text*>(m_shape);
+    if (text) {
+        m_edit->setMinimumWidth(150);
+        m_edit->setMaximumWidth(150);
+        m_edit->setFont(text->font());
+        m_edit->setWindowOpacity(m_shape->opacity());
         const QPen &pen = m_shape->pen();
         m_edit->setStyleSheet(QString("QLineEdit {"
                                       " background: transparent;"
@@ -135,15 +138,16 @@ void BaseWindow::setShape(const QPoint &point) {
                                       " color: %1;"
                                       " font-size: %2px;"
                                       " padding: 2px; }").arg(pen.color().name()).arg(pen.width()));
-        m_edit->move(mapToParent({point.x() - 4, point.y() - pen.width() - 3}));
+        m_edit->show();
+        m_edit->activateWindow();
+        m_edit->setFocus();
+
+        m_edit->move(mapToParent({point.x() - 6, point.y() - qRound((m_edit->height() - m_edit->fontMetrics().height()) / 2.0)}));
         int max = getGeometry().right() - m_edit->x();
         if (m_edit->width() > max) {
             m_edit->setMinimumWidth(max);
         }
         m_edit->setMaximumWidth(max);
-        m_edit->show();
-        m_edit->activateWindow();
-        m_edit->setFocus();
     }
 }
 

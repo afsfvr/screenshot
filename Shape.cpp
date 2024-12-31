@@ -5,7 +5,8 @@
 
 #include <cmath>
 
-Shape::Shape(const QPen &pen): m_pen(pen) {
+Shape::Shape(const QPen &pen, float opacity, bool fill): m_pen(pen), m_fill{fill} {
+    setOpacity(opacity);
 }
 
 void Shape::translate(int x, int y) {
@@ -15,6 +16,7 @@ void Shape::translate(int x, int y) {
 void Shape::draw(QPainter &painter) {
     if (! isNull()) {
         painter.save();
+        painter.setOpacity(m_opacity);
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setPen(m_pen);
         paint(painter);
@@ -22,11 +24,33 @@ void Shape::draw(QPainter &painter) {
     }
 }
 
+void Shape::setOpacity(float opacity) {
+    if (opacity > 1) {
+        m_opacity = 1.0f;
+    } else if (opacity < 0.1) {
+        m_opacity = 0.1f;
+    } else {
+        m_opacity = opacity;
+    }
+}
+
+float Shape::opacity() const {
+    return m_opacity;
+}
+
+void Shape::setFill(bool fill) {
+    m_fill = fill;
+}
+
+bool Shape::fill() const {
+    return m_fill;
+}
+
 const QPen &Shape::pen() const {
     return m_pen;
 }
 
-Rectangle::Rectangle(const QPoint &point, const QPen &pen): Shape(pen), p1(point), p2(-1, -1) {
+Rectangle::Rectangle(const QPoint &point, const QPen &pen, float opacity, bool fill): Shape{pen, opacity, fill}, p1{point}, p2{-1, -1} {
 }
 
 void Rectangle::addPoint(const QPoint &point) {
@@ -55,10 +79,14 @@ void Rectangle::paint(QPainter &painter) {
         y = p2.y();
         height = -height;
     }
-    painter.drawRect(x, y, width, height);
+    if (m_fill) {
+        painter.fillRect(x, y, width, height, m_pen.color());
+    } else {
+        painter.drawRect(x, y, width, height);
+    }
 }
 
-Ellipse::Ellipse(const QPoint &point, const QPen &pen): Shape(pen), p1(point), p2(-1, -1) {
+Ellipse::Ellipse(const QPoint &point, const QPen &pen, float opacity, bool fill): Shape{pen, opacity, fill}, p1{point}, p2{-1, -1} {
 }
 
 void Ellipse::addPoint(const QPoint &point) {
@@ -87,10 +115,15 @@ void Ellipse::paint(QPainter &painter) {
         y = p2.y();
         height = -height;
     }
-    painter.drawEllipse(x, y, width, height);
+    if (m_fill) {
+        painter.setClipRegion({x, y, width, height, QRegion::Ellipse});
+        painter.fillRect(x, y, width, height, m_pen.color());
+    } else {
+        painter.drawEllipse(x, y, width, height);
+    }
 }
 
-StraightLine::StraightLine(const QPoint &point, const QPen &pen): Shape(pen), p1(point), p2(-1, -1) {
+StraightLine::StraightLine(const QPoint &point, const QPen &pen, float opacity, bool fill): Shape{pen, opacity, fill}, p1{point}, p2{-1, -1} {
 }
 
 void StraightLine::addPoint(const QPoint &point) {
@@ -110,7 +143,7 @@ void StraightLine::paint(QPainter &painter) {
     painter.drawLine(p1, p2);
 }
 
-Line::Line(const QPoint &point, const QPen &pen): Shape(pen) {
+Line::Line(const QPoint &point, const QPen &pen, float opacity, bool fill): Shape{pen, opacity, fill} {
     m_path.moveTo(point);
 }
 
@@ -127,10 +160,15 @@ void Line::translate(const QPoint &point) {
 }
 
 void Line::paint(QPainter &painter) {
-    painter.drawPath(m_path);
+    if (m_fill) {
+        painter.fillPath(m_path, m_pen.color());
+    } else {
+        painter.drawPath(m_path);
+    }
 }
 
-Arrow::Arrow(const QPoint &point, const QPen &pen): Shape(pen), m_p1(point) {
+Arrow::Arrow(const QPoint &point, const QPen &pen, float opacity, bool fill): Shape{pen, opacity, fill}, m_p1{point}, m_pen2{pen} {
+    m_pen2.setWidth(2);
 }
 
 void Arrow::addPoint(const QPoint &point) {
@@ -173,10 +211,23 @@ void Arrow::paint(QPainter &painter) {
         m_path.lineTo(arrow22);
         m_path.closeSubpath();
     }
-    painter.fillPath(m_path, m_pen.color());
+    if (m_fill) {
+        painter.fillPath(m_path, m_pen.color());
+    } else {
+        painter.setPen(m_pen2);
+        painter.drawPath(m_path);
+    }
 }
 
-Text::Text(const QPoint &point, const QPen &pen): Shape{pen}, m_point{point} {
+Text::Text(const QPoint &point, const QPen &pen, float opacity, bool fill): Shape{pen, opacity, fill}, m_point{point} {
+    m_font.setPixelSize(pen.width());
+    QFontMetrics metrics{m_font};
+    m_point.ry() += metrics.ascent();
+}
+
+Text::Text(const QPoint &point, const QPen &pen, const QFont &font, float opacity, bool fill): Text{point, pen, opacity, fill} {
+    m_font = font;
+    m_font.setPixelSize(pen.width());
 }
 
 void Text::addPoint(const QPoint &point) {
@@ -195,9 +246,11 @@ void Text::setText(const QString &text) {
     m_text = text;
 }
 
+const QFont &Text::font() const {
+    return m_font;
+}
+
 void Text::paint(QPainter &painter) {
-    QFont font = painter.font();
-    font.setPixelSize(m_pen.width());
-    painter.setFont(font);
+    painter.setFont(m_font);
     painter.drawText(m_point, m_text);
 }
