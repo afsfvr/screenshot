@@ -458,6 +458,9 @@
           <bold>true</bold>
          </font>
         </property>
+        <property name="toolTip">
+         <string>加粗</string>
+        </property>
         <property name="text">
          <string>B</string>
         </property>
@@ -481,6 +484,9 @@
          <font>
           <italic>true</italic>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>倾斜</string>
         </property>
         <property name="text">
          <string>I</string>
@@ -506,6 +512,9 @@
           <underline>true</underline>
          </font>
         </property>
+        <property name="toolTip">
+         <string>下划线</string>
+        </property>
         <property name="text">
          <string>U</string>
         </property>
@@ -529,6 +538,9 @@
          <font>
           <strikeout>true</strikeout>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>删除线</string>
         </property>
         <property name="text">
          <string>S</string>

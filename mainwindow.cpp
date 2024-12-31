@@ -236,9 +236,24 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
             }
             repaint();
         } else if (shape == Qt::BitmapCursor) {
-            if (m_shape == nullptr) {
-            } else if (contains(event->pos())) {
-                m_shape->addPoint(event->pos());
+            QRect &&rect = getGeometry();
+            if (m_shape != nullptr && rect.isValid()) {
+                QPoint point = event->pos();
+                if (rect.contains(point)) {
+                    m_shape->addPoint(point);
+                } else {
+                    if (point.x() < rect.left()) {
+                        point.setX(rect.left());
+                    } else if (point.x() > rect.right()) {
+                        point.setX(rect.right());
+                    }
+                    if (point.y() < rect.top()) {
+                        point.setY(rect.top());
+                    } else if (point.y() > rect.bottom()) {
+                        point.setY(rect.bottom());
+                    }
+                    m_shape->addPoint(point);
+                }
             }
             repaint();
         }
