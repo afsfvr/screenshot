@@ -176,6 +176,8 @@ void Tool::setEditShow(bool show) {
         ui->btn_arrow->setVisible(true);
         ui->btn_text->setVisible(true);
         ui->btn_top->setVisible(true);
+        ui->btn_undo->setVisible(true);
+        ui->btn_redo->setVisible(true);
         ui->btn_save->setVisible(true);
     } else {
         if (m_shape != nullptr) {
@@ -188,6 +190,8 @@ void Tool::setEditShow(bool show) {
         ui->btn_arrow->setVisible(false);
         ui->btn_text->setVisible(false);
         ui->btn_top->setVisible(false);
+        ui->btn_undo->setVisible(false);
+        ui->btn_redo->setVisible(false);
         ui->btn_save->setVisible(false);
         this->setMinimumWidth(52);
         this->setMaximumWidth(52);

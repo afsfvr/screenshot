@@ -17,6 +17,7 @@
 
 #include "gif.h"
 
+class QComboBox;
 struct GifFrameData {
     GifWriter* writer;
     uint8_t* image;
@@ -47,6 +48,7 @@ private:
     QString m_path;
     GifWriter *m_writer;
     int m_timerId;
+    int m_updateTimerId;
     int m_delay;
     QRect m_screen;
     QSize m_size;
@@ -61,6 +63,8 @@ private:
     QPushButton *m_button;
     QSpinBox *m_spin;
     QLabel *m_label;
+    QComboBox *m_box;
+
 
     std::atomic<bool> m_run;
     std::thread *m_thread;
