@@ -350,12 +350,12 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         } else {
             point.setX(cursor.x() - 85 - 10);
         }
-        if (cursor.y() + 125 + 25 <= this->height()) {
+        if (cursor.y() + 140 + 25 <= this->height()) {
             point.setY(cursor.y() + 25);
         } else {
-            point.setY(cursor.y() - 125 - 20);
+            point.setY(cursor.y() - 140 - 20);
         }
-        painter.fillRect(point.x() - 3, point.y() - 3 ,90, 130, QColor(0, 0, 0, 150));
+        painter.fillRect(point.x() - 3, point.y() - 3 ,90, 145, QColor(0, 0, 0, 150));
         painter.drawRect(point.x() - 1, point.y() - 1, 84 + 2, 84 + 2);
         painter.drawImage(QRect(point.x(), point.y(), 84, 84), m_image, QRect(cursor.x() - 10, cursor.y() - 10, 21, 21));
         painter.drawLine(point.x(), point.y() + 42, point.x() + 84, point.y() + 42);
@@ -365,8 +365,9 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         font.setPixelSize(13);
         painter.setFont(font);
         painter.drawText(point.x(), point.y() + 97, QString("RGB: %1").arg(color.name().toUpper()));
-        painter.drawText(point.x(), point.y() + 110, QString("%1, %2").arg(cursor.x()).arg(cursor.y()));
-        painter.drawText(point.x(), point.y() + 123, QString("(%1 x %2)").arg(rect.width()).arg(rect.height()));
+        painter.drawText(point.x(), point.y() + 111, QString("按C复制颜色"));
+        painter.drawText(point.x(), point.y() + 125, QString("%1, %2").arg(cursor.x()).arg(cursor.y()));
+        painter.drawText(point.x(), point.y() + 138, QString("(%1 x %2)").arg(rect.width()).arg(rect.height()));
     }
 }
 

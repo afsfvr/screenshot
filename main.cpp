@@ -29,16 +29,16 @@ int main(int argc, char *argv[])
     if (! file.tryLock()) {
         switch (file.error()) {
         case QLockFile::LockFailedError:
-            qInfo() << "无法获取锁，因为另一个进程持有它";
+            qWarning() << "无法获取锁，因为另一个进程持有它";
             break;
         case QLockFile::PermissionError:
-            qInfo() << "由于在父目录中没有权限，无法创建文件";
+            qWarning() << "由于在父目录中没有权限，无法创建文件";
             break;
         case QLockFile::UnknownError:
-            qInfo() << "另一个错误发生了，例如，一个完整的分区阻止写出文件";
+            qWarning() << "另一个错误发生了，例如，一个完整的分区阻止写出文件";
             break;
         default:
-            qInfo() << "未知错误";
+            qWarning() << "未知错误";
             break;
         }
 
