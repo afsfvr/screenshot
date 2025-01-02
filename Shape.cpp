@@ -69,8 +69,8 @@ void Rectangle::translate(const QPoint &point) {
 void Rectangle::paint(QPainter &painter) {
     int x = p1.x();
     int y = p1.y();
-    int width = p2.x() - x;
-    int height = p2.y() - y;
+    int width = p2.x() - x + 1;
+    int height = p2.y() - y + 1;
     if (width < 0) {
         x = p2.x();
         width = -width;
@@ -105,8 +105,8 @@ void Ellipse::translate(const QPoint &point) {
 void Ellipse::paint(QPainter &painter) {
     int x = p1.x();
     int y = p1.y();
-    int width = p2.x() - x;
-    int height = p2.y() - y;
+    int width = p2.x() - x + 1;
+    int height = p2.y() - y + 1;
     if (width < 0) {
         x = p2.x();
         width = -width;
