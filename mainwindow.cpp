@@ -96,7 +96,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         if (m_state == State::RectScreen) {
             m_rect = getRect(m_point, event->pos());
-            if (m_rect.width() <= 0 || m_rect.height() <= 0) {
+            if (m_rect.width() <= 1 || m_rect.height() <= 1) {
                 if (m_index >= 0 && m_index < m_windows.size()) {
                     m_rect = m_windows[m_index];
                     const QRect &rect = this->geometry();
