@@ -102,8 +102,8 @@ QImage BaseWindow::fullScreenshot() {
 QRect BaseWindow::getRect(const QPoint &p1, const QPoint &p2) {
     int x = p1.x();
     int y = p1.y();
-    int width = p2.x() - x;
-    int height = p2.y() - y;
+    int width = p2.x() - x + 1;
+    int height = p2.y() - y + 1;
     if (width < 0) {
         x = p2.x();
         width = -width;
