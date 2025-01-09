@@ -384,6 +384,8 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         painter.drawText(point.x(), point.y() + 125, QString("%1, %2").arg(cursor.x()).arg(cursor.y()));
         painter.drawText(point.x(), point.y() + 138, QString("(%1 x %2)").arg(rect.width()).arg(rect.height()));
     }
+
+    drawTips(painter);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {

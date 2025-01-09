@@ -80,6 +80,10 @@ bool BaseWindow::eventFilter(QObject *watched, QEvent *event) {
     return QWidget::eventFilter(watched, event);
 }
 
+void BaseWindow::timerEvent(QTimerEvent *event) {
+    BaseWindow::removeTip(event->timerId());
+}
+
 QImage BaseWindow::fullScreenshot() {
     QList<QScreen*> list = QApplication::screens();
     QSize size;
@@ -167,12 +171,61 @@ void BaseWindow::redo() {
 
 void BaseWindow::saveColor() {
     if (! m_image.isNull()) {
-        QPoint point = QCursor::pos();
+        QPoint point = mapFromGlobal(QCursor::pos());
         QClipboard *clipboard = QApplication::clipboard();
         if (clipboard) {
             clipboard->setText(m_image.pixelColor(point).name().toUpper());
+            addTip("复制颜色成功");
+        } else {
+            addTip("复制颜色失败");
         }
     }
+}
+
+int BaseWindow::addTip(const QString &text, int duration) {
+    if (duration <= 0) {
+        return -1;
+    }
+
+    int id = startTimer(duration);
+    if (id < 0) {
+        return -1;
+    }
+
+    qint64 time = QDateTime::currentMSecsSinceEpoch();
+    m_tips.push_back({ id, text, time, duration });
+    repaint();
+    return id;
+}
+
+bool BaseWindow::removeTip(int id) {
+    if (id < 0) {
+        return false;
+    }
+    for (auto iter = m_tips.begin(); iter != m_tips.end(); ++iter) {
+        if (id == iter->id) {
+            killTimer(id);
+            m_tips.erase(iter);
+            repaint();
+            return true;
+        }
+    }
+    return false;
+}
+
+bool BaseWindow::removeTip(const QString &text) {
+    bool ret = false;
+    for (auto iter = m_tips.begin(); iter != m_tips.end(); ++iter) {
+        if (text == iter->text) {
+            killTimer(iter->id);
+            iter = m_tips.erase(iter);
+            ret = true;
+        }
+    }
+    if (ret) {
+        repaint();
+    }
+    return ret;
 }
 
 void BaseWindow::clearDraw()
@@ -191,5 +244,34 @@ void BaseWindow::clearStack()
         delete (*iter);
     }
     m_stack.clear();
+}
+
+void BaseWindow::drawTips(QPainter &painter) {
+    QPen backupPen = painter.pen();
+    QFont backupFont = painter.font();
+    QFont font = backupFont;
+    font.setPixelSize(16);
+    painter.setPen(Qt::red);
+    painter.setFont(font);
+
+    QFontMetrics fm{painter.font()};
+    int centerX = this->width() / 2;
+    int y = this->height() - fm.height() / 2;
+    qint64 time = QDateTime::currentMSecsSinceEpoch();
+    for (auto iter = m_tips.begin(); iter < m_tips.end(); ++iter) {
+        if (time < iter->time + iter->duration) {
+            int width = fm.horizontalAdvance(iter->text);
+            int x = centerX - width / 2;
+            painter.fillRect(x, y - fm.ascent(), fm.horizontalAdvance(iter->text), fm.height(), QColor(0, 0, 0, 150));
+            painter.drawText(x, y, iter->text);
+            y -= 1.5 * fm.height();
+        } else {
+            killTimer(iter->id);
+            iter = m_tips.erase(iter);
+        }
+    }
+
+    painter.setPen(backupPen);
+    painter.setFont(backupFont);
 }
 

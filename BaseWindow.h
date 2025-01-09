@@ -13,6 +13,7 @@
 #include <QClipboard>
 #include <QPainterPath>
 #include <QLineEdit>
+#include <QDateTime>
 
 #include "Shape.h"
 #include "Tool.h"
@@ -27,6 +28,7 @@ protected:
     virtual void keyPressEvent(QKeyEvent *event);
     virtual void mouseDoubleClickEvent(QMouseEvent *event);
     virtual bool eventFilter(QObject *watched, QEvent *event);
+    virtual void timerEvent(QTimerEvent *event);
 
     QImage fullScreenshot();
     QRect getRect(const QPoint &p1, const QPoint &p2);
@@ -39,8 +41,12 @@ protected slots:
     virtual void save(const QString &path="") = 0;
     virtual void end() = 0;
     virtual void saveColor();
+    virtual int addTip(const QString &text, int duration = 2000);
+    virtual bool removeTip(int id);
+    virtual bool removeTip(const QString &text);
     void clearDraw();
     void clearStack();
+    void drawTips(QPainter &painter);
 signals:
     void choosePath();
 protected:
@@ -55,6 +61,14 @@ protected:
     Tool *m_tool;
     QLineEdit *m_edit;
     bool m_ignore;
+
+    struct TipStruct {
+        int id;
+        QString text;
+        qint64 time;
+        int duration=2000;
+    };
+    QVector<TipStruct> m_tips;
 };
 
 template<typename T>
