@@ -117,6 +117,8 @@ void TopWidget::paintEvent(QPaintEvent *event) {
     if (m_shape != nullptr) {
         m_shape->draw(painter);
     }
+
+    drawTips(painter);
 }
 
 void TopWidget::hideEvent(QHideEvent *event) {
