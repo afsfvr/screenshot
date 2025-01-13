@@ -20,6 +20,8 @@ BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shap
         int width = m_edit->fontMetrics().horizontalAdvance(text) + 20;
         m_edit->setMinimumWidth(std::min(width, m_edit->maximumWidth()));
     });
+
+    m_cursor = Qt::ArrowCursor;
 }
 
 BaseWindow::~BaseWindow() {
@@ -273,5 +275,16 @@ void BaseWindow::drawTips(QPainter &painter) {
 
     painter.setPen(backupPen);
     painter.setFont(backupFont);
+}
+
+void BaseWindow::setCursorShape(Qt::CursorShape cursor) {
+    if (m_cursor != cursor) {
+        if (cursor == Qt::BitmapCursor) {
+            setCursor(QCursor(QPixmap(":/images/pencil.png"), 0, 24));
+        } else {
+            setCursor(cursor);
+        }
+        m_cursor = cursor;
+    }
 }
 

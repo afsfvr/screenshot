@@ -47,6 +47,7 @@ protected slots:
     void clearDraw();
     void clearStack();
     void drawTips(QPainter &painter);
+    void setCursorShape(Qt::CursorShape cursor=Qt::ArrowCursor);
 signals:
     void choosePath();
 protected:
@@ -61,6 +62,7 @@ protected:
     Tool *m_tool;
     QLineEdit *m_edit;
     bool m_ignore;
+    Qt::CursorShape m_cursor;
 
     struct TipStruct {
         int id;

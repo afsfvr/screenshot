@@ -131,10 +131,10 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
         m_press = true;
         m_point = event->globalPos() - geometry().topLeft();
         if (m_tool->isDraw()) {
-            setCursor(QCursor(QPixmap(":/images/pencil.png"), 0, 24));
+            setCursorShape(Qt::BitmapCursor);
             setShape(event->pos());
         } else {
-            setCursor(Qt::SizeAllCursor);
+            setCursorShape(Qt::SizeAllCursor);
             m_tool->hide();
         }
     }
@@ -142,7 +142,7 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
 
 void TopWidget::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
-        if (cursor().shape() == Qt::BitmapCursor) {
+        if (m_cursor == Qt::BitmapCursor) {
             if (m_shape == nullptr) {
             } else if (! m_shape->isNull()){
                 m_vector.push_back(m_shape);
@@ -154,15 +154,19 @@ void TopWidget::mouseReleaseEvent(QMouseEvent *event) {
             repaint();
         }
         m_press = false;
-        unsetCursor();
         showTool();
     }
 }
 
 void TopWidget::mouseMoveEvent(QMouseEvent *event) {
-    auto shape =  cursor().shape();
-    if (shape == Qt::BitmapCursor) {
-        QRect &&rect = this->rect();
+    if (event->buttons() == Qt::NoButton) {
+        if (m_tool->isDraw()) {
+            setCursorShape(Qt::BitmapCursor);
+        } else {
+            setCursorShape(Qt::SizeAllCursor);
+        }
+    } else if (m_cursor == Qt::BitmapCursor) {
+        const QRect &rect = this->rect();
         if (m_shape != nullptr && rect.isValid()) {
             QPoint point = event->pos();
             if (rect.contains(point)) {
@@ -182,7 +186,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
             }
         }
         repaint();
-    } else if (shape == Qt::SizeAllCursor && m_press) {
+    } else if (m_cursor == Qt::SizeAllCursor && m_press) {
         move(event->globalPos() - m_point);
     }
 }
@@ -239,6 +243,7 @@ void TopWidget::topChange(bool top) {
     this->hide();
     setWindowFlag(Qt::WindowStaysOnTopHint, top);
     m_tool->setWindowFlag(Qt::WindowStaysOnTopHint, top);
+
     QTimer::singleShot(100, this, &TopWidget::moveTop);
 }
 
@@ -251,6 +256,7 @@ void TopWidget::moveTop() {
 
 void TopWidget::init() {
     setFocusPolicy(Qt::ClickFocus);
+    setMouseTracking(true);
 
     m_tool->topChange();
     connect(m_tool, &Tool::clickTop, m_tool, &Tool::topChange);
