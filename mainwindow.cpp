@@ -122,9 +122,9 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
             }
             repaint();
         } else if (m_state & State::Edit) {
-            if (cursor().shape() == Qt::BitmapCursor) {
+            if (m_cursor == Qt::BitmapCursor) {
                 if (! contains(event->pos())) {
-                    unsetCursor();
+                    setCursorShape();
                 }
                 if (m_shape == nullptr) {
                 } else if (! m_shape->isNull()){
@@ -150,13 +150,13 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
         m_press = false;
         if ((event->x() == m_point.x() || event->y() == m_point.y()) && event->button() == Qt::RightButton) {
             if (m_state != State::Null && isValid()) {
-                setCursor(Qt::CrossCursor);
+                setCursorShape(Qt::CrossCursor);
                 clearDraw();
                 m_state = State::Null;
                 m_tool->hide();
                 repaint();
             } else {
-                unsetCursor();
+                setCursorShape();
                 end();
             }
         }
@@ -171,7 +171,6 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
         m_path.lineTo(event->pos());
         repaint();
     } else if ((m_state & State::Edit) && (event->buttons() & Qt::LeftButton)) {
-        auto shape =  cursor().shape();
         if (m_resize != ResizeImage::NoResize) {
             QPoint point = event->pos();
             if (m_resize & ResizeImage::Top) {
@@ -213,7 +212,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                     m_rect.setRight(point.x());
                 }
             }
-        } if (shape == Qt::SizeAllCursor) {
+        } else if (m_cursor == Qt::SizeAllCursor) {
             QPoint point = event->pos() - m_point;
             m_point = event->pos();
             const QRect &rect = getGeometry();
@@ -235,7 +234,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                 (*iter)->translate(point);
             }
             repaint();
-        } else if (shape == Qt::BitmapCursor) {
+        } else if (m_cursor == Qt::BitmapCursor) {
             QRect &&rect = getGeometry();
             if (m_shape != nullptr && rect.isValid()) {
                 QPoint point = event->pos();
@@ -259,7 +258,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
         }
     } else if (event->buttons() == Qt::NoButton) {
         if (m_state == State::Null) {
-            setCursor(Qt::CrossCursor);
+            setCursorShape(Qt::CrossCursor);
             for (int i = 0; i < m_windows.size(); ++i) {
                 if (m_windows[i].contains(event->pos())) {
                     if (i != m_index) {
@@ -274,9 +273,9 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
             QPoint point = event->pos();
             if (m_rect.contains(point)) {
                 if (m_tool->isDraw()) {
-                    setCursor(QCursor(QPixmap(":/images/pencil.png"), 0, 24));
+                    setCursorShape(Qt::BitmapCursor);
                 } else {
-                    setCursor(Qt::SizeAllCursor);
+                    setCursorShape(Qt::SizeAllCursor);
                 }
             } else {
                 if (m_rect.left() - point.x() >= 0 && m_rect.left() - point.x() <= 3) {
@@ -290,30 +289,32 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                     m_resize |= ResizeImage::Bottom;
                 }
                 if (m_resize == ResizeImage::NoResize) {
-                    unsetCursor();
+                    setCursorShape(Qt::CrossCursor);
                 } else {
                     if (m_resize == ResizeImage::TopLeft || m_resize == ResizeImage::BottomRight) {
-                        setCursor(Qt::SizeFDiagCursor);
+                        setCursorShape(Qt::SizeFDiagCursor);
                     } else if (m_resize == ResizeImage::TopRight || m_resize == ResizeImage::BottomLeft) {
-                        setCursor(Qt::SizeBDiagCursor);
+                        setCursorShape(Qt::SizeBDiagCursor);
                     } else if (m_resize == ResizeImage::Top || m_resize == ResizeImage::Bottom) {
-                        setCursor(Qt::SizeVerCursor);
+                        setCursorShape(Qt::SizeVerCursor);
                     } else if (m_resize == ResizeImage::Left || m_resize == ResizeImage::Right) {
-                        setCursor(Qt::SizeHorCursor);
+                        setCursorShape(Qt::SizeHorCursor);
                     } else {
-                        unsetCursor();
+                        addTip("unknown resize");
+                        qWarning() << "unknown resize";
+                        setCursorShape();
                     }
                 }
             }
         } else if (m_state == State::FreeEdit) {
             if (m_path.contains(event->pos())) {
                 if (m_tool->isDraw()) {
-                    setCursor(QCursor(QPixmap(":/images/pencil.png"), 0, 24));
+                    setCursorShape(Qt::BitmapCursor);
                 } else {
-                    setCursor(Qt::SizeAllCursor);
+                    setCursorShape(Qt::SizeAllCursor);
                 }
             } else {
-                unsetCursor();
+                setCursorShape(Qt::CrossCursor);
             }
         }
     }
@@ -435,7 +436,7 @@ void MainWindow::start() {
     }
     setGeometry(0, 0, m_image.width(), m_image.height());
     setWindowState((windowState() & ~(Qt::WindowMinimized | Qt::WindowMaximized)) | Qt::WindowFullScreen);
-    setCursor(Qt::CrossCursor);
+    setCursorShape(Qt::CrossCursor);
     setVisible(true);
     m_state = State::Null;
     m_resize = ResizeImage::NoResize;
@@ -785,7 +786,9 @@ void MainWindow::saveHotKey() {
         file.write(reinterpret_cast<const char*>(arr), 16);
         file.close();
     } else {
-        qWarning() << "write config failed: " << file.errorString();
+        QString error = QString("write config failed: %1").arg(file.errorString());
+        addTip(error);
+        qWarning() << error;
     }
 }
 
