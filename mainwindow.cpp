@@ -80,6 +80,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         } else {
             if (event->button() == Qt::LeftButton) {
                 clearDraw();
+                m_rect = QRect();
                 m_state = State::RectScreen;
             } else if (! m_gif && event->button() == Qt::RightButton) {
                 clearDraw();
@@ -434,8 +435,8 @@ void MainWindow::start() {
             m_gray_image.setPixel(x, y, qRgb(r, g, b));
         }
     }
-    setGeometry(0, 0, m_image.width(), m_image.height());
     setWindowState((windowState() & ~(Qt::WindowMinimized | Qt::WindowMaximized)) | Qt::WindowFullScreen);
+    setGeometry(0, 0, m_image.width(), m_image.height());
     setCursorShape(Qt::CrossCursor);
     setVisible(true);
     m_state = State::Null;
