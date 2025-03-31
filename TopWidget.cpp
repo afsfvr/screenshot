@@ -199,9 +199,17 @@ void TopWidget::moveEvent(QMoveEvent *event) {
 
 void TopWidget::focusOutEvent(QFocusEvent *event) {
     Q_UNUSED(event);
-    if (QApplication::focusWidget() == nullptr) {
-        m_tool->hide();
+    QObject *o = QApplication::focusObject();
+    if (o == this) {
+        return;
     }
+
+    while (o != nullptr && (o = o->parent()) != nullptr) {
+        if (o == this) {
+            return;
+        }
+    }
+    m_tool->hide();
 }
 
 QRect TopWidget::getGeometry() const {

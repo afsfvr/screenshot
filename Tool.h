@@ -27,7 +27,7 @@ class Tool : public QWidget
 
 public:
     static QString savePath;
-    explicit Tool(QWidget *parent = nullptr);
+    explicit Tool(QWidget *parent);
     ~Tool();
     bool isDraw();
     Shape *getShape(const QPoint &point);
@@ -51,6 +51,8 @@ signals:
     void clickTop();
     void topChanged(bool top);
 private:
+    void lostFocus();
+
     Ui::Tool *ui;
     QPen m_pen;
     Shape *m_shape;

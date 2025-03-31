@@ -139,10 +139,7 @@ bool Tool::eventFilter(QObject *watched, QEvent *event) {
         setFocus();
         return true;
     } else if (event->type() == QEvent::FocusOut && watched == ui->pen_size) {
-        if (QApplication::focusObject() == nullptr && ! m_ignore) {
-            this->setDraw(ShapeEnum::Null);
-            this->hide();
-        }
+        lostFocus();
         return true;
     }
     return QWidget::eventFilter(watched, event);
@@ -150,15 +147,14 @@ bool Tool::eventFilter(QObject *watched, QEvent *event) {
 
 void Tool::focusOutEvent(QFocusEvent *event) {
     Q_UNUSED(event);
-    if (QApplication::focusObject() == nullptr && ! m_ignore) {
-        this->setDraw(ShapeEnum::Null);
-        this->hide();
-    }
+    lostFocus();
 }
 
 void Tool::keyPressEvent(QKeyEvent *event) {
     if (event->modifiers() == Qt::ControlModifier) {
         if (event->key() == Qt::Key_S) {
+            this->choosePath();
+        } else if (event->key() == Qt::Key_C) {
             emit save();
         } else if (event->key() == Qt::Key_Z) {
             emit undo();
@@ -210,7 +206,7 @@ void Tool::choosePath() {
     if (savePath.isEmpty())
         savePath = QDir::currentPath();
 
-    QFileDialog fileDialog(this, tr("选择文件"), savePath);
+    QFileDialog fileDialog(this->isVisible() ? this : this->parentWidget(), tr("选择文件"), savePath);
     fileDialog.setAcceptMode(QFileDialog::AcceptSave);
     fileDialog.setFileMode(QFileDialog::AnyFile);
     fileDialog.setDirectory(savePath);
@@ -222,7 +218,10 @@ void Tool::choosePath() {
     fileDialog.setFileMode(QFileDialog::AnyFile);
     fileDialog.selectMimeTypeFilter("image/" + format);
     // fileDialog.setDefaultSuffix(format);
-    if (fileDialog.exec() != QDialog::Accepted)
+    m_ignore = true;
+    int ret = fileDialog.exec();
+    m_ignore = false;
+    if (ret != QDialog::Accepted)
         return;
 
     const QString &filter = fileDialog.selectedNameFilter();
@@ -371,4 +370,18 @@ void Tool::topChange() {
     ui->btn_top->setFlat(top);
     ui->btn_top->setToolTip(top ? "取消置顶" : "置顶");
     emit topChanged(top);
+}
+
+void Tool::lostFocus() {
+    QObject *o = QApplication::focusObject();
+    if (o == this || o == this->parentWidget() || m_ignore) {
+        return;
+    }
+    while (o != nullptr && (o = o->parent()) != nullptr) {
+        if (o == this) {
+            return;
+        }
+    }
+    this->setDraw(ShapeEnum::Null);
+    this->hide();
 }
