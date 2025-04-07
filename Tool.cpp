@@ -12,7 +12,6 @@ QString Tool::savePath = QStandardPaths::writableLocation(QStandardPaths::Pictur
 Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr), m_ignore{false} {
     ui->setupUi(this);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
-    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop);
     connect(ui->pen_color,  SIGNAL(clicked()),         this, SLOT(penChange()));
     connect(ui->pen_size,   SIGNAL(valueChanged(int)), this, SLOT(penChange(int)));
     connect(ui->btn_save,   SIGNAL(clicked()),         this, SLOT(choosePath()));

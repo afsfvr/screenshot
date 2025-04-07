@@ -14,7 +14,7 @@
 #include <malloc.h>
 
 GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent):
-    QWidget{parent}, m_writer{nullptr}, m_timerId{0}, m_updateTimerId{0}, m_size{screenSize}, m_preTime{0} {
+    QWidget{parent}, m_writer{nullptr}, m_timerId{-1}, m_updateTimerId{-1}, m_size{screenSize}, m_preTime{0} {
     m_tmp = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + QUuid::createUuid().toString();
     setGeometry(rect);
     m_screen.setTop(rect.top() + 1);
@@ -33,13 +33,13 @@ GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QW
 }
 
 GifWidget::~GifWidget() {
-    if (m_timerId != 0) {
+    if (m_timerId != -1) {
         killTimer(m_timerId);
-        m_timerId = 0;
+        m_timerId = -1;
     }
-    if (m_updateTimerId != 0) {
+    if (m_updateTimerId != -1) {
         killTimer(m_updateTimerId);
-        m_updateTimerId = 0;
+        m_updateTimerId = -1;
     }
     if (m_widget != nullptr) {
         m_widget->disconnect();
@@ -162,9 +162,13 @@ void GifWidget::buttonClicked() {
         m_preTime = m_startTime = QDateTime::currentMSecsSinceEpoch();
         GifBegin(m_writer, m_tmp.toUtf8().data(), m_screen.width(), m_screen.height(), m_delay);
     } else {
-        if (m_timerId != 0) {
+        if (m_timerId != -1) {
             killTimer(m_timerId);
-            m_timerId = 0;
+            m_timerId = -1;
+        }
+        if (m_updateTimerId != -1) {
+            killTimer(m_updateTimerId);
+            m_updateTimerId = -1;
         }
         m_path = QFileDialog::getSaveFileName(this, "选择路径", Tool::savePath, "*.gif");
         if (m_path.isEmpty()) {
@@ -193,7 +197,6 @@ void GifWidget::init() {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_DeleteOnClose);
-    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop);
 
     setVisible(true);
     activateWindow();
@@ -202,7 +205,6 @@ void GifWidget::init() {
     m_widget = new QWidget;
     m_widget->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     m_widget->setAttribute(Qt::WA_DeleteOnClose);
-    m_widget->setAttribute(Qt::WA_X11NetWmWindowTypeDesktop);
     m_layout = new QHBoxLayout{m_widget};
     m_layout->setSpacing(2);
     m_layout->setContentsMargins(0, 0, 0, 0);
@@ -215,7 +217,7 @@ void GifWidget::init() {
 
     m_spin = new QSpinBox{m_widget};
     m_spin->setMinimum(1);
-    m_spin->setMaximum(50);
+    m_spin->setMaximum(30);
     m_spin->setValue(2);
     m_layout->addWidget(m_spin);
 

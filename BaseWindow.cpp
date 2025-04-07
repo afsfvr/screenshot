@@ -3,7 +3,6 @@
 BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shape{nullptr}, m_tool{new Tool{this}}, m_edit{nullptr}, m_ignore{false} {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
-    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop);
 
     connect(m_tool, &Tool::undo, this, &BaseWindow::undo);
     connect(m_tool, &Tool::redo, this, &BaseWindow::redo);
