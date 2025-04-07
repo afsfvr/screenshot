@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
     signal(SIGTERM, signal_handler);
 #endif
 
+    QApplication::setWindowIcon(QIcon(":/images/screenshot.ico"));
     QApplication::setQuitOnLastWindowClosed(false);
     MainWindow w;
     return a.exec();

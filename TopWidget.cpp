@@ -263,6 +263,7 @@ void TopWidget::moveTop() {
 }
 
 void TopWidget::init() {
+    setWindowFlag(Qt::Tool, false);
     setFocusPolicy(Qt::ClickFocus);
     setMouseTracking(true);
 
