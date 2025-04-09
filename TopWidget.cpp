@@ -249,6 +249,7 @@ void TopWidget::end() {
 void TopWidget::topChange(bool top) {
     m_tool->hide();
     this->hide();
+    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop, top);
     setWindowFlag(Qt::WindowStaysOnTopHint, top);
     m_tool->setWindowFlag(Qt::WindowStaysOnTopHint, top);
 
@@ -263,6 +264,7 @@ void TopWidget::moveTop() {
 }
 
 void TopWidget::init() {
+    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop);
     setWindowFlag(Qt::Tool, false);
     setFocusPolicy(Qt::ClickFocus);
     setMouseTracking(true);
