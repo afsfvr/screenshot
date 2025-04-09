@@ -712,8 +712,10 @@ void MainWindow::top() {
         painter.translate(- point);
         painter.fillPath(m_path, m_image);
         painter.end();
+#if defined(Q_OS_WINDOWS)
+        new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
+#elif defined(Q_OS_LINUX)
         auto *t = new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
-#ifdef Q_OS_LINUX
         connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
 #endif
         end();
@@ -723,8 +725,11 @@ void MainWindow::top() {
         for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
             (*iter)->translate(- point);
         }
+
+#if defined(Q_OS_WINDOWS)
+        new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
+#elif defined(Q_OS_LINUX)
         auto *t = new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
-#ifdef Q_OS_LINUX
         connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
 #endif
         end();

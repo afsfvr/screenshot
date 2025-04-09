@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QFileInfo>
 #include <QProcess>
+#include <QDir>
 
 HotKeyWidget::HotKeyWidget(HotKey *capture, HotKey *record, QWidget *parent):
     QWidget(parent), ui(new Ui::HotKeyWidget), m_capture(capture), m_record(record) {
@@ -27,7 +28,11 @@ HotKeyWidget::HotKeyWidget(HotKey *capture, HotKey *record, QWidget *parent):
 #else
         QProcess process;
         process.setProgram("cmd.exe");
-        process.setArguments({"/C", QString("explorer /select,%1 >NUL 2>&1").arg(link)});
+        if (QFile::exists(link)) {
+            process.setArguments({"/C", QString("explorer /select,%1 >NUL 2>&1").arg(link)});
+        } else {
+            process.setArguments({"/C", QString("explorer %1 >NUL 2>&1").arg(QDir::toNativeSeparators(QFileInfo(link).path()))});
+        }
         process.start();
         process.waitForFinished();
         // system(QString("explorer /select,%1 >NUL 2>&1").arg(link).toStdString().c_str());
