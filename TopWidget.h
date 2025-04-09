@@ -14,6 +14,11 @@ public:
     virtual ~TopWidget();
     void showTool();
 
+#ifdef Q_OS_LINUX
+public slots:
+    void mouseRelease(QSharedPointer<QMouseEvent> event);
+#endif
+
 protected:
     void keyPressEvent(QKeyEvent *event);
     void closeEvent(QCloseEvent *event);
@@ -38,6 +43,9 @@ private:
 private:
     QMenu *tray_menu;
     QMenu *m_menu;
+#ifdef Q_OS_LINUX
+    bool m_move = false;
+#endif
 };
 
 #endif // TOPWIDGET_H

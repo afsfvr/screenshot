@@ -712,7 +712,10 @@ void MainWindow::top() {
         painter.translate(- point);
         painter.fillPath(m_path, m_image);
         painter.end();
-        new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
+        auto *t = new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
+#ifdef Q_OS_LINUX
+        connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
+#endif
         end();
     } else if (m_state & State::Rect) {
         if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
@@ -720,7 +723,10 @@ void MainWindow::top() {
         for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
             (*iter)->translate(- point);
         }
-        new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
+        auto *t = new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
+#ifdef Q_OS_LINUX
+        connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
+#endif
         end();
     }
 }
