@@ -2,6 +2,11 @@
 
 #include <QTimer>
 
+#ifdef Q_OS_LINUX
+#include <X11/Xlib.h>
+#include <QX11Info>
+#endif
+
 TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect, QMenu *menu) {
     m_image = std::move(image);
     m_vector = std::move(vector);
@@ -69,6 +74,26 @@ void TopWidget::showTool() {
     m_tool->show();
     m_tool->move(point);
 }
+
+#ifdef Q_OS_LINUX
+void TopWidget::mouseRelease(QSharedPointer<QMouseEvent> event) {
+    if (m_move && event->button() == Qt::LeftButton) {
+        QPoint screenPos = event->globalPos();
+        QList<QScreen*> list = QApplication::screens();
+        if (list.size() > 1) {
+            for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
+                QRect rect = (*iter)->geometry();
+                if (rect.contains(screenPos)) {
+                    screenPos -= rect.topLeft();
+                    break;
+                }
+            }
+        }
+        QMouseEvent *e = new QMouseEvent(QEvent::MouseButtonRelease, event->globalPos() - geometry().topLeft(), event->globalPos(), screenPos, Qt::LeftButton, event->buttons(), event->modifiers(), event->source());
+        QApplication::postEvent(this, e);
+    }
+}
+#endif
 
 void TopWidget::keyPressEvent(QKeyEvent *event) {
     BaseWindow::keyPressEvent(event);
@@ -153,6 +178,9 @@ void TopWidget::mouseReleaseEvent(QMouseEvent *event) {
             }
             repaint();
         }
+#ifdef Q_OS_LINUX
+        m_move = false;
+#endif
         m_press = false;
         showTool();
     }
@@ -187,7 +215,28 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
         }
         repaint();
     } else if (m_cursor == Qt::SizeAllCursor && m_press) {
+#if defined (Q_OS_LINUX)
+        m_move = true;
+
+        XEvent xevent;
+        memset(&xevent, 0, sizeof(XEvent));
+        Display *display = QX11Info::display();
+        xevent.xclient.type = ClientMessage;
+        xevent.xclient.message_type = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
+        xevent.xclient.display = display;
+        xevent.xclient.window = this->winId();
+        xevent.xclient.format = 32;
+        xevent.xclient.data.l[0] = event->globalX();
+        xevent.xclient.data.l[1] = event->globalY();
+        xevent.xclient.data.l[2] = 8;
+        xevent.xclient.data.l[3] = Button1;
+        xevent.xclient.data.l[4] = 1;
+        XUngrabPointer(display, CurrentTime);
+        XSendEvent(display, QX11Info::appRootWindow(QX11Info::appScreen()), False, SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+        XFlush(display);
+#elif defined (Q_OS_WINDOWS)
         move(event->globalPos() - m_point);
+#endif
     }
 }
 
@@ -249,7 +298,6 @@ void TopWidget::end() {
 void TopWidget::topChange(bool top) {
     m_tool->hide();
     this->hide();
-    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop, top);
     setWindowFlag(Qt::WindowStaysOnTopHint, top);
     m_tool->setWindowFlag(Qt::WindowStaysOnTopHint, top);
 
@@ -264,7 +312,6 @@ void TopWidget::moveTop() {
 }
 
 void TopWidget::init() {
-    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop);
     setWindowFlag(Qt::Tool, false);
     setFocusPolicy(Qt::ClickFocus);
     setMouseTracking(true);
