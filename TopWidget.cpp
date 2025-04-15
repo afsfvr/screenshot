@@ -11,6 +11,8 @@ TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect
     m_image = std::move(image);
     m_vector = std::move(vector);
     tray_menu = menu;
+    setMinimumSize(rect.size());
+    setMaximumSize(rect.size());
     setGeometry(rect);
     init();
 }
@@ -20,6 +22,8 @@ TopWidget::TopWidget(QImage &image, QPainterPath &&path, QVector<Shape *> &vecto
     m_path = std::move(path);
     m_vector = std::move(vector);
     tray_menu = menu;
+    setMinimumSize(rect.size());
+    setMaximumSize(rect.size());
     setGeometry(rect);
     init();
 }
