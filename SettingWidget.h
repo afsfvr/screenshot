@@ -1,9 +1,10 @@
-#ifndef SETTINGWIDGET_H
+﻿#ifndef SETTINGWIDGET_H
 #define SETTINGWIDGET_H
 
 #include <QWidget>
 #include <QDebug>
 #include <QDataStream>
+#include <QProcess>
 
 namespace Ui {
 class SettingWidget;
@@ -11,7 +12,7 @@ class SettingWidget;
 
 struct HotKey {
     Qt::KeyboardModifiers modifiers = Qt::NoModifier;
-    quint32 key = 0;
+    quint32 key = 'A';
     inline bool operator==(const HotKey &key) { return this->modifiers == key.modifiers && this->key == key.key; }
     inline bool operator!=(const HotKey &key) { return this->modifiers != key.modifiers || this->key != key.key; }
     friend QDataStream& operator<<(QDataStream& stream, const HotKey &key);
@@ -35,7 +36,8 @@ public:
 
     inline const HotKey& autoSave() const { return m_auto_save_key; }
     inline const QString& autoSavePath() const { return m_auto_save_path; }
-    inline bool autoSaveMode() const { return m_auto_save_mode; }
+    inline const QString& saveFormat() const { return m_save_format; }
+    inline bool fullScreen() const { return m_full_screen; }
     inline const HotKey& capture() const { return m_capture; }
     inline const HotKey& record() const { return m_record; }
 
@@ -43,14 +45,15 @@ protected:
     void showEvent(QShowEvent *event);
 
 private slots:
-    void openLink(const QString &link);
+    void openFile(const QString &link);
+    void choosePath(const QString &link);
     void confirm();
 
 private:
     void checkData(HotKey &key);
-    void updateKey1(const HotKey &key);
-    void updateKey2(const HotKey &key);
-    void updateKey3(const HotKey &key);
+    void updateKey1();
+    void updateKey2();
+    void updateKey3();
 
 signals:
     void autoSaveChanged(const HotKey &key, bool mode, const QString &path);
@@ -61,7 +64,8 @@ private:
     Ui::SettingWidget *ui;
     HotKey m_auto_save_key;
     QString m_auto_save_path;
-    bool m_auto_save_mode;
+    QString m_save_format;
+    bool m_full_screen;
     HotKey m_capture;
     HotKey m_record;
 };

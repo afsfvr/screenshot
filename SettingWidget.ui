@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>424</width>
-    <height>385</height>
+    <width>292</width>
+    <height>354</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,7 +36,7 @@
         <item>
          <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>按下</string>
+           <string>快捷键</string>
           </property>
          </widget>
         </item>
@@ -63,6 +63,12 @@
         </item>
         <item>
          <widget class="QComboBox" name="key1">
+          <property name="minimumSize">
+           <size>
+            <width>40</width>
+            <height>0</height>
+           </size>
+          </property>
           <item>
            <property name="text">
             <string>A</string>
@@ -195,39 +201,56 @@
           </item>
          </widget>
         </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_6">
         <item>
-         <widget class="QLabel" name="label_3">
+         <widget class="QLabel" name="label">
           <property name="text">
-           <string>截</string>
+           <string>截图方式：</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="fullScreen">
+          <property name="text">
+           <string>全屏</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="program">
+          <property name="text">
+           <string>前台程序</string>
           </property>
          </widget>
         </item>
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_6">
+       <layout class="QHBoxLayout" name="horizontalLayout_7">
         <item>
-         <widget class="QComboBox" name="saveMode">
-          <item>
-           <property name="text">
-            <string>全屏</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>当前程序</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="autoSavePath">
+         <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>保存到</string>
+           <string>图片保存格式：</string>
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QComboBox" name="format"/>
+        </item>
        </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="autoSavePath">
+        <property name="text">
+         <string>保存路径：</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -235,7 +258,7 @@
    <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>快捷键</string>
+      <string>截图快捷键</string>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
@@ -399,7 +422,7 @@
    <item>
     <widget class="QGroupBox" name="groupBox_3">
      <property name="title">
-      <string>快捷键</string>
+      <string>录制GIF快捷键</string>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
@@ -611,7 +634,6 @@
   <tabstop>alt1</tabstop>
   <tabstop>shift1</tabstop>
   <tabstop>key1</tabstop>
-  <tabstop>saveMode</tabstop>
   <tabstop>control2</tabstop>
   <tabstop>alt2</tabstop>
   <tabstop>shift2</tabstop>

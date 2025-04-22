@@ -1,4 +1,4 @@
-#include "TopWidget.h"
+﻿#include "TopWidget.h"
 
 #include <QTimer>
 
@@ -328,6 +328,7 @@ void TopWidget::init() {
     // QString text = QString("0x%1(%2,%3 %4x%5)").arg(reinterpret_cast<quintptr>(this), QT_POINTER_SIZE, 16).arg(x()).arg(y()).arg(m_image.width()).arg(m_image.height());
 
     m_menu = new QMenu(this);
+    m_menu->setIcon(QIcon(QPixmap::fromImage(m_image)));
     m_menu->setTitle(text);
     m_menu->addAction("显示", this, &TopWidget::moveTop);
     m_menu->addAction("关闭", this, &TopWidget::close);

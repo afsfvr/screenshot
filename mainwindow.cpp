@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "TopWidget.h"
 #include "GifWidget.h"
 
@@ -9,17 +9,17 @@
 
 MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_setting = new SettingWidget;
+    connect(m_setting, &SettingWidget::autoSaveChanged, this, &MainWindow::updateAutoSave);
     connect(m_setting, &SettingWidget::captureChanged, this, &MainWindow::updateCapture);
     connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
 
     m_menu = new QMenu(this);
-    m_menu->addAction("修改快捷键", this, &MainWindow::updateHotkey);
-    m_action1 = m_menu->addAction("截图", this, &MainWindow::start);
-    m_action2 = m_menu->addAction("录制GIF", this, [=](){
-        m_gif = true;
-        start();
-    });
-    m_menu->addAction("退出", this, &MainWindow::quit);
+    m_menu->addAction(QIcon(":/images/setting.png"), "设置", this, &MainWindow::updateHotkey);
+    m_action1 = m_menu->addAction(QIcon(":/images/save.png"), "自动保存", this, &MainWindow::openSaveDir);
+    m_action2 = m_menu->addAction(QIcon(":/images/screenshot.ico"), "截图", this, &MainWindow::start);
+    m_action3 = m_menu->addAction(QIcon(":/images/gif.png"), "录制GIF", this, &MainWindow::gifStart);
+    m_menu->addAction(QIcon(":/images/exit.png"), "退出", this, &MainWindow::quit);
+    m_menu->addSeparator();
     m_tray = new QSystemTrayIcon(this);
     m_tray->setContextMenu(m_menu);
     m_tray->setIcon(QIcon(":/images/screenshot.ico"));
@@ -30,13 +30,16 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_resize = ResizeImage::NoResize;
     m_gif = false;
 
+#ifdef Q_OS_LINUX
     m_monitor = new KeyMouseEvent;
     m_monitor->start();
     m_monitor->resume();
     connect(m_monitor, &KeyMouseEvent::keyPress, this, &MainWindow::keyPress);
+#endif
     setMouseTracking(true);
 
     connect(m_tool, &Tool::clickTop, this, &MainWindow::top);
+    m_setting->readConfig();
 }
 
 MainWindow::~MainWindow() {
@@ -48,6 +51,7 @@ MainWindow::~MainWindow() {
 #ifdef Q_OS_WINDOWS
     UnregisterHotKey((HWND)this->winId(), 1);
     UnregisterHotKey((HWND)this->winId(), 2);
+    UnregisterHotKey((HWND)this->winId(), 3);
 #endif
 }
 
@@ -403,11 +407,13 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *r
         MSG *msg = static_cast<MSG *>(message);
         if (msg->message == WM_HOTKEY) {
             if (msg->wParam == 1) {
-                start();
+                saveImage();
                 return true;
             } else if (msg->wParam == 2) {
-                m_gif = true;
                 start();
+                return true;
+            } else if (msg->wParam == 3) {
+                gifStart();
                 return true;
             }
         }
@@ -415,6 +421,94 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *r
     return QWidget::nativeEvent(eventType, message, result);
 }
 #endif
+
+void MainWindow::saveImage() {
+    const QString path = m_setting->autoSavePath();
+    if (path.length() == 0) {
+        qWarning() << "path为空，取消截图";
+        return;
+    }
+
+    if (! QDir{path}.mkpath(path)) {
+        qWarning() << QString("创建文件夹%1失败").arg(path);
+        return;
+    }
+
+    QString windowTitle{"unknown"};
+    QImage image;
+    if (m_setting->fullScreen()) {
+        windowTitle = "全屏";
+        image = fullScreenshot();
+    } else {
+        QRect rect;
+#if defined(Q_OS_WINDOWS)
+        HWND hwnd = GetForegroundWindow();
+        rect = getRectByHwnd(hwnd);
+        if (rect.isEmpty()) {
+            while ((hwnd = GetNextWindow(hwnd, GW_HWNDNEXT)) != nullptr) {
+                rect = getRectByHwnd(hwnd);
+                if (rect.isValid()) {
+                    break;
+                }
+            }
+        }
+        char title[256];
+        GetWindowTextA(hwnd, title, 256);
+        windowTitle = QString::fromLocal8Bit(title);
+#elif defined(Q_OS_LINUX)
+        Display *display = XOpenDisplay(nullptr);
+        Window rootWindow = DefaultRootWindow(display);
+        Window parent;
+        Window* children;
+        unsigned int nChildren;
+        // 获取所有子窗口
+        if (XQueryTree(display, rootWindow, &rootWindow, &parent, &children, &nChildren)) {
+            for (int i = nChildren - 1; i >= 0; --i) {
+                XWindowAttributes attributes;
+                XGetWindowAttributes(display, children[i], &attributes);
+
+                if ((attributes.map_state != IsViewable) || (attributes.width == attributes.height && attributes.width <= 5)) {
+                    continue;
+                }
+                rect = {attributes.x, attributes.y, attributes.width, attributes.height};
+                XTextProperty nameProp;
+                char **list = nullptr;
+                int count;
+                if (XmbTextPropertyToTextList(display, &nameProp, &list, &count) >= Success && count > 0 && list) {
+                    windowTitle = QString::fromUtf8(list[0]);
+                    XFreeStringList(list);
+                break;
+            }
+
+            XFree(children);
+        }
+        XCloseDisplay(display);
+#endif
+        QList<QScreen*> list = QApplication::screens();
+        for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
+            QRect r = (*iter)->geometry();
+            if (r.contains(rect, false)) {
+                QScreen *screen = (*iter);
+                image = screen->grabWindow(0, rect.x(), rect.y(), rect.width(), rect.height()).toImage();
+                break;
+            }
+        }
+
+        if (image.isNull()) {
+            image = fullScreenshot().copy(rect);
+        }
+    }
+    if (image.isNull()) {
+        qWarning() << "图片为空";
+    } else {
+        std::string saveFormat = m_setting->saveFormat().toStdString();
+        const char *format = saveFormat.c_str();
+        bool ret = image.save(QString("%1%2%3_%4.%5").arg(path, QDir::separator(), windowTitle, QDateTime::currentDateTime().toString("yyyyMMddhhmmss"), format), format);
+        if (! ret) {
+            image.save(QString("%1%2%3.%4").arg(path, QDir::separator(), QDateTime::currentDateTime().toString("yyyyMMddhhmmss"), format), format);
+        }
+    }
+}
 
 void MainWindow::start() {
     updateWindows();
@@ -449,6 +543,11 @@ void MainWindow::start() {
     m_press = false;
     activateWindow();
     repaint();
+}
+
+void MainWindow::gifStart() {
+    m_gif = true;
+    start();
 }
 
 void MainWindow::showTool() {
@@ -532,107 +631,148 @@ void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
         } else {
             code = it->second;
         }
-        if (m_capture.modifiers != Qt::NoModifier && m_capture.modifiers == modifiers && m_capture.key == static_cast<quint32>(code)) {
+        const HotKey &save = m_setting->autoSave();
+        const HotKey &capture = m_setting->capture();
+        const HotKey &record = m_setting->record();
+        if (save.modifiers != Qt::NoModifier && save.modifiers == modifiers && save.key == static_cast<quint32>(code)) {
+            saveImage();
+        } else if (capture.modifiers != Qt::NoModifier && capture.modifiers == modifiers && capture.key == static_cast<quint32>(code)) {
             start();
-        } else if (m_record.modifiers != Qt::NoModifier && m_record.modifiers == modifiers && m_record.key == static_cast<quint32>(code)) {
-            m_gif = true;
-            start();
+        } else if (record.modifiers != Qt::NoModifier && record.modifiers == modifiers && record.key == static_cast<quint32>(code)) {
+            gifStart();
         }
     }
 }
 #endif
 
-void MainWindow::updateCapture() {
+void MainWindow::updateAutoSave(const HotKey &key, bool mode, const QString &path) {
+    Q_UNUSED(mode);
+    Q_UNUSED(path);
 #ifdef Q_OS_WINDOWS
     UnregisterHotKey((HWND)this->winId(), 1);
     quint32 fsModifiers = 0;
 #endif
-    if (m_capture == m_record && m_capture.modifiers != Qt::NoModifier) {
-        QMessageBox::warning(this, "注册热键失败", "不能重复");
-        m_capture.modifiers = Qt::NoModifier;
-    }
-    if (m_capture.modifiers != Qt::NoModifier) {
-        QString s{"截图("};
-        if (m_capture.modifiers & Qt::ControlModifier) {
+    if (key.modifiers != Qt::NoModifier) {
+        QString s{"自动保存("};
+        if (key.modifiers & Qt::ControlModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_CONTROL;
 #endif
             s.append("Ctrl+");
         }
-        if (m_capture.modifiers & Qt::AltModifier) {
+        if (key.modifiers & Qt::AltModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_ALT;
 #endif
             s.append("Alt+");
         }
-        if (m_capture.modifiers & Qt::ShiftModifier) {
+        if (key.modifiers & Qt::ShiftModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_SHIFT;
 #endif
             s.append("Shift+");
         }
 #if defined(Q_OS_WINDOWS)
-        if (RegisterHotKey((HWND)this->winId(), 1, fsModifiers, m_capture.key)) {
-            s.append(static_cast<char>(m_capture.key)).append(")");
+        if (RegisterHotKey((HWND)this->winId(), 1, fsModifiers, key.key)) {
+            s.append(static_cast<char>(key.key)).append(")");
             m_action1->setText(s);
         } else {
-            QMessageBox::warning(this, "注册热键失败", "截图注册热键失败");
-            m_capture.modifiers = Qt::NoModifier;
-            m_action1->setText("截图");
+            QMessageBox::warning(this, "注册热键失败", "自动保存热键注册失败");
+            m_setting->cleanAutoSaveKey();
+            m_action1->setText("自动保存");
         }
 #else
-        s.append(static_cast<char>(m_capture.key)).append(")");
+        s.append(static_cast<char>(key.key)).append(")");
         m_action1->setText(s);
 #endif
     } else {
-        m_action1->setText("截图");
+        m_action1->setText("自动保存");
     }
 }
 
-void MainWindow::updateRecord() {
+void MainWindow::updateCapture(const HotKey &key) {
 #ifdef Q_OS_WINDOWS
     UnregisterHotKey((HWND)this->winId(), 2);
     quint32 fsModifiers = 0;
 #endif
-    if (m_capture == m_record && m_capture.modifiers != Qt::NoModifier) {
-        QMessageBox::warning(this, "注册热键失败", "不能重复");
-        m_record.modifiers = Qt::NoModifier;
-    }
-    if (m_record.modifiers != Qt::NoModifier) {
-        QString s{"录制GIF("};
-        if (m_record.modifiers & Qt::ControlModifier) {
+    if (key.modifiers != Qt::NoModifier) {
+        QString s{"截图("};
+        if (key.modifiers & Qt::ControlModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_CONTROL;
 #endif
             s.append("Ctrl+");
         }
-        if (m_record.modifiers & Qt::AltModifier) {
+        if (key.modifiers & Qt::AltModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_ALT;
 #endif
             s.append("Alt+");
         }
-        if (m_record.modifiers & Qt::ShiftModifier) {
+        if (key.modifiers & Qt::ShiftModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_SHIFT;
 #endif
             s.append("Shift+");
         }
 #if defined(Q_OS_WINDOWS)
-        if (RegisterHotKey((HWND)this->winId(), 2, fsModifiers, m_record.key)) {
-            s.append(static_cast<char>(m_record.key)).append(")");
+        if (RegisterHotKey((HWND)this->winId(), 2, fsModifiers, key.key)) {
+            s.append(static_cast<char>(key.key)).append(")");
             m_action2->setText(s);
         } else {
-            QMessageBox::warning(this, "注册热键失败", "GIF注册热键失败");
-            m_record.modifiers = Qt::NoModifier;
-            m_action2->setText("录制GIF");
+            QMessageBox::warning(this, "注册热键失败", "截图注册热键失败");
+            m_setting->cleanCaptureKey();
+            m_action2->setText("截图");
         }
 #else
-        s.append(static_cast<char>(m_record.key)).append(")");
+        s.append(static_cast<char>(key.key)).append(")");
+        m_action1->setText(s);
+#endif
+    } else {
+        m_action2->setText("截图");
+    }
+}
+
+void MainWindow::updateRecord(const HotKey &key) {
+#ifdef Q_OS_WINDOWS
+    UnregisterHotKey((HWND)this->winId(), 3);
+    quint32 fsModifiers = 0;
+#endif
+    if (key.modifiers != Qt::NoModifier) {
+        QString s{"录制GIF("};
+        if (key.modifiers & Qt::ControlModifier) {
+#ifdef Q_OS_WINDOWS
+            fsModifiers |= MOD_CONTROL;
+#endif
+            s.append("Ctrl+");
+        }
+        if (key.modifiers & Qt::AltModifier) {
+#ifdef Q_OS_WINDOWS
+            fsModifiers |= MOD_ALT;
+#endif
+            s.append("Alt+");
+        }
+        if (key.modifiers & Qt::ShiftModifier) {
+#ifdef Q_OS_WINDOWS
+            fsModifiers |= MOD_SHIFT;
+#endif
+            s.append("Shift+");
+        }
+#if defined(Q_OS_WINDOWS)
+        if (RegisterHotKey((HWND)this->winId(), 3, fsModifiers, key.key)) {
+            s.append(static_cast<char>(key.key)).append(")");
+            m_action3->setText(s);
+        } else {
+            QMessageBox::warning(this, "注册热键失败", "GIF注册热键失败");
+            m_setting->cleanRecordKey();
+            m_action3->setText("录制GIF");
+        }
+#else
+        s.append(static_cast<char>(key.key)).append(")");
         m_action2->setText(s);
 #endif
     } else {
-        m_action2->setText("录制GIF");
+        m_action3->setText("录制GIF");
     }
 }
 
@@ -739,6 +879,30 @@ void MainWindow::top() {
     }
 }
 
+void MainWindow::openSaveDir() {
+    const QString &path = m_setting->autoSavePath();
+#if defined(Q_OS_LINUX)
+    if (system(QString("nautilus %1 >/dev/null 2>&1 &").arg(path).toStdString().c_str()) != 0) {
+        if (system(QString("thunar %1 >/dev/null 2>&1 &").arg(path).toStdString().c_str()) != 0) {
+            if (system(QString("dolphin %1 >/dev/null 2>&1 &").arg(path).toStdString().c_str()) != 0) {
+                qDebug() << system(QString("xdg-open %1 >/dev/null 2>&1 &").arg(path).toStdString().c_str());
+            }
+        }
+    }
+#else
+    QProcess process;
+    process.setProgram("cmd.exe");
+    if (QFile::exists(path)) {
+        process.setArguments({"/C", QString("explorer %1 >NUL 2>&1").arg(path)});
+    } else {
+        process.setArguments({"/C", QString("explorer %1 >NUL 2>&1").arg(QDir::toNativeSeparators(QFileInfo{path}.path()))});
+    }
+    process.start();
+    process.waitForFinished();
+    // system(QString("explorer /select,%1 >NUL 2>&1").arg(link).toStdString().c_str());
+#endif
+}
+
 bool MainWindow::contains(const QPoint &point) {
     if (m_state & State::Rect) {
         return m_rect.contains(point);
@@ -754,10 +918,16 @@ void MainWindow::updateWindows() {
 
 #ifdef Q_OS_WINDOWS
     HWND hwnd = GetTopWindow(nullptr);
-    addRect(hwnd);
+    QRect rect = getRectByHwnd(hwnd);
+    if (rect.isValid()) {
+        m_windows.push_back(rect);
+    }
 
     while ((hwnd = GetNextWindow(hwnd, GW_HWNDNEXT)) != nullptr) {
-        addRect(hwnd);
+        QRect rect = getRectByHwnd(hwnd);
+        if (rect.isValid()) {
+            m_windows.push_back(rect);
+        }
     }
 #else
     Display *display = XOpenDisplay(nullptr);
@@ -792,9 +962,9 @@ void MainWindow::updateWindows() {
 }
 
 #ifdef Q_OS_WINDOWS
-void MainWindow::addRect(HWND hwnd) {
+QRect MainWindow::getRectByHwnd(HWND hwnd) {
+    QRect qrect;
     if (IsWindow(hwnd) && IsWindowVisible(hwnd)) {
-        QRect qrect;
         RECT rect;
 
         if (DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, (void*)&rect, sizeof(rect)) == S_OK) {
@@ -825,11 +995,8 @@ void MainWindow::addRect(HWND hwnd) {
                 qrect.setBottom(rect.bottom);
             }
         }
-
-        if (qrect.isValid()) {
-            m_windows.push_back(qrect);
-        }
     }
+    return qrect;
 }
 
 #endif

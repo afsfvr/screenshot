@@ -1,4 +1,4 @@
-#ifndef MAINWINDOW_H
+﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QSystemTrayIcon>
@@ -60,7 +60,9 @@ protected:
 #ifdef Q_OS_WINDOWS
     bool nativeEvent(const QByteArray &eventType, void *message, long *result);
 #endif
+    void saveImage();
     void start();
+    void gifStart();
     void showTool();
     bool isValid() const;
     QRect getGeometry() const;
@@ -69,17 +71,19 @@ private slots:
     void keyPress(int code, Qt::KeyboardModifiers modifiers);
 #endif
     void updateHotkey();
-    void updateCapture();
-    void updateRecord();
+    void updateAutoSave(const HotKey &key, bool mode, const QString &path);
+    void updateCapture(const HotKey &key);
+    void updateRecord(const HotKey &key);
     void quit();
     void save(const QString &path="");
     void end();
     void top();
 private:
+    void openSaveDir();
     bool contains(const QPoint &point);
     void updateWindows();
 #ifdef Q_OS_WINDOWS
-    void addRect(HWND hwnd);
+    QRect getRectByHwnd(HWND hwnd);
 #endif
 
 #ifdef Q_OS_LINUX
@@ -96,6 +100,7 @@ private:
 
     QAction *m_action1;
     QAction *m_action2;
+    QAction *m_action3;
     SettingWidget *m_setting;
 };
 

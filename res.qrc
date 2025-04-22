@@ -14,5 +14,8 @@
         <file>images/word.png</file>
         <file>images/redo.png</file>
         <file>images/undo.png</file>
+        <file>images/gif.png</file>
+        <file>images/setting.png</file>
+        <file>images/exit.png</file>
     </qresource>
 </RCC>
