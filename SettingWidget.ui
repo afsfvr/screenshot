@@ -1,0 +1,624 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SettingWidget</class>
+ <widget class="QWidget" name="SettingWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>424</width>
+    <height>385</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QLabel" name="savePath">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>自动保存</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>按下</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="control1">
+          <property name="text">
+           <string>Control</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="alt1">
+          <property name="text">
+           <string>Alt</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="shift1">
+          <property name="text">
+           <string>Shift</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="key1">
+          <item>
+           <property name="text">
+            <string>A</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>B</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>C</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>D</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>E</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>F</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>G</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>H</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>I</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>J</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>K</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>L</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>M</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>N</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>O</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>P</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Q</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>R</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>S</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>T</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>U</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>V</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>W</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>X</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Y</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Z</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>截</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_6">
+        <item>
+         <widget class="QComboBox" name="saveMode">
+          <item>
+           <property name="text">
+            <string>全屏</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>当前程序</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="autoSavePath">
+          <property name="text">
+           <string>保存到</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>快捷键</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QCheckBox" name="control2">
+        <property name="text">
+         <string>Control</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="alt2">
+        <property name="text">
+         <string>Alt</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="shift2">
+        <property name="text">
+         <string>Shift</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="key2">
+        <item>
+         <property name="text">
+          <string>A</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>B</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>C</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>D</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>E</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>F</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>G</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>H</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>I</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>J</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>L</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>M</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>N</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>O</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>P</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Q</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>R</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>S</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>T</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>V</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>X</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Y</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Z</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="title">
+      <string>快捷键</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QCheckBox" name="control3">
+        <property name="text">
+         <string>Control</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="alt3">
+        <property name="text">
+         <string>Alt</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="shift3">
+        <property name="text">
+         <string>Shift</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="key3">
+        <item>
+         <property name="text">
+          <string>A</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>B</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>C</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>D</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>E</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>F</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>G</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>H</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>I</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>J</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>L</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>M</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>N</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>O</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>P</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Q</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>R</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>S</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>T</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>V</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>X</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Y</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Z</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="cancel">
+       <property name="text">
+        <string>取消</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="ok">
+       <property name="text">
+        <string>确定</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>control1</tabstop>
+  <tabstop>alt1</tabstop>
+  <tabstop>shift1</tabstop>
+  <tabstop>key1</tabstop>
+  <tabstop>saveMode</tabstop>
+  <tabstop>control2</tabstop>
+  <tabstop>alt2</tabstop>
+  <tabstop>shift2</tabstop>
+  <tabstop>key2</tabstop>
+  <tabstop>cancel</tabstop>
+  <tabstop>ok</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

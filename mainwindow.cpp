@@ -8,9 +8,9 @@
 #include <QStandardPaths>
 
 MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
-    m_hotkey = new HotKeyWidget{&m_capture, &m_record};
-    connect(m_hotkey, &HotKeyWidget::capture, this, &MainWindow::updateCapture);
-    connect(m_hotkey, &HotKeyWidget::record, this, &MainWindow::updateRecord);
+    m_setting = new SettingWidget;
+    connect(m_setting, &SettingWidget::captureChanged, this, &MainWindow::updateCapture);
+    connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
 
     m_menu = new QMenu(this);
     m_menu->addAction("修改快捷键", this, &MainWindow::updateHotkey);
@@ -30,15 +30,17 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_resize = ResizeImage::NoResize;
     m_gif = false;
 
-    initHotKey();
+    m_monitor = new KeyMouseEvent;
+    m_monitor->start();
+    m_monitor->resume();
+    connect(m_monitor, &KeyMouseEvent::keyPress, this, &MainWindow::keyPress);
     setMouseTracking(true);
 
     connect(m_tool, &Tool::clickTop, this, &MainWindow::top);
 }
 
 MainWindow::~MainWindow() {
-    saveHotKey();
-    safeDelete(m_hotkey);
+    safeDelete(m_setting);
 
 #ifdef Q_OS_LINUX
     delete m_monitor;
@@ -504,14 +506,13 @@ QRect MainWindow::getGeometry() const {
 }
 
 void MainWindow::updateHotkey() {
-    m_hotkey->setConfigPath(getConfigPath());
-    if (m_hotkey->isMinimized()) {
-        m_hotkey->showNormal();
-    } else if (m_hotkey->isVisible()) {
-        m_hotkey->activateWindow();
-        m_hotkey->raise();
+    if (m_setting->isMinimized()) {
+        m_setting->showNormal();
+    } else if (m_setting->isVisible()) {
+        m_setting->activateWindow();
+        m_setting->raise();
     } else {
-        m_hotkey->show();
+        m_setting->show();
     }
 }
 
@@ -735,74 +736,6 @@ void MainWindow::top() {
         connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
 #endif
         end();
-    }
-}
-
-QString MainWindow::getConfigPath() {
-    QString path = QDir::toNativeSeparators(QApplication::applicationDirPath() + QDir::separator() + QApplication::applicationName() + ".data");
-    if (QFile::exists(path)) {
-        return path;
-    } else {
-        path = QDir::toNativeSeparators(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation));
-        if (! QFile::exists(path)) {
-            qDebug() << QString("创建文件夹%1: %2").arg(path, QDir{}.mkdir(path) ? "成功" : "失败");
-        }
-        return path + QDir::separator() + QApplication::applicationName() + ".data";;
-    }
-}
-
-void MainWindow::initHotKey() {
-    m_capture.modifiers = Qt::ControlModifier | Qt::AltModifier;
-    m_capture.key = 'A';
-    m_record.modifiers = Qt::NoModifier;
-    m_record.key = 'A';
-
-    QFile file{getConfigPath()};
-    if (file.exists() && file.open(QFile::ReadOnly) && file.size() == 16) {
-        QByteArray array = file.readAll();
-        const char *data = array.constData();
-        m_capture.modifiers = static_cast<Qt::KeyboardModifiers>(*reinterpret_cast<const quint32*>(data));
-        m_capture.key = *reinterpret_cast<const quint32*>(data + 4);
-        if ((m_capture.modifiers & (Qt::ControlModifier | Qt::AltModifier | Qt::ShiftModifier)) == Qt::NoModifier || m_capture.key < 'A' || m_capture.key > 'Z') {
-            m_capture.modifiers = Qt::NoModifier;
-            m_capture.key = 'A';
-        }
-
-        m_record.modifiers = static_cast<Qt::KeyboardModifiers>(*reinterpret_cast<const quint32*>(data + 8));
-        m_record.key = *reinterpret_cast<const quint32*>(data + 12);
-        if ((m_record.modifiers & (Qt::ControlModifier | Qt::AltModifier | Qt::ShiftModifier)) == Qt::NoModifier || m_record.key < 'A' || m_record.key > 'Z') {
-            m_record.modifiers = Qt::NoModifier;
-            m_record.key = 'A';
-        }
-    } else {
-        saveHotKey();
-    }
-
-#ifdef Q_OS_LINUX
-    m_monitor = new KeyMouseEvent;
-    m_monitor->start();
-    m_monitor->resume();
-    connect(m_monitor, &KeyMouseEvent::keyPress, this, &MainWindow::keyPress);
-#endif
-
-    updateCapture();
-    updateRecord();
-}
-
-void MainWindow::saveHotKey() {
-    QFile file{getConfigPath()};
-    if (file.open(QFile::WriteOnly | QFile::Truncate)) {
-        quint32 arr[4];
-        arr[0] = m_capture.modifiers;
-        arr[1] = m_capture.key;
-        arr[2] = m_record.modifiers;
-        arr[3] = m_record.key;
-        file.write(reinterpret_cast<const char*>(arr), 16);
-        file.close();
-    } else {
-        QString error = QString("write config failed: %1").arg(file.errorString());
-        addTip(error);
-        qWarning() << error;
     }
 }
 

@@ -4,7 +4,7 @@
 #include <QSystemTrayIcon>
 #include <QMenu>
 
-#include "HotKeyWidget.h"
+#include "SettingWidget.h"
 #include "BaseWindow.h"
 #ifdef Q_OS_LINUX
 #include "KeyMouseEvent.h"
@@ -76,9 +76,6 @@ private slots:
     void end();
     void top();
 private:
-    QString getConfigPath();
-    void initHotKey();
-    void saveHotKey();
     bool contains(const QPoint &point);
     void updateWindows();
 #ifdef Q_OS_WINDOWS
@@ -99,9 +96,7 @@ private:
 
     QAction *m_action1;
     QAction *m_action2;
-    HotKeyWidget *m_hotkey;
-    HotKey m_capture;
-    HotKey m_record;
+    SettingWidget *m_setting;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(MainWindow::States)
