@@ -71,7 +71,7 @@ private slots:
     void keyPress(int code, Qt::KeyboardModifiers modifiers);
 #endif
     void updateHotkey();
-    void updateAutoSave(const HotKey &key, bool mode, const QString &path);
+    void updateAutoSave(const HotKey &key, quint8 mode, const QString &path);
     void updateCapture(const HotKey &key);
     void updateRecord(const HotKey &key);
     void quit();
@@ -82,6 +82,9 @@ private:
     void openSaveDir();
     bool contains(const QPoint &point);
     void updateWindows();
+#ifdef Q_OS_LINUX
+    QString getWindowTitle(Display *display, Window window);
+#endif
 #ifdef Q_OS_WINDOWS
     QRect getRectByHwnd(HWND hwnd);
 #endif

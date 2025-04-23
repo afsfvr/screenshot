@@ -15,9 +15,12 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
 
     m_menu = new QMenu(this);
     m_menu->addAction(QIcon(":/images/setting.png"), "设置", this, &MainWindow::updateHotkey);
-    m_action1 = m_menu->addAction(QIcon(":/images/save.png"), "自动保存", this, &MainWindow::openSaveDir);
-    m_action2 = m_menu->addAction(QIcon(":/images/screenshot.ico"), "截图", this, &MainWindow::start);
-    m_action3 = m_menu->addAction(QIcon(":/images/gif.png"), "录制GIF", this, &MainWindow::gifStart);
+    m_action1 = m_menu->addAction(QIcon(":/images/save.png"), "自动保存(未设置)", this, &MainWindow::openSaveDir);
+    m_action1->setToolTip("点击进入目录");
+    m_action2 = m_menu->addAction(QIcon(":/images/screenshot.ico"), "截图(未设置)", this, &MainWindow::start);
+    m_action2->setToolTip("点击截图");
+    m_action3 = m_menu->addAction(QIcon(":/images/gif.png"), "录制GIF(未设置)", this, &MainWindow::gifStart);
+    m_action3->setToolTip("点击录制GIF");
     m_menu->addAction(QIcon(":/images/exit.png"), "退出", this, &MainWindow::quit);
     m_menu->addSeparator();
     m_tray = new QSystemTrayIcon(this);
@@ -458,30 +461,48 @@ void MainWindow::saveImage() {
 #elif defined(Q_OS_LINUX)
         Display *display = XOpenDisplay(nullptr);
         Window rootWindow = DefaultRootWindow(display);
-        Window parent;
-        Window* children;
-        unsigned int nChildren;
-        // 获取所有子窗口
-        if (XQueryTree(display, rootWindow, &rootWindow, &parent, &children, &nChildren)) {
-            for (int i = nChildren - 1; i >= 0; --i) {
+
+        Atom actual_type;
+        int actual_format;
+        unsigned long nitems, bytes_after;
+        unsigned char *prop = nullptr;
+        Atom _NET_ACTIVE_WINDOW = XInternAtom(display, "_NET_ACTIVE_WINDOW", True);
+
+        if (XGetWindowProperty(display, rootWindow, _NET_ACTIVE_WINDOW,
+                               0, (~0L), False, AnyPropertyType,
+                               &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success && prop) {
+            if (nitems > 0) {
+                Window active_window = *(Window *)prop;
+                XFree(prop);
                 XWindowAttributes attributes;
-                XGetWindowAttributes(display, children[i], &attributes);
-
-                if ((attributes.map_state != IsViewable) || (attributes.width == attributes.height && attributes.width <= 5)) {
-                    continue;
+                XGetWindowAttributes(display, active_window, &attributes);
+                if ((attributes.map_state == IsViewable) && (attributes.width != attributes.height || attributes.width > 5 || attributes.height > 5)) {
+                    rect = {attributes.x, attributes.y, attributes.width, attributes.height};
+                    windowTitle = getWindowTitle(display, active_window);
                 }
-                rect = {attributes.x, attributes.y, attributes.width, attributes.height};
-                XTextProperty nameProp;
-                char **list = nullptr;
-                int count;
-                if (XmbTextPropertyToTextList(display, &nameProp, &list, &count) >= Success && count > 0 && list) {
-                    windowTitle = QString::fromUtf8(list[0]);
-                    XFreeStringList(list);
-                break;
             }
-
-            XFree(children);
         }
+        if (rect.isEmpty()) {
+            Window parent;
+            Window* children;
+            unsigned int nChildren;
+            if (XQueryTree(display, rootWindow, &rootWindow, &parent, &children, &nChildren)) {
+                for (int i = nChildren - 1; i >= 0; --i) {
+                    XWindowAttributes attributes;
+                    XGetWindowAttributes(display, children[i], &attributes);
+
+                    if ((attributes.map_state != IsViewable) || (attributes.width == attributes.height && attributes.width <= 5)) {
+                        continue;
+                    }
+                    rect = {attributes.x, attributes.y, attributes.width, attributes.height};
+                    windowTitle = getWindowTitle(display, children[i]);
+                    break;
+                }
+
+                XFree(children);
+            }
+        }
+
         XCloseDisplay(display);
 #endif
         QList<QScreen*> list = QApplication::screens();
@@ -501,11 +522,14 @@ void MainWindow::saveImage() {
     if (image.isNull()) {
         qWarning() << "图片为空";
     } else {
+        static QRegularExpression regex(R"([\/:*?"<>|])");
+        windowTitle.replace(regex, "_");
         std::string saveFormat = m_setting->saveFormat().toStdString();
         const char *format = saveFormat.c_str();
-        bool ret = image.save(QString("%1%2%3_%4.%5").arg(path, QDir::separator(), windowTitle, QDateTime::currentDateTime().toString("yyyyMMddhhmmss"), format), format);
+        QString datetimeString = QDateTime::currentDateTime().toString("yyyy-MM-dd-hh-mm-ss.zzz");
+        bool ret = image.save(QString("%1%2%3_%4.%5").arg(path, QDir::separator(), windowTitle, datetimeString, format), format);
         if (! ret) {
-            image.save(QString("%1%2%3.%4").arg(path, QDir::separator(), QDateTime::currentDateTime().toString("yyyyMMddhhmmss"), format), format);
+            image.save(QString("%1%2%3.%4").arg(path, QDir::separator(), datetimeString, format), format);
         }
     }
 }
@@ -645,7 +669,7 @@ void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
 }
 #endif
 
-void MainWindow::updateAutoSave(const HotKey &key, bool mode, const QString &path) {
+void MainWindow::updateAutoSave(const HotKey &key, quint8 mode, const QString &path) {
     Q_UNUSED(mode);
     Q_UNUSED(path);
 #ifdef Q_OS_WINDOWS
@@ -679,14 +703,14 @@ void MainWindow::updateAutoSave(const HotKey &key, bool mode, const QString &pat
         } else {
             QMessageBox::warning(this, "注册热键失败", "自动保存热键注册失败");
             m_setting->cleanAutoSaveKey();
-            m_action1->setText("自动保存");
+            m_action1->setText("自动保存(未设置)");
         }
 #else
         s.append(static_cast<char>(key.key)).append(")");
         m_action1->setText(s);
 #endif
     } else {
-        m_action1->setText("自动保存");
+        m_action1->setText("自动保存(未设置)");
     }
 }
 
@@ -722,14 +746,14 @@ void MainWindow::updateCapture(const HotKey &key) {
         } else {
             QMessageBox::warning(this, "注册热键失败", "截图注册热键失败");
             m_setting->cleanCaptureKey();
-            m_action2->setText("截图");
+            m_action2->setText("截图(未设置)");
         }
 #else
         s.append(static_cast<char>(key.key)).append(")");
-        m_action1->setText(s);
+        m_action2->setText(s);
 #endif
     } else {
-        m_action2->setText("截图");
+        m_action2->setText("截图(未设置)");
     }
 }
 
@@ -765,14 +789,14 @@ void MainWindow::updateRecord(const HotKey &key) {
         } else {
             QMessageBox::warning(this, "注册热键失败", "GIF注册热键失败");
             m_setting->cleanRecordKey();
-            m_action3->setText("录制GIF");
+            m_action3->setText("录制GIF(未设置)");
         }
 #else
         s.append(static_cast<char>(key.key)).append(")");
-        m_action2->setText(s);
+        m_action3->setText(s);
 #endif
     } else {
-        m_action3->setText("录制GIF");
+        m_action3->setText("录制GIF(未设置)");
     }
 }
 
@@ -960,6 +984,25 @@ void MainWindow::updateWindows() {
         }
     }
 }
+
+#ifdef Q_OS_LINUX
+QString MainWindow::getWindowTitle(Display *display, Window window) {
+    Atom actual_type;
+    int actual_format;
+    unsigned long nitems, bytes_after;
+    unsigned char *prop = nullptr;
+    Atom _NET_WM_NAME = XInternAtom(display, "_NET_WM_NAME", True);
+    Atom UTF8_STRING = XInternAtom(display, "UTF8_STRING", True);
+    if (XGetWindowProperty(display, window, _NET_WM_NAME, 0, (~0L), False,
+                           UTF8_STRING, &actual_type, &actual_format,
+                           &nitems, &bytes_after, &prop) == Success && prop) {
+        QString str = QString::fromUtf8(reinterpret_cast<const char*>(prop));
+        XFree(prop);
+        return str;
+    }
+    return {};
+}
+#endif
 
 #ifdef Q_OS_WINDOWS
 QRect MainWindow::getRectByHwnd(HWND hwnd) {

@@ -56,7 +56,7 @@ private:
     void updateKey3();
 
 signals:
-    void autoSaveChanged(const HotKey &key, bool mode, const QString &path);
+    void autoSaveChanged(const HotKey &key, quint8 mode, const QString &path);
     void captureChanged(const HotKey &key);
     void recordChanged(const HotKey &key);
 

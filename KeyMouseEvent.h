@@ -9,6 +9,7 @@
 #include <X11/Xlibint.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/record.h>
+#include <X11/extensions/Xrandr.h>
 
 class KeyMouseEvent : public QThread
 {

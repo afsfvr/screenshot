@@ -224,15 +224,18 @@ void Tool::choosePath() {
         return;
 
     const QString &filter = fileDialog.selectedNameFilter();
-    QRegExp regex("\\(([^)]+)\\)");
+    static const QRegularExpression regex("\\(([^)]+)\\)");
     QStringList extensions;
-    if (regex.indexIn(filter) != -1) {
-        QString matchedString = regex.cap(1);
-        QStringList parts = matchedString.split(QRegExp("\\s+"), Qt::SkipEmptyParts);
-        QRegExp alphaRegex("[a-zA-Z]+");
+    QRegularExpressionMatch match = regex.match(filter);
+    if (match.hasMatch()) {
+        QString matchedString = match.captured(1);
+        static const QRegularExpression spaceRegex("\\s+");
+        QStringList parts = matchedString.split(spaceRegex, Qt::SkipEmptyParts);
+        static const QRegularExpression alphaRegex("[a-zA-Z]+");
         for (const QString &part : parts) {
-            if (alphaRegex.indexIn(part) != -1) {
-                extensions.append(alphaRegex.cap(0));
+            QRegularExpressionMatch alphaMatch = alphaRegex.match(part);
+            if (alphaMatch.hasMatch()) {
+                extensions.append(alphaMatch.captured(0));
             }
         }
     }
