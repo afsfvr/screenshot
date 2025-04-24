@@ -1,4 +1,4 @@
-#include "BaseWindow.h"
+﻿#include "BaseWindow.h"
 
 BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shape{nullptr}, m_tool{new Tool{this}}, m_edit{nullptr}, m_ignore{false} {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
@@ -147,7 +147,7 @@ void BaseWindow::setShape(const QPoint &point) {
         m_edit->activateWindow();
         m_edit->setFocus();
 
-        m_edit->move(mapToParent({point.x() - 6, point.y() - qRound((m_edit->height() - m_edit->fontMetrics().height()) / 2.0)}));
+        m_edit->move(mapToParent(QPoint(point.x() - 6, point.y() - qRound((m_edit->height() - m_edit->fontMetrics().height()) / 2.0))));
         int max = getGeometry().right() - m_edit->x();
         if (m_edit->width() > max) {
             m_edit->setMinimumWidth(max);

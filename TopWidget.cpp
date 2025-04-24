@@ -158,7 +158,11 @@ void TopWidget::hideEvent(QHideEvent *event) {
 void TopWidget::mousePressEvent(QMouseEvent *event) {
     if (event->buttons() == Qt::LeftButton) {
         m_press = true;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        m_point = event->globalPosition().toPoint() - geometry().topLeft();
+#else
         m_point = event->globalPos() - geometry().topLeft();
+#endif
         if (m_tool->isDraw()) {
             setCursorShape(Qt::BitmapCursor);
             setShape(event->pos());
@@ -239,7 +243,11 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
         XSendEvent(display, QX11Info::appRootWindow(QX11Info::appScreen()), False, SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
         XFlush(display);
 #elif defined (Q_OS_WINDOWS)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        move(event->globalPosition().toPoint() - m_point);
+#else
         move(event->globalPos() - m_point);
+#endif
 #endif
     }
 }

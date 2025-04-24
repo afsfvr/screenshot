@@ -58,7 +58,11 @@ protected:
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
 #ifdef Q_OS_WINDOWS
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result);
+#else
     bool nativeEvent(const QByteArray &eventType, void *message, long *result);
+#endif
 #endif
     void saveImage();
     void start();

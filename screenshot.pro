@@ -7,8 +7,7 @@ unix: {
     HEADERS += KeyMouseEvent.h
 }
 win32: {
-    LIBS += -lDwmapi
-    LIBS += -luser32
+    LIBS += -lDwmapi  -luser32
 }
 win32-msvc*: {
     QMAKE_CFLAGS *= /utf-8

@@ -158,7 +158,8 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
     }
     if (event->buttons() == Qt::NoButton) {
         m_press = false;
-        if ((event->x() == m_point.x() || event->y() == m_point.y()) && event->button() == Qt::RightButton) {
+        QPoint p = event->pos();
+        if ((p.x() == m_point.x() || p.y() == m_point.y()) && event->button() == Qt::RightButton) {
             if (m_state != State::Null && isValid()) {
                 setCursorShape(Qt::CrossCursor);
                 clearDraw();
@@ -405,7 +406,11 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 }
 
 #ifdef Q_OS_WINDOWS
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr *result) {
+#else
 bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result) {
+#endif
     if (! this->isVisible() && eventType == "windows_generic_MSG") {
         MSG *msg = static_cast<MSG *>(message);
         if (msg->message == WM_HOTKEY) {
