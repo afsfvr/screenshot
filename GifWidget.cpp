@@ -1,4 +1,4 @@
-#include "GifWidget.h"
+﻿#include "GifWidget.h"
 #include "Tool.h"
 
 #include <QUuid>
@@ -97,6 +97,74 @@ void GifWidget::paintEvent(QPaintEvent *event) {
 
 void GifWidget::timerEvent(QTimerEvent *event) {
     if (event->timerId() == m_timerId) {
+        updateGIF();
+    } else if (event->timerId() == m_updateTimerId) {
+        if (m_widget != nullptr) {
+            m_label->setText(QString("%1s").arg((QDateTime::currentMSecsSinceEpoch() - m_startTime) / 1000.0, 0, 'f', 2));
+        }
+    }
+}
+
+void GifWidget::buttonClicked() {
+    if (m_widget == nullptr) {
+        return;
+    }
+    if (m_writer == nullptr) {
+        m_writer = new GifWriter;
+        float value = m_spin->value();
+        if (m_box->currentIndex() == 0) {
+            value = 1 / value;
+        }
+        m_spin->deleteLater();
+        m_spin = nullptr;
+        m_box->deleteLater();
+        m_box = nullptr;
+
+        m_updateTimerId = startTimer(33);
+        m_timerId = startTimer(1000 / value, Qt::PreciseTimer);
+        m_button->setText("结束");
+        m_action->setText("结束");
+        m_label->setText("0s");
+        m_label->setVisible(true);
+
+        m_delay = 100 / value;
+        memset(m_writer, 0, sizeof(GifWriter));
+        m_startTime = QDateTime::currentMSecsSinceEpoch();
+        GifBegin(m_writer, m_tmp.toUtf8().data(), m_screen.width(), m_screen.height(), m_delay);
+        updateGIF();
+    } else {
+        if (m_timerId != -1) {
+            killTimer(m_timerId);
+            m_timerId = -1;
+        }
+        if (m_updateTimerId != -1) {
+            killTimer(m_updateTimerId);
+            m_updateTimerId = -1;
+        }
+        m_path = QFileDialog::getSaveFileName(this, "选择路径", Tool::savePath, "*.gif");
+        if (m_path.isEmpty()) {
+            m_mutex.lock();
+            for (auto iter = m_queue.begin(); iter != m_queue.end(); ++iter) {
+                if (iter->image[0] == 'f') {
+                    QFile::remove(reinterpret_cast<const char*>(iter->image + 1));
+                }
+                delete[] iter->image;
+            }
+            m_queue.clear();
+            m_mutex.unlock();
+        } else {
+            QFileInfo fileinfo{m_path};
+            Tool::savePath = fileinfo.absolutePath();
+            if (! fileinfo.fileName().endsWith(".gif", Qt::CaseInsensitive)) {
+                m_path += ".gif";
+            }
+        }
+        close();
+    }
+}
+
+void GifWidget::updateGIF() {
+    if (m_writer) {
         QImage &&image = screenshot();
         uint8_t *bits = nullptr;
         if (m_queue.size() > 100) {
@@ -130,67 +198,6 @@ void GifWidget::timerEvent(QTimerEvent *event) {
         }
         m_queue.append({m_writer, bits, image.width(), image.height(), delay});
         m_mutex.unlock();
-    } else if (event->timerId() == m_updateTimerId) {
-        if (m_widget != nullptr) {
-            m_label->setText(QString("%1s").arg((QDateTime::currentMSecsSinceEpoch() - m_startTime) / 1000.0, 0, 'f', 2));
-        }
-    }
-}
-
-void GifWidget::buttonClicked() {
-    if (m_widget == nullptr) {
-        return;
-    }
-    if (m_writer == nullptr) {
-        m_writer = new GifWriter;
-        float value = m_spin->value();
-        if (m_box->currentIndex() == 0) {
-            value = 1 / value;
-        }
-        m_spin->deleteLater();
-        m_spin = nullptr;
-        m_box->deleteLater();
-        m_box = nullptr;
-
-        m_updateTimerId = startTimer(33);
-        m_timerId = startTimer(1000 / value, Qt::PreciseTimer);
-        m_button->setText("结束");
-        m_action->setText("结束");
-        m_label->setText("0s");
-        m_label->setVisible(true);
-
-        m_delay = 100 / value;
-        memset(m_writer, 0, sizeof(GifWriter));
-        m_preTime = m_startTime = QDateTime::currentMSecsSinceEpoch();
-        GifBegin(m_writer, m_tmp.toUtf8().data(), m_screen.width(), m_screen.height(), m_delay);
-    } else {
-        if (m_timerId != -1) {
-            killTimer(m_timerId);
-            m_timerId = -1;
-        }
-        if (m_updateTimerId != -1) {
-            killTimer(m_updateTimerId);
-            m_updateTimerId = -1;
-        }
-        m_path = QFileDialog::getSaveFileName(this, "选择路径", Tool::savePath, "*.gif");
-        if (m_path.isEmpty()) {
-            m_mutex.lock();
-            for (auto iter = m_queue.begin(); iter != m_queue.end(); ++iter) {
-                if (iter->image[0] == 'f') {
-                    QFile::remove(reinterpret_cast<const char*>(iter->image + 1));
-                }
-                delete[] iter->image;
-            }
-            m_queue.clear();
-            m_mutex.unlock();
-        } else {
-            QFileInfo fileinfo{m_path};
-            Tool::savePath = fileinfo.absolutePath();
-            if (! fileinfo.fileName().endsWith(".gif", Qt::CaseInsensitive)) {
-                m_path += ".gif";
-            }
-        }
-        close();
     }
 }
 

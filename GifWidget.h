@@ -1,4 +1,4 @@
-#ifndef GIFWIDGET_H
+﻿#ifndef GIFWIDGET_H
 #define GIFWIDGET_H
 
 #include <QWidget>
@@ -40,6 +40,7 @@ protected:
 private slots:
     void buttonClicked();
 private:
+    void updateGIF();
     void init();
     QImage screenshot();
     void start();

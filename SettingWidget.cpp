@@ -112,7 +112,7 @@ const QString& SettingWidget::getConfigPath() const {
     } else {
         static QString userDir = QDir::toNativeSeparators(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation));
         if (! QFile::exists(userDir)) {
-            qDebug() << QString("创建文件夹%1: %2").arg(userDir, QDir{}.mkdir(userDir) ? "成功" : "失败");
+            qDebug() << QString("创建文件夹%1: %2").arg(userDir, QDir{}.mkpath(userDir) ? "成功" : "失败");
         }
         static QString userPath = userDir + QDir::separator() + QApplication::applicationName() + ".data";
         return userPath;

@@ -28,6 +28,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_tray->setIcon(QIcon(":/images/screenshot.ico"));
     m_tray->setToolTip("截图");
     m_tray->show();
+    connect(m_tray, &QSystemTrayIcon::messageClicked, this, &MainWindow::openSaveDir);
 
     m_state = State::Null;
     m_resize = ResizeImage::NoResize;
@@ -434,11 +435,14 @@ void MainWindow::saveImage() {
     const QString path = m_setting->autoSavePath();
     if (path.length() == 0) {
         qWarning() << "path为空，取消截图";
+        m_tray->showMessage("路径错误", "path为空，取消截图", QSystemTrayIcon::Warning, 3000);
         return;
     }
 
     if (! QDir{path}.mkpath(path)) {
-        qWarning() << QString("创建文件夹%1失败").arg(path);
+        QString msg = QString("创建文件夹%1失败").arg(path);
+        qWarning() << msg;
+        m_tray->showMessage("路径错误", msg, QSystemTrayIcon::Warning, 3000);
         return;
     }
 
@@ -526,15 +530,23 @@ void MainWindow::saveImage() {
     }
     if (image.isNull()) {
         qWarning() << "图片为空";
+        m_tray->showMessage("截图失败", "截图失败", QSystemTrayIcon::Critical, 3000);
     } else {
         static QRegularExpression regex(R"([\/:*?"<>|])");
         windowTitle.replace(regex, "_");
         std::string saveFormat = m_setting->saveFormat().toStdString();
         const char *format = saveFormat.c_str();
         QString datetimeString = QDateTime::currentDateTime().toString("yyyy-MM-dd-hh-mm-ss.zzz");
-        bool ret = image.save(QString("%1%2%3_%4.%5").arg(path, QDir::separator(), windowTitle, datetimeString, format), format);
+        QString imagePath = QString("%1%2%3_%4.%5").arg(path, QDir::separator(), windowTitle, datetimeString, format);
+        bool ret = image.save(imagePath, format);
         if (! ret) {
-            image.save(QString("%1%2%3.%4").arg(path, QDir::separator(), datetimeString, format), format);
+            imagePath = QString("%1%2%3.%4").arg(path, QDir::separator(), datetimeString, format);
+            ret = image.save(imagePath, format);
+        }
+        if (ret) {
+            m_tray->showMessage("截图成功", QString("图片已保存到%1").arg(imagePath), QIcon(QPixmap::fromImage(image)), 3000);
+        } else {
+            m_tray->showMessage("截图失败", QString("保存图片到%1失败").arg(imagePath), QSystemTrayIcon::Critical, 3000);
         }
     }
 }
@@ -909,7 +921,19 @@ void MainWindow::top() {
 }
 
 void MainWindow::openSaveDir() {
-    const QString &path = m_setting->autoSavePath();
+    QString path = m_setting->autoSavePath();
+    QFileInfo info{path};
+    if (! info.exists()) {
+        QDir{path}.mkpath(path);
+    }
+    if (! info.isDir()) {
+        path = QDir::toNativeSeparators(info.path());
+        info.setFile(path);
+        if (! info.isDir()) {
+            return;
+        }
+    }
+
 #if defined(Q_OS_LINUX)
     if (system(QString("nautilus %1 >/dev/null 2>&1 &").arg(path).toStdString().c_str()) != 0) {
         if (system(QString("thunar %1 >/dev/null 2>&1 &").arg(path).toStdString().c_str()) != 0) {
@@ -921,11 +945,7 @@ void MainWindow::openSaveDir() {
 #else
     QProcess process;
     process.setProgram("cmd.exe");
-    if (QFile::exists(path)) {
-        process.setArguments({"/C", QString("explorer %1 >NUL 2>&1").arg(path)});
-    } else {
-        process.setArguments({"/C", QString("explorer %1 >NUL 2>&1").arg(QDir::toNativeSeparators(QFileInfo{path}.path()))});
-    }
+    process.setArguments({"/C", QString("explorer %1 >NUL 2>&1").arg(path)});
     process.start();
     process.waitForFinished();
     // system(QString("explorer /select,%1 >NUL 2>&1").arg(link).toStdString().c_str());
