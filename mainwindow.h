@@ -70,6 +70,11 @@ protected:
     void showTool();
     bool isValid() const;
     QRect getGeometry() const;
+
+signals:
+    void started();
+    void finished();
+
 private slots:
 #ifdef Q_OS_LINUX
     void keyPress(int code, Qt::KeyboardModifiers modifiers);

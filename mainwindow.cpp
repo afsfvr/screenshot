@@ -584,6 +584,7 @@ void MainWindow::start() {
     m_press = false;
     activateWindow();
     repaint();
+    emit started();
 }
 
 void MainWindow::gifStart() {
@@ -880,6 +881,7 @@ void MainWindow::end() {
     safeDelete(m_shape);
     resize(1, 1);
     repaint();
+    emit finished();
 }
 
 void MainWindow::top() {
@@ -896,10 +898,10 @@ void MainWindow::top() {
         painter.translate(- point);
         painter.fillPath(m_path, m_image);
         painter.end();
-#if defined(Q_OS_WINDOWS)
-        new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
-#elif defined(Q_OS_LINUX)
         auto *t = new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
+        connect(this, &MainWindow::started, t, &TopWidget::hide);
+        connect(this, &MainWindow::finished, t, &TopWidget::show);
+#if defined(Q_OS_LINUX)
         connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
 #endif
         end();
@@ -910,10 +912,10 @@ void MainWindow::top() {
             (*iter)->translate(- point);
         }
 
-#if defined(Q_OS_WINDOWS)
-        new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
-#elif defined(Q_OS_LINUX)
         auto *t = new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
+        connect(this, &MainWindow::started, t, &TopWidget::hide);
+        connect(this, &MainWindow::finished, t, &TopWidget::show);
+#if defined(Q_OS_LINUX)
         connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
 #endif
         end();
