@@ -1,19 +1,16 @@
 #ifndef SHAPE_H
 #define SHAPE_H
-#include <QObject>
 #include <QPainter>
 #include <QPen>
 #include <QPainterPath>
 
 #define SHAPE(Class) \
-    Q_OBJECT \
 public: \
     virtual Shape *getInstance(const QPoint &point, const QPen &pen, float opacity, bool fill) { \
         return new Class(point, pen, opacity, fill); \
     }
 
-class Shape: public QObject {
-    Q_OBJECT
+class Shape {
 public:
     Shape(const QPen &pen, float opacity = 1.0f, bool fill = false);
     virtual ~Shape() = default;

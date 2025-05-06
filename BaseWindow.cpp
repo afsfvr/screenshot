@@ -63,7 +63,7 @@ bool BaseWindow::eventFilter(QObject *watched, QEvent *event) {
     if (watched == m_edit && event->type() == QEvent::FocusOut) {
         m_ignore = (QApplication::focusObject() == this);
         if (! m_vector.isEmpty()) {
-            Text *text = qobject_cast<Text*>(m_vector.last());
+            Text *text = dynamic_cast<Text*>(m_vector.last());
             if (text) {
                 const QString &s = m_edit->text();
                 if (s.isEmpty()) {
@@ -130,7 +130,7 @@ void BaseWindow::setShape(const QPoint &point) {
         safeDelete(m_shape);
     }
     m_shape = m_tool->getShape(point);
-    Text *text = qobject_cast<Text*>(m_shape);
+    Text *text = dynamic_cast<Text*>(m_shape);
     if (text) {
         m_edit->setMinimumWidth(150);
         m_edit->setMaximumWidth(150);
