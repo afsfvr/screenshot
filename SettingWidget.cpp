@@ -92,6 +92,7 @@ void SettingWidget::readConfig() {
 }
 
 void SettingWidget::saveConfig() {
+    qDebug() << "save config";
     QFile file{getConfigPath()};
     if (file.open(QFile::WriteOnly | QFile::Truncate)) {
         QDataStream stream{&file};
@@ -168,7 +169,6 @@ void SettingWidget::openFile(const QString &link) {
 void SettingWidget::choosePath(const QString &link) {
     QString path = QDir::toNativeSeparators(QFileDialog::getExistingDirectory(this, "选择路径", link));
     if (path.length() > 0 && QFile::exists(path)) {
-        m_auto_save_path = path;
         ui->autoSavePath->setText(QString("<a href=\"%1\" style=\"color:black; text-decoration: none;\">保存路径:%1</a>").arg(path));
         ui->autoSavePath->setToolTip(path);
     }
@@ -178,8 +178,8 @@ void SettingWidget::confirm() {
     HotKey key1;
     HotKey key2;
     HotKey key3;
-
-    m_full_screen = ui->fullScreen->isChecked();
+    bool save = false;
+    const QString savePath = (ui->autoSavePath->toolTip() == "未设置" ? "" : ui->autoSavePath->toolTip());
 
     QString msg = "是否删除";
     key1.modifiers = Qt::NoModifier;
@@ -194,7 +194,7 @@ void SettingWidget::confirm() {
     }
     key1.key = 'A' + ui->key1->currentIndex();
     checkData(key1);
-    if (m_auto_save_path.length() == 0) {
+    if (savePath.length() == 0) {
         key1.modifiers = Qt::NoModifier;
     }
     if (key1.modifiers != m_auto_save_key.modifiers && key1.modifiers == Qt::NoModifier) {
@@ -242,11 +242,11 @@ void SettingWidget::confirm() {
 
     this->hide();
 
-    m_save_format = ui->format->currentText();
     if (key1 != m_auto_save_key) {
         m_auto_save_key = key1;
         if (key1.modifiers == Qt::NoModifier) {
-            emit autoSaveChanged(m_auto_save_key, m_full_screen, m_auto_save_path);
+            save = true;
+            emit autoSaveChanged(m_auto_save_key, m_full_screen, savePath);
         }
     } else {
         key1.modifiers = Qt::NoModifier;
@@ -254,6 +254,7 @@ void SettingWidget::confirm() {
     if (key2 != m_capture) {
         m_capture = key2;
         if (key2.modifiers == Qt::NoModifier) {
+            save = true;
             emit captureChanged(m_capture);
         }
     } else {
@@ -262,6 +263,7 @@ void SettingWidget::confirm() {
     if (key3 != m_record) {
         m_record = key3;
         if (key3.modifiers == Qt::NoModifier) {
+            save = true;
             emit recordChanged(m_record);
         }
     } else {
@@ -269,13 +271,33 @@ void SettingWidget::confirm() {
     }
 
     if (key1.modifiers != Qt::NoModifier) {
-        emit autoSaveChanged(m_auto_save_key, m_full_screen, m_auto_save_path);
+        save = true;
+        emit autoSaveChanged(m_auto_save_key, m_full_screen, savePath);
     }
     if (key2.modifiers != Qt::NoModifier) {
+        save = true;
         emit captureChanged(m_capture);
     }
     if (key3.modifiers != Qt::NoModifier) {
+        save = true;
         emit recordChanged(m_record);
+    }
+
+    if (m_full_screen != ui->fullScreen->isChecked()) {
+        save = true;
+        m_full_screen = ui->fullScreen->isChecked();
+    }
+    if (m_save_format != ui->format->currentText()) {
+        save = true;
+        m_save_format = ui->format->currentText();
+    }
+    if (m_auto_save_path != savePath) {
+        save = true;
+        m_auto_save_path = savePath;
+    }
+
+    if (save) {
+        saveConfig();
     }
 }
 
