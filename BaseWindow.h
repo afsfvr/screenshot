@@ -25,10 +25,10 @@ public:
     explicit BaseWindow(QWidget *parent = nullptr);
     virtual ~BaseWindow();
 protected:
-    virtual void keyPressEvent(QKeyEvent *event);
-    virtual void mouseDoubleClickEvent(QMouseEvent *event);
-    virtual bool eventFilter(QObject *watched, QEvent *event);
-    virtual void timerEvent(QTimerEvent *event);
+    virtual void keyPressEvent(QKeyEvent *event) override;
+    virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
+    virtual bool eventFilter(QObject *watched, QEvent *event) override;
+    virtual void timerEvent(QTimerEvent *event) override;
 
     QImage fullScreenshot();
     QRect getRect(const QPoint &p1, const QPoint &p2);

@@ -6,7 +6,7 @@
 
 #define SHAPE(Class) \
 public: \
-    virtual Shape *getInstance(const QPoint &point, const QPen &pen, float opacity, bool fill) { \
+    virtual Shape *getInstance(const QPoint &point, const QPen &pen, float opacity, bool fill) override { \
         return new Class(point, pen, opacity, fill); \
     }
 
@@ -36,11 +36,11 @@ class Rectangle: public Shape {
     SHAPE(Rectangle)
 public:
     Rectangle(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
-    virtual void addPoint(const QPoint &point);
-    virtual bool isNull();
-    virtual void translate(const QPoint &point);
+    virtual void addPoint(const QPoint &point) override;
+    virtual bool isNull() override;
+    virtual void translate(const QPoint &point) override;
 protected:
-    virtual void paint(QPainter &painter);
+    virtual void paint(QPainter &painter) override;
 private:
     QPoint p1, p2;
 };
@@ -49,11 +49,11 @@ class Ellipse: public Shape {
     SHAPE(Ellipse)
 public:
     Ellipse(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
-    virtual void addPoint(const QPoint &point);
-    virtual bool isNull();
-    virtual void translate(const QPoint &point);
+    virtual void addPoint(const QPoint &point) override;
+    virtual bool isNull() override;
+    virtual void translate(const QPoint &point) override;
 protected:
-    virtual void paint(QPainter &painter);
+    virtual void paint(QPainter &painter) override;
 private:
     QPoint p1, p2;
 };
@@ -62,11 +62,11 @@ class StraightLine: public Shape {
     SHAPE(StraightLine)
 public:
     StraightLine(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
-    virtual void addPoint(const QPoint &point);
-    virtual bool isNull();
-    virtual void translate(const QPoint &point);
+    virtual void addPoint(const QPoint &point) override;
+    virtual bool isNull() override;
+    virtual void translate(const QPoint &point) override;
 protected:
-    virtual void paint(QPainter &painter);
+    virtual void paint(QPainter &painter) override;
 private:
     QPoint p1, p2;
 };
@@ -75,11 +75,11 @@ class Line: public Shape {
     SHAPE(Line)
 public:
     Line(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
-    virtual void addPoint(const QPoint &point);
-    virtual bool isNull();
-    virtual void translate(const QPoint &point);
+    virtual void addPoint(const QPoint &point) override;
+    virtual bool isNull() override;
+    virtual void translate(const QPoint &point) override;
 protected:
-    virtual void paint(QPainter &painter);
+    virtual void paint(QPainter &painter) override;
 private:
     QPainterPath m_path;
 };
@@ -88,11 +88,11 @@ class Arrow: public Shape {
     SHAPE(Arrow)
 public:
     Arrow(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
-    virtual void addPoint(const QPoint &point);
-    virtual bool isNull();
-    virtual void translate(const QPoint &point);
+    virtual void addPoint(const QPoint &point) override;
+    virtual bool isNull() override;
+    virtual void translate(const QPoint &point) override;
 protected:
-    virtual void paint(QPainter &painter);
+    virtual void paint(QPainter &painter) override;
 private:
     QPoint m_p1, m_p2;
     QPainterPath m_path;
@@ -104,13 +104,13 @@ class Text: public Shape {
 public:
     Text(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
     Text(const QPoint &point, const QPen &pen, const QFont &font, float opacity = 1.0f, bool fill = false);
-    virtual void addPoint(const QPoint &point);
-    virtual bool isNull();
-    virtual void translate(const QPoint &point);
+    virtual void addPoint(const QPoint &point) override;
+    virtual bool isNull() override;
+    virtual void translate(const QPoint &point) override;
     void setText(const QString &text);
     const QFont &font() const;
 protected:
-    virtual void paint(QPainter &painter);
+    virtual void paint(QPainter &painter) override;
 private:
     QFont m_font;
     QPoint m_point;

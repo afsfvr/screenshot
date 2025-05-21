@@ -31,11 +31,11 @@ public:
     ~Tool();
     bool isDraw();
     Shape *getShape(const QPoint &point);
-    void showEvent(QShowEvent *event);
-    void hideEvent(QHideEvent *event);
-    bool eventFilter(QObject *watched, QEvent *event);
-    void focusOutEvent(QFocusEvent *event);
-    void keyPressEvent(QKeyEvent *event);
+    void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
+    void focusOutEvent(QFocusEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
     void setEditShow(bool show);
 public slots:
     void choosePath();

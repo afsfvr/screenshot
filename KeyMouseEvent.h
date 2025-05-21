@@ -22,7 +22,7 @@ public:
     void resume();
     void pause();
 protected:
-    virtual void run();
+    virtual void run() override;
     Q_INVOKABLE void eventLoop();
     void handleEvent(XRecordInterceptData* data);
 

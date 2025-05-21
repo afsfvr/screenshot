@@ -35,8 +35,8 @@ public:
     explicit GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent = nullptr);
     ~GifWidget();
 protected:
-    void paintEvent(QPaintEvent *event);
-    void timerEvent(QTimerEvent *event);
+    void paintEvent(QPaintEvent *event) override;
+    void timerEvent(QTimerEvent *event) override;
 private slots:
     void buttonClicked();
 private:
