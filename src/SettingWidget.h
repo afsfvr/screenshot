@@ -42,7 +42,7 @@ public:
     inline const HotKey& record() const { return m_record; }
 
 protected:
-    void showEvent(QShowEvent *event);
+    void showEvent(QShowEvent *event) override;
 
 private slots:
     void openFile(const QString &link);

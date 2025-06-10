@@ -79,6 +79,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         if (m_resize != ResizeImage::NoResize) {
             clearDraw();
             m_tool->hide();
+            repaint();
         } else if (contains(event->pos())) {
             if (event->button() == Qt::LeftButton) {
                 if (m_tool->isDraw()) {
@@ -146,6 +147,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
                     safeDelete(m_shape);
                 }
             }
+            m_resize = ResizeImage::NoResize;
             repaint();
             showTool();
         }
@@ -204,7 +206,6 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                     m_rect.setBottom(point.y());
                 }
             }
-            repaint();
             if (m_resize & ResizeImage::Left) {
                 if (point.x() > m_rect.right()) {
                     m_resize &= ~ResizeImage::Left;
@@ -224,6 +225,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                     m_rect.setRight(point.x());
                 }
             }
+            repaint();
         } else if (m_cursor == Qt::SizeAllCursor) {
             QPoint point = event->pos() - m_point;
             m_point = event->pos();
@@ -370,7 +372,7 @@ void MainWindow::paintEvent(QPaintEvent *event) {
 
     painter.setClipping(false);
 
-    if (m_state == State::Null || (m_state & State::Screen)) {
+    if (m_state == State::Null || (m_state & State::Screen) || m_resize != ResizeImage::NoResize) {
         const QPoint &cursor = QCursor::pos();
         QPoint point;
         if (cursor.x() + 85 + 10 <= this->width()) {

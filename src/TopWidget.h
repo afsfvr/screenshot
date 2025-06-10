@@ -20,21 +20,21 @@ public slots:
 #endif
 
 protected:
-    void keyPressEvent(QKeyEvent *event);
-    void closeEvent(QCloseEvent *event);
-    void paintEvent(QPaintEvent *event);
-    void hideEvent(QHideEvent *event);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void moveEvent(QMoveEvent *event);
-    void mouseDoubleClickEvent(QMouseEvent *event) { QWidget::mouseDoubleClickEvent(event); }
-    void focusOutEvent(QFocusEvent *event);
-    bool isValid() const { return true; }
-    QRect getGeometry() const;
+    void keyPressEvent(QKeyEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void moveEvent(QMoveEvent *event) override;
+    inline void mouseDoubleClickEvent(QMouseEvent *event) override { QWidget::mouseDoubleClickEvent(event); }
+    void focusOutEvent(QFocusEvent *event) override;
+    inline bool isValid() const override { return true; }
+    QRect getGeometry() const override;
 private slots:
-    void save(const QString &path="");
-    void end();
+    void save(const QString &path="") override;
+    void end() override;
     void topChange(bool top);
     void moveTop();
 private:

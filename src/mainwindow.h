@@ -52,24 +52,24 @@ public:
     Q_ENUM(ResizeImage)
 
 protected:
-    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void paintEvent(QPaintEvent *event);
-    void closeEvent(QCloseEvent *event);
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
 #ifdef Q_OS_WINDOWS
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result);
+    bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
 #else
-    bool nativeEvent(const QByteArray &eventType, void *message, long *result);
+    bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
 #endif
 #endif
     void saveImage();
     void start();
     void gifStart();
     void showTool();
-    bool isValid() const;
-    QRect getGeometry() const;
+    bool isValid() const override;
+    QRect getGeometry() const override;
 
 signals:
     void started();
@@ -84,8 +84,8 @@ private slots:
     void updateCapture(const HotKey &key);
     void updateRecord(const HotKey &key);
     void quit();
-    void save(const QString &path="");
-    void end();
+    void save(const QString &path="") override;
+    void end() override;
     void top();
 private:
     void openSaveDir();
