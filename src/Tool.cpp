@@ -1,4 +1,4 @@
-#include "Tool.h"
+﻿#include "Tool.h"
 #include "ui_Tool.h"
 
 #include <QDebug>
@@ -169,8 +169,7 @@ void Tool::keyPressEvent(QKeyEvent *event) {
 
 void Tool::setEditShow(bool show) {
     if (show) {
-        this->setMinimumWidth(312);
-        this->setMaximumWidth(312);
+        this->setFixedWidth(312);
         ui->btn_rectangle->setVisible(true);
         ui->btn_ellipse->setVisible(true);
         ui->btn_straightline->setVisible(true);
@@ -195,8 +194,7 @@ void Tool::setEditShow(bool show) {
         ui->btn_undo->setVisible(false);
         ui->btn_redo->setVisible(false);
         ui->btn_save->setVisible(false);
-        this->setMinimumWidth(52);
-        this->setMaximumWidth(52);
+        this->setFixedWidth(52);
     }
 }
 
@@ -297,8 +295,7 @@ void Tool::setDraw(ShapeEnum shape) {
     if (shape != ShapeEnum::Null) {
         ui->pen_widget->setVisible(true);
         ui->fill->setVisible(true);
-        setMinimumHeight(52);
-        setMaximumHeight(52);
+        setFixedHeight(52);
         if (shape == ShapeEnum::Text) {
             ui->bold->setVisible(true);
             ui->italic->setVisible(true);
@@ -351,8 +348,7 @@ void Tool::setDraw(ShapeEnum shape) {
     default:
         s = "";
         ui->pen_widget->setVisible(false);
-        setMinimumHeight(26);
-        setMaximumHeight(26);
+        setFixedHeight(26);
         break;
     }
 

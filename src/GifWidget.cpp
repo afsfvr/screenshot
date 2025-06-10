@@ -16,8 +16,7 @@
 GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent):
     QWidget{parent}, m_writer{nullptr}, m_timerId{-1}, m_updateTimerId{-1}, m_size{screenSize}, m_preTime{0} {
     m_tmp = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + QUuid::createUuid().toString();
-    setMinimumSize(rect.size());
-    setMaximumSize(rect.size());
+    setFixedSize(rect.size());
     setGeometry(rect);
     m_screen.setTop(rect.top() + 1);
     m_screen.setLeft(rect.left() + 1);
@@ -244,8 +243,7 @@ void GifWidget::init() {
         this->close();
     });
     m_widget->setWindowOpacity(0.5);
-    m_widget->setMinimumSize(140, 25);
-    m_widget->setMaximumSize(140, 25);
+    m_widget->setFixedSize(140, 25);
     QPoint point{0, 0};
     QRect rect = geometry();
     if (rect.bottom() + 25 <= m_size.height()) {

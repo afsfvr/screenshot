@@ -573,8 +573,7 @@ void MainWindow::start() {
         }
     }
     setWindowState((windowState() & ~(Qt::WindowMinimized | Qt::WindowMaximized)) | Qt::WindowFullScreen);
-    setMinimumSize(m_image.size());
-    setMaximumSize(m_image.size());
+    setFixedSize(m_image.size());
     setGeometry(0, 0, m_image.width(), m_image.height());
     setCursorShape(Qt::CrossCursor);
     setVisible(true);

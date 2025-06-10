@@ -132,8 +132,7 @@ void BaseWindow::setShape(const QPoint &point) {
     m_shape = m_tool->getShape(point);
     Text *text = dynamic_cast<Text*>(m_shape);
     if (text) {
-        m_edit->setMinimumWidth(150);
-        m_edit->setMaximumWidth(150);
+        m_edit->setFixedWidth(150);
         m_edit->setFont(text->font());
         m_edit->setWindowOpacity(m_shape->opacity());
         const QPen &pen = m_shape->pen();
