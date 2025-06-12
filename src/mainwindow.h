@@ -14,6 +14,7 @@
 #include <dwmapi.h>
 #endif
 
+class TopWidget;
 class MainWindow : public BaseWindow
 {
     Q_OBJECT
@@ -79,6 +80,9 @@ private slots:
 #ifdef Q_OS_LINUX
     void keyPress(int code, Qt::KeyboardModifiers modifiers);
 #endif
+#ifdef OCR
+    void ocrStart();
+#endif
     void updateHotkey();
     void updateAutoSave(const HotKey &key, quint8 mode, const QString &path);
     void updateCapture(const HotKey &key);
@@ -86,7 +90,7 @@ private slots:
     void quit();
     void save(const QString &path="") override;
     void end() override;
-    void top();
+    TopWidget *top();
 private:
     void openSaveDir();
     bool contains(const QPoint &point);

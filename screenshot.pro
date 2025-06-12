@@ -3,8 +3,14 @@ QT       += core gui
 unix: {
     QT += x11extras
     LIBS += -lX11 -lXext -lXtst
-    SOURCES += src/KeyMouseEvent.cpp
-    HEADERS += src/KeyMouseEvent.h
+    SOURCES += src/KeyMouseEvent.cpp src/Ocr.cpp
+    HEADERS += src/KeyMouseEvent.h src/Ocr.h
+    DEFINES += OCR
+    models.path=$$OUT_PWD
+    models.files=$$PWD/rapidocr/models
+    COPIES += models
+    INCLUDEPATH += $$PWD/rapidocr/include
+    LIBS += -L$$PWD/rapidocr/lib -lRapidOcrOnnx
 }
 win32: {
     LIBS += -lDwmapi  -luser32

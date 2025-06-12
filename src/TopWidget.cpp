@@ -1,18 +1,29 @@
 ﻿#include "TopWidget.h"
 
 #include <QTimer>
+#include <QtMath>
+#include <QHBoxLayout>
+#include <QPushButton>
 
 #ifdef Q_OS_LINUX
 #include <X11/Xlib.h>
 #include <QX11Info>
 #endif
-
+#ifdef KeyPress
+#undef KeyPress
+#endif
 TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect, QMenu *menu) {
     m_image = std::move(image);
     m_vector = std::move(vector);
     tray_menu = menu;
-    setFixedSize(rect.size());
+    QSize size = rect.size();
+    setFixedSize(size);
     setGeometry(rect);
+#ifdef OCR
+    m_center = QPoint(size.width() / 2, size.height() / 2);
+    m_radius = qMin(size.width(), size.height()) / 4;
+    m_radius1 = qRound(m_radius / 8.0);
+#endif
     init();
 }
 
@@ -21,13 +32,27 @@ TopWidget::TopWidget(QImage &image, QPainterPath &&path, QVector<Shape *> &vecto
     m_path = std::move(path);
     m_vector = std::move(vector);
     tray_menu = menu;
-    setFixedSize(rect.size());
+    QSize size = rect.size();
+    setFixedSize(size);
     setGeometry(rect);
+#ifdef OCR
+    m_center = QPoint(size.width() / 2, size.height() / 2);
+    m_radius = qMin(size.width(), size.height()) / 4;
+    m_radius1 = qRound(m_radius / 8.0);
+#endif
     init();
 }
 
 TopWidget::~TopWidget() {
     delete m_menu;
+#ifdef OCR
+    if (m_widget != nullptr) {
+        delete m_widget;
+        m_widget = nullptr;
+        m_text = nullptr;
+        m_button = nullptr;
+    }
+#endif
 }
 
 void TopWidget::showTool() {
@@ -77,6 +102,31 @@ void TopWidget::showTool() {
     m_tool->move(point);
 }
 
+#ifdef OCR
+void TopWidget::ocrStart() {
+    m_ocr.clear();
+    if (m_ocr_timer != -1) {
+        killTimer(m_ocr_timer);
+        m_ocr_timer = -1;
+        repaint();
+        return;
+    }
+    m_angle = 0;
+    m_ocr_timer = startTimer(50);
+    OcrInstance->ocr(this, grab().toImage());
+}
+
+void TopWidget::ocrEnd(const QVector<Ocr::OcrResult> &result) {
+    m_ocr = result;
+
+    if (m_ocr_timer != -1) {
+        killTimer(m_ocr_timer);
+        m_ocr_timer = -1;
+        repaint();
+    }
+}
+#endif
+
 #ifdef Q_OS_LINUX
 void TopWidget::mouseRelease(QSharedPointer<QMouseEvent> event) {
     if (m_move && event->button() == Qt::LeftButton) {
@@ -93,6 +143,31 @@ void TopWidget::mouseRelease(QSharedPointer<QMouseEvent> event) {
         }
         QMouseEvent *e = new QMouseEvent(QEvent::MouseButtonRelease, event->globalPos() - geometry().topLeft(), event->globalPos(), screenPos, Qt::LeftButton, event->buttons(), event->modifiers(), event->source());
         QApplication::postEvent(this, e);
+    }
+}
+#endif
+
+#ifdef OCR
+bool TopWidget::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == m_widget) {
+        if (event->type() == QEvent::Leave) {
+            hideWidget();
+        } else if (event->type() == QEvent::KeyPress){
+            QKeyEvent *e = dynamic_cast<QKeyEvent*>(event);
+            if (e && e->key() == Qt::Key_Escape) {
+                hideWidget();
+            }
+        }
+    }
+    return BaseWindow::eventFilter(watched, event);
+}
+
+void TopWidget::timerEvent(QTimerEvent *event) {
+    if (event->timerId() == m_ocr_timer) {
+        m_angle = (m_angle + 30) % 360;
+        repaint();
+    } else {
+        BaseWindow::timerEvent(event);
     }
 }
 #endif
@@ -145,6 +220,29 @@ void TopWidget::paintEvent(QPaintEvent *event) {
         m_shape->draw(painter);
     }
 
+#ifdef OCR
+    if (m_ocr_timer != -1) {
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.fillRect(this->rect(), QColor(255, 255, 255, 150));
+        for (int i = 0; i < 12; ++i) {
+            int alpha = 255 - (i * 20);
+            QColor color(100, 100, 255, qMax(0, alpha));
+            painter.setBrush(color);
+            painter.setPen(Qt::NoPen);
+
+            float theta = (m_angle + i * 30) * M_PI / 180.0;
+            int x = m_center.x() + qCos(theta) * m_radius;
+            int y = m_center.y() + qSin(theta) * m_radius;
+
+            painter.drawEllipse(QPoint(x, y), m_radius1, m_radius1);
+        }
+    }
+    painter.setPen(Qt::red);
+    for (auto iter = m_ocr.cbegin(); iter != m_ocr.cend(); ++iter) {
+        painter.drawPath(iter->path);
+    }
+#endif
+
     drawTips(painter);
 }
 
@@ -163,7 +261,13 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
 #endif
         if (m_tool->isDraw()) {
             setCursorShape(Qt::BitmapCursor);
+#ifdef OCR
+            if (m_ocr_timer == -1) {
+                setShape(event->pos());
+            }
+#else
             setShape(event->pos());
+#endif
         } else {
             setCursorShape(Qt::SizeAllCursor);
             m_tool->hide();
@@ -199,6 +303,28 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
         } else {
             setCursorShape(Qt::SizeAllCursor);
         }
+#ifdef OCR
+        bool hide = true;
+        for (auto iter = m_ocr.cbegin(); iter != m_ocr.cend(); ++iter) {
+            if (iter->path.contains(event->pos())) {
+                QString ptr = QString::number(reinterpret_cast<quintptr>(&(iter->text)));
+                if (ptr != m_text->statusTip()) {
+                    QRect rect = iter->path.boundingRect().toRect();
+                    m_text->setReadOnly(true);
+                    m_text->setText(iter->text);
+                    m_text->setStatusTip(ptr);
+                    m_widget->setFixedWidth(std::max(55, rect.width()));
+                    m_widget->show();
+                    m_widget->move(mapToGlobal(rect.bottomLeft()));
+                }
+                hide = false;
+                break;
+            }
+        }
+        if (hide && ! m_widget->geometry().contains(event->globalPos())) {
+            hideWidget();
+        }
+#endif
     } else if (m_cursor == Qt::BitmapCursor) {
         const QRect &rect = this->rect();
         if (m_shape != nullptr && rect.isValid()) {
@@ -321,6 +447,48 @@ void TopWidget::moveTop() {
     this->raise();
 }
 
+#ifdef OCR
+void TopWidget::copyText() {
+    if (m_text) {
+        QString text = m_text->toPlainText();
+        if (! text.isEmpty()) {
+            QClipboard *clipboard = QApplication::clipboard();
+            if (clipboard) {
+                clipboard->setText(text);
+                addTip("复制成功");
+            } else {
+                addTip("复制失败");
+            }
+        }
+    }
+}
+
+void TopWidget::editText() {
+    if (m_text) {
+        if (m_text->isReadOnly()) {
+            m_text->setReadOnly(false);
+            m_text->setFocus();
+            m_text->moveCursor(QTextCursor::End);
+            if (m_button) {
+                m_button->setIcon(QIcon(":/images/ok.png"));
+            }
+        } else {
+            m_text->setReadOnly(true);
+            if (m_button) {
+                m_button->setIcon(QIcon(":/images/pencil.png"));
+            }
+            for (auto iter = m_ocr.begin(); iter != m_ocr.end(); ++iter) {
+                QString ptr = QString::number(reinterpret_cast<quintptr>(&(iter->text)));
+                if (ptr == m_text->statusTip()) {
+                    iter->text = m_text->toPlainText();
+                    break;
+                }
+            }
+        }
+    }
+}
+#endif
+
 void TopWidget::init() {
     setWindowFlag(Qt::Tool, false);
     setFocusPolicy(Qt::ClickFocus);
@@ -342,6 +510,42 @@ void TopWidget::init() {
 
     show();
     showTool();
+
+#ifdef OCR
+    connect(m_tool, &Tool::ocr, this, &TopWidget::ocrStart);
+    connect(OcrInstance, &Ocr::ocrEnd, this, &TopWidget::ocrEnd);
+
+    m_widget = new QWidget(this);
+    m_widget->setWindowFlag(Qt::FramelessWindowHint, true);
+    m_widget->setWindowFlag(Qt::Dialog, true);
+    m_widget->setFixedHeight(80);
+    m_widget->installEventFilter(this);
+
+    QVBoxLayout *layout = new QVBoxLayout(m_widget);
+    layout->setMargin(2);
+    layout->setSpacing(2);
+    m_text = new QTextEdit(m_widget);
+    m_text->document()->setDocumentMargin(0);
+    layout->addWidget(m_text);
+
+    QHBoxLayout *btns = new QHBoxLayout;
+    btns->addItem(new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum));
+
+    QPushButton *button = new QPushButton(m_widget);
+    button->setFixedSize(24, 24);
+    button->setIcon(QIcon(":/images/save.png"));
+    button->setToolTip("复制");
+    connect(button, &QPushButton::clicked, this, &TopWidget::copyText);
+    btns->addWidget(button);
+
+    m_button = new QPushButton(m_widget);
+    m_button->setFixedSize(24, 24);
+    m_button->setIcon(QIcon(":/images/pencil.png"));
+    m_button->setToolTip("编辑");
+    connect(m_button, &QPushButton::clicked, this, &TopWidget::editText);
+    btns->addWidget(m_button);
+    layout->addLayout(btns);
+#endif
 }
 
 bool TopWidget::contains(const QPoint &point) {
@@ -351,3 +555,14 @@ bool TopWidget::contains(const QPoint &point) {
         return m_path.contains(point);
     }
 }
+
+#ifdef OCR
+void TopWidget::hideWidget() {
+    if (m_widget) {
+        m_widget->hide();
+        m_text->setReadOnly(true);
+        m_text->setStatusTip("");
+        m_text->clear();
+    }
+}
+#endif

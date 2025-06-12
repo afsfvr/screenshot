@@ -6,7 +6,13 @@
 #include <QStandardPaths>
 #include <QImageWriter>
 #include <QKeyEvent>
+#include <QPushButton>
 
+#ifdef OCR
+static constexpr int maxWidth = 338;
+#else
+static constexpr int maxWidth = 312;
+#endif
 QString Tool::savePath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 
 Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr), m_ignore{false} {
@@ -18,8 +24,8 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     connect(ui->btn_cancel, SIGNAL(clicked()),         this, SIGNAL(cancel()));
     connect(ui->btn_ok,     SIGNAL(clicked()),         this, SIGNAL(save()));
     connect(ui->btn_top,    SIGNAL(clicked()),         this, SIGNAL(clickTop()));
-    connect(ui->btn_undo,    SIGNAL(clicked()),        this, SIGNAL(undo()));
-    connect(ui->btn_redo,    SIGNAL(clicked()),        this, SIGNAL(redo()));
+    connect(ui->btn_undo,   SIGNAL(clicked()),         this, SIGNAL(undo()));
+    connect(ui->btn_redo,   SIGNAL(clicked()),         this, SIGNAL(redo()));
 
     connect(ui->btn_rectangle, &QPushButton::clicked, this, [=](){
         setDraw(! ui->btn_rectangle->isFlat() ? ShapeEnum::Rectangle : ShapeEnum::Null);
@@ -96,6 +102,15 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     ui->btn_save->installEventFilter(this);
     ui->pen_size->installEventFilter(this);
     ui->pen_color->installEventFilter(this);
+
+#ifdef OCR
+    QPushButton *btn = new QPushButton(this);
+    btn->setFixedSize(24, 24);
+    btn->setToolTip("ocr");
+    btn->setIcon(QIcon(":/images/ocr.png"));
+    ui->btns_layout->insertWidget(6, btn);
+    connect(btn, SIGNAL(clicked()), this, SIGNAL(ocr()));
+#endif
 }
 
 Tool::~Tool()
@@ -169,7 +184,7 @@ void Tool::keyPressEvent(QKeyEvent *event) {
 
 void Tool::setEditShow(bool show) {
     if (show) {
-        this->setFixedWidth(312);
+        this->setFixedWidth(maxWidth);
         ui->btn_rectangle->setVisible(true);
         ui->btn_ellipse->setVisible(true);
         ui->btn_straightline->setVisible(true);

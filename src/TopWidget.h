@@ -3,8 +3,12 @@
 
 #include <QWidget>
 #include <QMenu>
+#include <QTextEdit>
 
 #include "BaseWindow.h"
+#ifdef OCR
+#include "Ocr.h"
+#endif
 
 class TopWidget : public BaseWindow {
     Q_OBJECT
@@ -14,12 +18,20 @@ public:
     virtual ~TopWidget();
     void showTool();
 
-#ifdef Q_OS_LINUX
 public slots:
+#ifdef OCR
+    void ocrStart();
+    void ocrEnd(const QVector<Ocr::OcrResult> &result);
+#endif
+#ifdef Q_OS_LINUX
     void mouseRelease(QSharedPointer<QMouseEvent> event);
 #endif
 
 protected:
+#ifdef OCR
+    bool eventFilter(QObject *watched, QEvent *event) override;
+    void timerEvent(QTimerEvent *event) override;
+#endif
     void keyPressEvent(QKeyEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
@@ -32,17 +44,36 @@ protected:
     void focusOutEvent(QFocusEvent *event) override;
     inline bool isValid() const override { return true; }
     QRect getGeometry() const override;
+
 private slots:
     void save(const QString &path="") override;
     void end() override;
     void topChange(bool top);
     void moveTop();
+#ifdef OCR
+    void copyText();
+    void editText();
+#endif
+
 private:
     void init();
     bool contains(const QPoint &point);
+
 private:
     QMenu *tray_menu;
     QMenu *m_menu;
+
+#ifdef OCR
+    void hideWidget();
+    int m_ocr_timer = -1;
+    QPoint m_center;
+    int m_radius, m_radius1, m_angle;
+    QVector<Ocr::OcrResult> m_ocr;
+    QWidget *m_widget = nullptr;
+    QTextEdit *m_text = nullptr;
+    QPushButton *m_button = nullptr;
+#endif
+
 #ifdef Q_OS_LINUX
     bool m_move = false;
 #endif

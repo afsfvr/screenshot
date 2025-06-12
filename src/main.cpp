@@ -5,6 +5,7 @@
 #include <csignal>
 
 #include "mainwindow.h"
+#include "TopWidget.h"
 
 #ifdef Q_OS_LINUX
 void signal_handler(int x) {
@@ -62,8 +63,18 @@ int main(int argc, char *argv[])
     signal(SIGTERM, signal_handler);
 #endif
 
+    qRegisterMetaType<TopWidget*>("TopWidget*");
     QApplication::setWindowIcon(QIcon(":/images/screenshot.ico"));
     QApplication::setQuitOnLastWindowClosed(false);
     MainWindow w;
-    return a.exec();
+#ifdef OCR
+    qRegisterMetaType<QVector<Ocr::OcrResult>>("QVector<Ocr::OcrResult>");
+    OcrInstance->start();
+#endif
+    int ret = a.exec();
+#ifdef OCR
+    OcrInstance->quit();
+    OcrInstance->wait();
+#endif
+    return ret;
 }

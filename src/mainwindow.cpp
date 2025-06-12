@@ -12,6 +12,9 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     connect(m_setting, &SettingWidget::autoSaveChanged, this, &MainWindow::updateAutoSave);
     connect(m_setting, &SettingWidget::captureChanged, this, &MainWindow::updateCapture);
     connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
+#ifdef OCR
+    connect(m_tool, &Tool::ocr, this, &MainWindow::ocrStart);
+#endif
 
     m_menu = new QMenu(this);
     m_menu->addAction(QIcon(":/images/setting.png"), "设置", this, &MainWindow::updateHotkey);
@@ -647,17 +650,6 @@ QRect MainWindow::getGeometry() const {
     }
 }
 
-void MainWindow::updateHotkey() {
-    if (m_setting->isMinimized()) {
-        m_setting->showNormal();
-    } else if (m_setting->isVisible()) {
-        m_setting->activateWindow();
-        m_setting->raise();
-    } else {
-        m_setting->show();
-    }
-}
-
 #ifdef Q_OS_LINUX
 void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
     if (! this->isVisible()) {
@@ -687,6 +679,26 @@ void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
     }
 }
 #endif
+
+#ifdef OCR
+void MainWindow::ocrStart() {
+    auto *t = top();
+    if (t) {
+        t->ocrStart();
+    }
+}
+#endif
+
+void MainWindow::updateHotkey() {
+    if (m_setting->isMinimized()) {
+        m_setting->showNormal();
+    } else if (m_setting->isVisible()) {
+        m_setting->activateWindow();
+        m_setting->raise();
+    } else {
+        m_setting->show();
+    }
+}
 
 void MainWindow::updateAutoSave(const HotKey &key, quint8 mode, const QString &path) {
     Q_UNUSED(mode);
@@ -885,10 +897,10 @@ void MainWindow::end() {
     emit finished();
 }
 
-void MainWindow::top() {
+TopWidget *MainWindow::top() {
     if (m_state & State::Free) {
         QRect rect = m_path.boundingRect().toRect();
-        if (rect.width() <= 0 || rect.height() <= 0) return;
+        if (rect.width() <= 0 || rect.height() <= 0) return nullptr;
         QPoint point = rect.topLeft();
         for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
             (*iter)->translate(- point);
@@ -906,8 +918,9 @@ void MainWindow::top() {
         connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
 #endif
         end();
+        return t;
     } else if (m_state & State::Rect) {
-        if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
+        if (m_rect.width() <= 0 || m_rect.height() <= 0) return nullptr;
         QPoint point = m_rect.topLeft();
         for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
             (*iter)->translate(- point);
@@ -920,7 +933,9 @@ void MainWindow::top() {
         connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
 #endif
         end();
+        return t;
     }
+    return nullptr;
 }
 
 void MainWindow::openSaveDir() {

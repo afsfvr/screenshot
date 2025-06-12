@@ -50,6 +50,10 @@ signals:
     void penChanged(const QPen &pen, bool draw);
     void clickTop();
     void topChanged(bool top);
+#ifdef OCR
+    void ocr();
+#endif
+
 private:
     void lostFocus();
 

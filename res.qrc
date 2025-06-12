@@ -17,5 +17,6 @@
         <file>images/gif.png</file>
         <file>images/setting.png</file>
         <file>images/exit.png</file>
+        <file>images/ocr.png</file>
     </qresource>
 </RCC>
