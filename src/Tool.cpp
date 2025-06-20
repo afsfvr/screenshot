@@ -104,12 +104,12 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     ui->pen_color->installEventFilter(this);
 
 #ifdef OCR
-    QPushButton *btn = new QPushButton(this);
-    btn->setFixedSize(24, 24);
-    btn->setToolTip("ocr");
-    btn->setIcon(QIcon(":/images/ocr.png"));
-    ui->btns_layout->insertWidget(6, btn);
-    connect(btn, SIGNAL(clicked()), this, SIGNAL(ocr()));
+    m_ocr = new QPushButton(this);
+    m_ocr->setFixedSize(24, 24);
+    m_ocr->setToolTip("ocr");
+    m_ocr->setIcon(QIcon(":/images/ocr.png"));
+    ui->btns_layout->insertWidget(6, m_ocr);
+    connect(m_ocr, SIGNAL(clicked()), this, SIGNAL(ocr()));
 #endif
 }
 
@@ -183,6 +183,9 @@ void Tool::keyPressEvent(QKeyEvent *event) {
 }
 
 void Tool::setEditShow(bool show) {
+#ifdef OCR
+    m_ocr->setVisible(show);
+#endif
     if (show) {
         this->setFixedWidth(maxWidth);
         ui->btn_rectangle->setVisible(true);

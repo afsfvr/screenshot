@@ -10,7 +10,7 @@ unix: {
     models.files=$$PWD/rapidocr/models
     COPIES += models
     INCLUDEPATH += $$PWD/rapidocr/include
-    LIBS += -L$$PWD/rapidocr/lib -lRapidOcrOnnx
+    LIBS += -L$$PWD/rapidocr/lib -lRapidOcrOnnx -lopencv_imgproc -l opencv_imgcodecs -lopencv_core
 }
 win32: {
     LIBS += -lDwmapi  -luser32

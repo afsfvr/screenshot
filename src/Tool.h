@@ -62,6 +62,9 @@ private:
     Shape *m_shape;
     bool m_ignore;
     QFont m_font;
+#ifdef OCR
+    QPushButton *m_ocr = nullptr;
+#endif
 };
 
 #endif // TOOL_H
