@@ -104,16 +104,21 @@ void TopWidget::showTool() {
 
 #ifdef OCR
 void TopWidget::ocrStart() {
-    m_ocr.clear();
-    if (m_ocr_timer != -1) {
-        killTimer(m_ocr_timer);
-        m_ocr_timer = -1;
+    if (m_ocr.isEmpty()) {
+        if (m_ocr_timer != -1) {
+            return;
+        }
+        m_angle = 0;
+        m_ocr_timer = startTimer(50);
+        OcrInstance->ocr(this, m_image);
+    } else {
+        m_ocr.clear();
+        if (m_ocr_timer != -1) {
+            killTimer(m_ocr_timer);
+            m_ocr_timer = -1;
+        }
         repaint();
-        return;
     }
-    m_angle = 0;
-    m_ocr_timer = startTimer(50);
-    OcrInstance->ocr(this, grab().toImage());
 }
 
 void TopWidget::ocrEnd(const QVector<Ocr::OcrResult> &result) {
@@ -270,6 +275,9 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
 #endif
         } else {
             setCursorShape(Qt::SizeAllCursor);
+#ifdef OCR
+            m_widget->hide();
+#endif
             m_tool->hide();
         }
     }
@@ -304,25 +312,27 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
             setCursorShape(Qt::SizeAllCursor);
         }
 #ifdef OCR
-        bool hide = true;
-        for (auto iter = m_ocr.cbegin(); iter != m_ocr.cend(); ++iter) {
-            if (iter->path.contains(event->pos())) {
-                QString ptr = QString::number(reinterpret_cast<quintptr>(&(iter->text)));
-                if (ptr != m_text->statusTip()) {
-                    QRect rect = iter->path.boundingRect().toRect();
-                    m_text->setReadOnly(true);
-                    m_text->setText(iter->text);
-                    m_text->setStatusTip(ptr);
-                    m_widget->setFixedWidth(std::max(55, rect.width()));
-                    m_widget->show();
-                    m_widget->move(mapToGlobal(rect.bottomLeft()));
+        if (m_widget->isHidden() || ! m_widget->geometry().contains(event->globalPos())) {
+            bool hide = true;
+            for (auto iter = m_ocr.cbegin(); iter != m_ocr.cend(); ++iter) {
+                if (iter->path.contains(event->pos())) {
+                    QString ptr = QString::number(reinterpret_cast<quintptr>(&(iter->text)));
+                    if (ptr != m_text->statusTip()) {
+                        QRect rect = iter->path.boundingRect().toRect();
+                        m_text->setReadOnly(true);
+                        m_text->setText(iter->text);
+                        m_text->setStatusTip(ptr);
+                        m_widget->setFixedWidth(std::max(55, rect.width()));
+                        m_widget->show();
+                        m_widget->move(mapToGlobal(rect.bottomLeft()));
+                    }
+                    hide = false;
+                    break;
                 }
-                hide = false;
-                break;
             }
-        }
-        if (hide && ! m_widget->geometry().contains(event->globalPos())) {
-            hideWidget();
+            if (hide && ! m_widget->geometry().contains(event->globalPos())) {
+                hideWidget();
+            }
         }
 #endif
     } else if (m_cursor == Qt::BitmapCursor) {
@@ -402,6 +412,11 @@ QRect TopWidget::getGeometry() const {
 }
 
 void TopWidget::save(const QString &path) {
+#ifdef OCR
+    if (! m_ocr.isEmpty()) {
+        m_ocr.clear();
+    }
+#endif
     if (m_path.isEmpty()) {
         m_image = this->grab().toImage();
     } else {
