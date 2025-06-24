@@ -103,6 +103,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     ui->pen_size->installEventFilter(this);
     ui->pen_color->installEventFilter(this);
 
+    setFixedSize(maxWidth, 26);
 #ifdef OCR
     m_ocr = new QPushButton(this);
     m_ocr->setFixedSize(24, 24);
