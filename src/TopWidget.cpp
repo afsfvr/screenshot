@@ -135,7 +135,12 @@ void TopWidget::ocrEnd(const QVector<Ocr::OcrResult> &result) {
 #ifdef Q_OS_LINUX
 void TopWidget::mouseRelease(QSharedPointer<QMouseEvent> event) {
     if (m_move && event->button() == Qt::LeftButton) {
-        QPoint screenPos = event->globalPos();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        QPoint gpos = event->globalPosition().toPoint();
+#else
+        QPoint gpos = event->globalPos();
+#endif
+        QPoint screenPos = gpos;
         QList<QScreen*> list = QApplication::screens();
         if (list.size() > 1) {
             for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
@@ -146,7 +151,7 @@ void TopWidget::mouseRelease(QSharedPointer<QMouseEvent> event) {
                 }
             }
         }
-        QMouseEvent *e = new QMouseEvent(QEvent::MouseButtonRelease, event->globalPos() - geometry().topLeft(), event->globalPos(), screenPos, Qt::LeftButton, event->buttons(), event->modifiers(), event->source());
+        QMouseEvent *e = new QMouseEvent(QEvent::MouseButtonRelease, gpos - geometry().topLeft(), gpos, screenPos, Qt::LeftButton, event->buttons(), event->modifiers(), event->source());
         QApplication::postEvent(this, e);
     }
 }
@@ -305,6 +310,11 @@ void TopWidget::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void TopWidget::mouseMoveEvent(QMouseEvent *event) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QPoint gpos = event->globalPosition().toPoint();
+#else
+    QPoint gpos = event->globalPos();
+#endif
     if (event->buttons() == Qt::NoButton) {
         if (m_tool->isDraw()) {
             setCursorShape(Qt::BitmapCursor);
@@ -312,7 +322,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
             setCursorShape(Qt::SizeAllCursor);
         }
 #ifdef OCR
-        if (m_widget->isHidden() || ! m_widget->geometry().contains(event->globalPos())) {
+        if (m_widget->isHidden() || ! m_widget->geometry().contains(gpos)) {
             bool hide = true;
             for (auto iter = m_ocr.cbegin(); iter != m_ocr.cend(); ++iter) {
                 if (iter->path.contains(event->pos())) {
@@ -331,7 +341,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                     break;
                 }
             }
-            if (hide && ! m_widget->geometry().contains(event->globalPos())) {
+            if (hide && ! m_widget->geometry().contains(gpos)) {
                 hideWidget();
             }
         }
@@ -378,11 +388,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
         XSendEvent(display, QX11Info::appRootWindow(QX11Info::appScreen()), False, SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
         XFlush(display);
 #elif defined (Q_OS_WINDOWS)
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        move(event->globalPosition().toPoint() - m_point);
-#else
-        move(event->globalPos() - m_point);
-#endif
+        move(gpos - m_point);
 #endif
     }
 }
@@ -538,7 +544,7 @@ void TopWidget::init() {
     m_widget->installEventFilter(this);
 
     QVBoxLayout *layout = new QVBoxLayout(m_widget);
-    layout->setMargin(2);
+    layout->setContentsMargins(2, 2, 2, 2);
     layout->setSpacing(2);
     m_text = new QTextEdit(m_widget);
     m_text->document()->setDocumentMargin(0);
