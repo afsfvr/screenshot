@@ -1,13 +1,14 @@
 #ifndef OCR_H
 #define OCR_H
 
+#include <QImage>
 #include <QThread>
-#include <QRect>
 #include <QVector>
-#include <OcrLite.h>
 #include <QPainterPath>
+#include <QDebug>
 
 class TopWidget;
+class OcrBase;
 class Ocr: public QThread
 {
     Q_OBJECT
@@ -15,12 +16,14 @@ class Ocr: public QThread
     Q_DISABLE_COPY_MOVE(Ocr)
 
 public:
+    ~Ocr();
     static Ocr* instance();
     void ocr(TopWidget *t, const QImage &image);
 
     struct OcrResult {
         QPainterPath path;
         QString text;
+        double score;
     };
 
 
@@ -31,12 +34,17 @@ protected:
     void run() override;
 
 private slots:
-    void rapidOcr(TopWidget *t, const QImage &img);
+    void _ocr(TopWidget *t, const QImage &img);
 
 private:
-    bool rapidOcrInit();
+    OcrBase *m_ocr;
+};
 
-    OcrLite m_ocr;
+class OcrBase {
+public:
+    virtual ~OcrBase() = default;
+    virtual QVector<Ocr::OcrResult> ocr(const QImage &img) = 0;
+    virtual bool init() { return true; }
 };
 
 #define OcrInstance (Ocr::instance())

@@ -322,7 +322,8 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                         m_text->setReadOnly(true);
                         m_text->setText(iter->text);
                         m_text->setStatusTip(ptr);
-                        m_widget->setFixedWidth(std::max(55, rect.width()));
+                        m_label->setText(iter->score >= 0 ? QString("%1%").arg(iter->score, 0, 'f', 0) : "");
+                        m_widget->setFixedWidth(std::max(95, rect.width()));
                         m_widget->show();
                         m_widget->move(mapToGlobal(rect.bottomLeft()));
                     }
@@ -545,6 +546,9 @@ void TopWidget::init() {
 
     QHBoxLayout *btns = new QHBoxLayout;
     btns->addItem(new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum));
+
+    m_label = new QLabel(m_widget);
+    btns->addWidget(m_label);
 
     QPushButton *button = new QPushButton(m_widget);
     button->setFixedSize(24, 24);

@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QMenu>
 #include <QTextEdit>
+#include <QLabel>
 
 #include "BaseWindow.h"
 #ifdef OCR
@@ -71,6 +72,7 @@ private:
     QVector<Ocr::OcrResult> m_ocr;
     QWidget *m_widget = nullptr;
     QTextEdit *m_text = nullptr;
+    QLabel *m_label = nullptr;
     QPushButton *m_button = nullptr;
 #endif
 

@@ -1,16 +1,11 @@
-QT       += core gui
+QT       += core gui widgets
 
 unix: {
     QT += x11extras
     LIBS += -lX11 -lXext -lXtst
-    SOURCES += src/KeyMouseEvent.cpp src/Ocr.cpp
-    HEADERS += src/KeyMouseEvent.h src/Ocr.h
-    DEFINES += OCR
-    models.path=$$OUT_PWD
-    models.files=$$PWD/rapidocr/models
-    COPIES += models
-    INCLUDEPATH += $$PWD/rapidocr/include
-    LIBS += -L$$PWD/rapidocr/lib -lRapidOcrOnnx -lopencv_imgproc -l opencv_imgcodecs -lopencv_core
+    SOURCES += src/KeyMouseEvent.cpp
+    HEADERS += src/KeyMouseEvent.h
+    DEFINES += TENCENT_OCR
 }
 win32: {
     LIBS += -lDwmapi  -luser32
@@ -19,7 +14,31 @@ win32-msvc*: {
     QMAKE_CFLAGS *= /utf-8
     QMAKE_CXXFLAGS *= /utf-8
 }
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
+contains(DEFINES, RAPID_OCR) {
+    models.path=$$OUT_PWD
+    models.files=$$PWD/rapidocr/models
+    COPIES += models
+    INCLUDEPATH += $$PWD/rapidocr/include
+    LIBS += -L$$PWD/rapidocr/lib -lRapidOcrOnnx -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
+    SOURCES += src/OcrImpl/RapidOcr.cpp
+    HEADERS += src/OcrImpl/RapidOcr.h
+    ! contains(DEFINES, OCR) {
+        DEFINES += OCR
+    }
+}
+contains(DEFINES, TENCENT_OCR) {
+    QT += network
+    SOURCES += src/OcrImpl/TencentOcr.cpp
+    HEADERS += src/OcrImpl/TencentOcr.h
+    ! contains(DEFINES, OCR) {
+        DEFINES += OCR
+    }
+}
+contains(DEFINES, OCR) {
+    SOURCES += src/Ocr.cpp
+    HEADERS += src/Ocr.h
+}
 
 CONFIG += c++17
 
