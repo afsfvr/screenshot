@@ -13,6 +13,31 @@
 #include <QComboBox>
 #include <malloc.h>
 
+static void writeGIF(std::atomic<bool> *run, std::mutex *mutex, std::condition_variable *cond, QQueue<GifFrameData> *queue) {
+    std::unique_lock<std::mutex> lock{*mutex};
+    while (true) {
+        cond->wait(lock, [=](){ return ! queue->empty() || ! run->load(); });
+        if (! run->load() && queue->empty()) {
+            break;
+        }
+        GifFrameData &&data = queue->dequeue();
+        lock.unlock();
+        if (data.image[0] == 'b') {
+            GifWriteFrame(data.writer, data.image + 1, data.width, data.height, data.delay);
+        } else if (data.image[0] == 'f') {
+            const char *filename = reinterpret_cast<const char*>(data.image + 1);
+            QFile file{filename};
+            if (file.open(QFile::ReadOnly)) {
+                QByteArray array = file.readAll();
+                GifWriteFrame(data.writer, reinterpret_cast<const uint8_t*>(array.constData()), data.width, data.height, data.delay);
+            }
+            QFile::remove(filename);
+        }
+        delete[] data.image;
+        lock.lock();
+    }
+}
+
 GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent):
     QWidget{parent}, m_writer{nullptr}, m_timerId{-1}, m_updateTimerId{-1}, m_size{screenSize}, m_preTime{0} {
     m_tmp = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + QUuid::createUuid().toString();
@@ -262,7 +287,7 @@ void GifWidget::init() {
     m_widget->show();
 
     m_run = true;
-    m_thread = new std::thread{func, &m_run, &m_mutex, &m_cond, &m_queue};
+    m_thread = new std::thread{writeGIF, &m_run, &m_mutex, &m_cond, &m_queue};
 }
 
 QImage GifWidget::screenshot() {
@@ -285,29 +310,4 @@ QImage GifWidget::screenshot() {
     }
     painter.end();
     return image.copy(m_screen);
-}
-
-void func(std::atomic<bool> *run, std::mutex *mutex, std::condition_variable *cond, QQueue<GifFrameData> *queue) {
-    std::unique_lock<std::mutex> lock{*mutex};
-    while (true) {
-        cond->wait(lock, [=](){ return ! queue->empty() || ! run->load(); });
-        if (! run->load() && queue->empty()) {
-            break;
-        }
-        GifFrameData &&data = queue->dequeue();
-        lock.unlock();
-        if (data.image[0] == 'b') {
-            GifWriteFrame(data.writer, data.image + 1, data.width, data.height, data.delay);
-        } else if (data.image[0] == 'f') {
-            const char *filename = reinterpret_cast<const char*>(data.image + 1);
-            QFile file{filename};
-            if (file.open(QFile::ReadOnly)) {
-                QByteArray array = file.readAll();
-                GifWriteFrame(data.writer, reinterpret_cast<const uint8_t*>(array.constData()), data.width, data.height, data.delay);
-            }
-            QFile::remove(filename);
-        }
-        delete[] data.image;
-        lock.lock();
-    }
 }

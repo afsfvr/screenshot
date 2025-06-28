@@ -54,6 +54,7 @@ CONFIG += c++17
 SOURCES += \
     src/BaseWindow.cpp \
     src/GifWidget.cpp \
+    src/LongWidget.cpp \
     src/SettingWidget.cpp \
     src/Shape.cpp \
     src/Tool.cpp \
@@ -65,6 +66,7 @@ SOURCES += \
 HEADERS += \
     src/BaseWindow.h \
     src/GifWidget.h \
+    src/LongWidget.h \
     src/SettingWidget.h \
     src/Shape.h \
     src/Tool.h \

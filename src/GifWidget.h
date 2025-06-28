@@ -26,8 +26,6 @@ struct GifFrameData {
     int delay;
 };
 
-void func(std::atomic<bool> *run, std::mutex *mutex, std::condition_variable *cond, QQueue<GifFrameData> *queue);
-
 class GifWidget : public QWidget
 {
     Q_OBJECT
