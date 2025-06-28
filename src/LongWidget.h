@@ -4,11 +4,13 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QImage>
+#include <QMenu>
 
+class MainWindow;
 class LongWidget : public QWidget {
     Q_OBJECT
 public:
-    explicit LongWidget(const QImage &image, const QRect &rect, const QSize &size, QWidget *parent = nullptr);
+    explicit LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, MainWindow *main);
     ~LongWidget();
 
     void showTool();
@@ -31,6 +33,9 @@ private:
     QRect m_screen;
     QSize m_size;
     int m_id;
+    QMenu *m_tray_menu;
+    QAction *m_action;
+    MainWindow *m_main;
 };
 
 #endif // LONGWIDGET_H

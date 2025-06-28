@@ -22,6 +22,7 @@ class MainWindow : public BaseWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void connectTopWidget(TopWidget *t);
     enum State {
         Null = 0,
         Screen = 1,
@@ -83,6 +84,7 @@ private slots:
 #ifdef OCR
     void ocrStart();
 #endif
+    void longScreenshot();
     void updateHotkey();
     void updateAutoSave(const HotKey &key, quint8 mode, const QString &path);
     void updateCapture(const HotKey &key);

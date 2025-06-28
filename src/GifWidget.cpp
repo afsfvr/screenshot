@@ -68,8 +68,6 @@ GifWidget::~GifWidget() {
         m_updateTimerId = -1;
     }
     if (m_widget != nullptr) {
-        m_widget->disconnect();
-        m_widget->close();
         delete m_widget;
         m_widget = nullptr;
         m_button = nullptr;

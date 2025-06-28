@@ -1,6 +1,7 @@
 ﻿#include "mainwindow.h"
 #include "TopWidget.h"
 #include "GifWidget.h"
+#include "LongWidget.h"
 
 #include <QShortcut>
 #include <QMessageBox>
@@ -45,8 +46,11 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
 #endif
     setMouseTracking(true);
 
+    m_tool->setLongShow(true);
     connect(m_tool, &Tool::clickTop, this, &MainWindow::top);
+    connect(m_tool, &Tool::longScreenshot, this, &MainWindow::longScreenshot);
     m_setting->readConfig();
+
 }
 
 MainWindow::~MainWindow() {
@@ -59,6 +63,14 @@ MainWindow::~MainWindow() {
     UnregisterHotKey((HWND)this->winId(), 1);
     UnregisterHotKey((HWND)this->winId(), 2);
     UnregisterHotKey((HWND)this->winId(), 3);
+#endif
+}
+
+void MainWindow::connectTopWidget(TopWidget *t) {
+    connect(this, &MainWindow::started, t, &TopWidget::hide);
+    connect(this, &MainWindow::finished, t, &TopWidget::show);
+#if defined(Q_OS_LINUX)
+    connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
 #endif
 }
 
@@ -678,6 +690,14 @@ void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
         }
     }
 }
+
+void MainWindow::longScreenshot() {
+    if (m_state & State::Rect) {
+        if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
+        new LongWidget(m_image.copy(m_rect), m_rect, size(), m_menu, this);
+        end();
+    }
+}
 #endif
 
 #ifdef OCR
@@ -912,11 +932,7 @@ TopWidget *MainWindow::top() {
         painter.fillPath(m_path, m_image);
         painter.end();
         auto *t = new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
-        connect(this, &MainWindow::started, t, &TopWidget::hide);
-        connect(this, &MainWindow::finished, t, &TopWidget::show);
-#if defined(Q_OS_LINUX)
-        connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
-#endif
+        connectTopWidget(t);
         end();
         return t;
     } else if (m_state & State::Rect) {
@@ -927,11 +943,7 @@ TopWidget *MainWindow::top() {
         }
 
         auto *t = new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
-        connect(this, &MainWindow::started, t, &TopWidget::hide);
-        connect(this, &MainWindow::finished, t, &TopWidget::show);
-#if defined(Q_OS_LINUX)
-        connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
-#endif
+        connectTopWidget(t);
         end();
         return t;
     }

@@ -12,6 +12,27 @@
 #ifdef KeyPress
 #undef KeyPress
 #endif
+
+TopWidget::TopWidget(QImage &image, const QRect &rect, QMenu *menu) {
+    m_image = std::move(image);
+    tray_menu = menu;
+    QSize size = m_image.size();
+    int h = QApplication::primaryScreen()->availableSize().height();
+    if (size.height() > h) {
+        float ratio = h / static_cast<float>(size.height());
+        size.rwidth() *= ratio;
+        size.setHeight(h);
+    }
+    setFixedSize(size);
+    move(rect.topLeft());
+#ifdef OCR
+    m_center = QPoint(size.width() / 2, size.height() / 2);
+    m_radius = qMin(size.width(), size.height()) / 4;
+    m_radius1 = qRound(m_radius / 8.0);
+#endif
+    init();
+}
+
 TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect, QMenu *menu) {
     m_image = std::move(image);
     m_vector = std::move(vector);

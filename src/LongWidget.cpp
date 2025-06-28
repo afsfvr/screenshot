@@ -1,5 +1,3 @@
-#include "LongWidget.h"
-
 #include <QPainter>
 #include <QApplication>
 #include <QScreen>
@@ -8,8 +6,12 @@
 #include <QDebug>
 #include <opencv2/opencv.hpp>
 
-LongWidget::LongWidget(const QImage &image, const QRect &rect, const QSize &size, QWidget *parent):
-    QWidget{parent}, m_widget{nullptr}, m_size{size}, m_id{-1} {
+#include "LongWidget.h"
+#include "TopWidget.h"
+#include "mainwindow.h"
+
+LongWidget::LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, MainWindow *main):
+    m_widget{nullptr}, m_size{size}, m_id{-1}, m_tray_menu{menu}, m_main{main} {
     m_image = image.convertToFormat(QImage::Format_BGR888);
 
     QRect geometry;
@@ -21,7 +23,13 @@ LongWidget::LongWidget(const QImage &image, const QRect &rect, const QSize &size
     setGeometry(geometry);
     m_screen = rect;
 
+    m_action = m_tray_menu->addAction(
+        QString("long(%1,%2 %3x%4)").arg(rect.x()).arg(rect.y()).arg(rect.width()).arg(rect.height()),
+        this,
+        &LongWidget::edit);
+
     init();
+    show();
 }
 
 LongWidget::~LongWidget() {
@@ -30,8 +38,12 @@ LongWidget::~LongWidget() {
         m_id = -1;
     }
     if (m_widget != nullptr) {
-        delete m_widget;
+        m_widget->deleteLater();
         m_widget = nullptr;
+    }
+    if (m_action) {
+        m_action->deleteLater();
+        m_action = nullptr;
     }
 }
 
@@ -53,6 +65,7 @@ void LongWidget::timerEvent(QTimerEvent *event) {
 }
 
 void LongWidget::edit() {
+    m_main->connectTopWidget(new TopWidget(m_image, geometry(), m_tray_menu));
     this->close();
 }
 
@@ -74,6 +87,10 @@ void LongWidget::init() {
     m_widget = new QWidget;
     m_widget->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     m_widget->setAttribute(Qt::WA_DeleteOnClose);
+    connect(m_widget, &QWidget::destroyed, this, [this](){
+        this->m_widget = nullptr;
+        this->close();
+    });
 
     QHBoxLayout *layout = new QHBoxLayout{m_widget};
     layout->setSpacing(2);
@@ -162,8 +179,8 @@ QImage LongWidget::screenshot() {
     QSize size;
     for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
         QRect rect = (*iter)->geometry();
-        size.setWidth(std::max(rect.right() + 1, size.width()));
-        size.setHeight(std::max(rect.bottom() + 1, size.height()));
+        size.setWidth(max(rect.right() + 1, size.width()));
+        size.setHeight(max(rect.bottom() + 1, size.height()));
         if (rect.contains(m_screen)) {
             return (*iter)->grabWindow(0, m_screen.x(), m_screen.y(), m_screen.width(), m_screen.height()).toImage().convertToFormat(QImage::Format_BGR888);
         }

@@ -15,7 +15,7 @@ static constexpr int maxWidth = 312;
 #endif
 QString Tool::savePath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 
-Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr), m_ignore{false} {
+Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr), m_ignore{false}, m_show_long{false} {
     ui->setupUi(this);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     connect(ui->pen_color,  SIGNAL(clicked()),         this, SLOT(penChange()));
@@ -24,6 +24,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     connect(ui->btn_cancel, SIGNAL(clicked()),         this, SIGNAL(cancel()));
     connect(ui->btn_ok,     SIGNAL(clicked()),         this, SIGNAL(save()));
     connect(ui->btn_top,    SIGNAL(clicked()),         this, SIGNAL(clickTop()));
+    connect(ui->btn_long,   SIGNAL(clicked()),         this, SIGNAL(longScreenshot()));
     connect(ui->btn_undo,   SIGNAL(clicked()),         this, SIGNAL(undo()));
     connect(ui->btn_redo,   SIGNAL(clicked()),         this, SIGNAL(redo()));
 
@@ -103,6 +104,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     ui->pen_size->installEventFilter(this);
     ui->pen_color->installEventFilter(this);
 
+    ui->btn_long->setVisible(false);
     setFixedSize(maxWidth, 26);
 #ifdef OCR
     m_ocr = new QPushButton(this);
@@ -114,8 +116,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
 #endif
 }
 
-Tool::~Tool()
-{
+Tool::~Tool() {
     delete ui;
 }
 
@@ -188,7 +189,7 @@ void Tool::setEditShow(bool show) {
     m_ocr->setVisible(show);
 #endif
     if (show) {
-        this->setFixedWidth(maxWidth);
+        this->setFixedWidth(maxWidth + (m_show_long ? 26 : 0));
         ui->btn_rectangle->setVisible(true);
         ui->btn_ellipse->setVisible(true);
         ui->btn_straightline->setVisible(true);
@@ -196,6 +197,7 @@ void Tool::setEditShow(bool show) {
         ui->btn_arrow->setVisible(true);
         ui->btn_text->setVisible(true);
         ui->btn_top->setVisible(true);
+        ui->btn_long->setVisible(m_show_long);
         ui->btn_undo->setVisible(true);
         ui->btn_redo->setVisible(true);
         ui->btn_save->setVisible(true);
@@ -210,10 +212,19 @@ void Tool::setEditShow(bool show) {
         ui->btn_arrow->setVisible(false);
         ui->btn_text->setVisible(false);
         ui->btn_top->setVisible(false);
+        ui->btn_long->setVisible(false);
         ui->btn_undo->setVisible(false);
         ui->btn_redo->setVisible(false);
         ui->btn_save->setVisible(false);
         this->setFixedWidth(52);
+    }
+}
+
+void Tool::setLongShow(bool show) {
+    if (show != m_show_long) {
+        m_show_long = show;
+        ui->btn_long->setVisible(show);
+        this->setFixedWidth(maxWidth + (show ? 26 : 0));
     }
 }
 

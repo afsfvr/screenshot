@@ -14,6 +14,7 @@
 class TopWidget : public BaseWindow {
     Q_OBJECT
 public:
+    explicit TopWidget(QImage &image, const QRect &rect, QMenu *menu);
     explicit TopWidget(QImage &&image, QVector<Shape*> &vector, const QRect &rect, QMenu *menu);
     explicit TopWidget(QImage &image, QPainterPath &&path, QVector<Shape*> &vector, const QRect &rect, QMenu *menu);
     virtual ~TopWidget();
