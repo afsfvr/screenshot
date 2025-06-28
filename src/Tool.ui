@@ -230,6 +230,10 @@
        <property name="text">
         <string/>
        </property>
+       <property name="icon">
+        <iconset resource="../res.qrc">
+         <normaloff>:/images/long_screenshot.png</normaloff>:/images/long_screenshot.png</iconset>
+       </property>
       </widget>
      </item>
      <item>

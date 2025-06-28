@@ -1,10 +1,14 @@
-#ifndef LONGWIDGET_H
+﻿#ifndef LONGWIDGET_H
 #define LONGWIDGET_H
 
 #include <QWidget>
 #include <QPushButton>
 #include <QImage>
 #include <QMenu>
+#include <thread>
+#include <QReadWriteLock>
+
+#include "BlockQueue.h"
 
 class MainWindow;
 class LongWidget : public QWidget {
@@ -24,6 +28,7 @@ private slots:
     void save();
 
 private:
+    friend void mergePicture();
     void init();
     void join();
     QImage screenshot();
@@ -32,10 +37,14 @@ private:
     QWidget *m_widget;
     QRect m_screen;
     QSize m_size;
-    int m_id;
+    int m_timer;
     QMenu *m_tray_menu;
     QAction *m_action;
     MainWindow *m_main;
+
+    QReadWriteLock m_lock;
+    BlockQueue<QImage> m_queue;
+    std::thread *m_thread;
 };
 
 #endif // LONGWIDGET_H

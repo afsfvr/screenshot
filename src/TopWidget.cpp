@@ -13,18 +13,12 @@
 #undef KeyPress
 #endif
 
-TopWidget::TopWidget(QImage &image, const QRect &rect, QMenu *menu) {
+TopWidget::TopWidget(QImage &image, const QRect &rect, QMenu *menu): m_max_offset{image.height() - rect.height()} {
     m_image = std::move(image);
     tray_menu = menu;
-    QSize size = m_image.size();
-    int h = QApplication::primaryScreen()->availableSize().height();
-    if (size.height() > h) {
-        float ratio = h / static_cast<float>(size.height());
-        size.rwidth() *= ratio;
-        size.setHeight(h);
-    }
+    QSize size = rect.size();
     setFixedSize(size);
-    move(rect.topLeft());
+    setGeometry(rect);
 #ifdef OCR
     m_center = QPoint(size.width() / 2, size.height() / 2);
     m_radius = qMin(size.width(), size.height()) / 4;
@@ -192,16 +186,22 @@ bool TopWidget::eventFilter(QObject *watched, QEvent *event) {
     }
     return BaseWindow::eventFilter(watched, event);
 }
+#endif
 
 void TopWidget::timerEvent(QTimerEvent *event) {
-    if (event->timerId() == m_ocr_timer) {
+    if (event->timerId() == m_scroll_timer) {
+        killTimer(m_scroll_timer);
+        m_scroll_timer = -1;
+        repaint();
+#ifdef OCR
+    } else if (event->timerId() == m_ocr_timer) {
         m_angle = (m_angle + 30) % 360;
         repaint();
+#endif
     } else {
         BaseWindow::timerEvent(event);
     }
 }
-#endif
 
 void TopWidget::keyPressEvent(QKeyEvent *event) {
     BaseWindow::keyPressEvent(event);
@@ -238,17 +238,36 @@ void TopWidget::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event);
     QPainter painter(this);
     if (m_path.elementCount() < 2) {
-        painter.drawImage(rect(), m_image);
+        painter.drawImage(rect(), m_image, QRect(QPoint(0, m_offsetY), size()));
     } else {
         painter.fillPath(m_path, m_image);
         painter.setClipPath(m_path);
     }
 
+    if (m_max_offset > 0) {
+        painter.save();
+        painter.translate(0, - m_offsetY);
+    }
     for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
         (*iter)->draw(painter);
     }
     if (m_shape != nullptr) {
         m_shape->draw(painter);
+    }
+    if (m_max_offset > 0) {
+        painter.restore();
+    }
+    if (m_scroll_timer != -1) {
+        int maxH = m_image.height();
+        int h = height();
+
+        int sliderHeight = std::max(h / maxH * h, 20); // 最小高度为20
+        float offsetRatio = static_cast<float>(m_offsetY) / m_max_offset;
+        int sliderY = static_cast<int>((h - sliderHeight) * offsetRatio);
+
+        QRect sliderRect(width() - 10, sliderY, 10, sliderHeight);
+
+        painter.fillRect(sliderRect, QColor(100, 100, 100));
     }
 
 #ifdef OCR
@@ -292,12 +311,14 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
 #endif
         if (m_tool->isDraw()) {
             setCursorShape(Qt::BitmapCursor);
+            QPoint point = event->pos();
+            point.ry() += m_offsetY;
 #ifdef OCR
             if (m_ocr_timer == -1) {
-                setShape(event->pos());
+                setShape(point);
             }
 #else
-            setShape(event->pos());
+            setShape(point);
 #endif
         } else {
             setCursorShape(Qt::SizeAllCursor);
@@ -372,7 +393,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
         if (m_shape != nullptr && rect.isValid()) {
             QPoint point = event->pos();
             if (rect.contains(point)) {
-                m_shape->addPoint(point);
+                m_shape->addPoint(QPoint{point.x(), point.y() + m_offsetY});
             } else {
                 if (point.x() < rect.left()) {
                     point.setX(rect.left());
@@ -384,7 +405,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                 } else if (point.y() > rect.bottom()) {
                     point.setY(rect.bottom());
                 }
-                m_shape->addPoint(point);
+                m_shape->addPoint(QPoint{point.x(), point.y() + m_offsetY});
             }
         }
         repaint();
@@ -420,6 +441,25 @@ void TopWidget::moveEvent(QMoveEvent *event) {
     m_menu->setTitle(text);
 }
 
+void TopWidget::wheelEvent(QWheelEvent *event) {
+    if (m_max_offset) {
+        int delta = event->angleDelta().y();
+        if (delta < 0) {
+            m_offsetY = std::min(m_offsetY + 30, m_max_offset);
+            repaint();
+        } else if (delta > 0) {
+            m_offsetY = std::max(m_offsetY - 30, 0);
+            repaint();
+        }
+        if (m_scroll_timer != -1) {
+            killTimer(m_scroll_timer);
+        }
+        m_scroll_timer = startTimer(3000);
+    } else {
+        BaseWindow::wheelEvent(event);
+    }
+}
+
 void TopWidget::focusOutEvent(QFocusEvent *event) {
     Q_UNUSED(event);
     QObject *o = QApplication::focusObject();
@@ -445,19 +485,17 @@ void TopWidget::save(const QString &path) {
         m_ocr.clear();
     }
 #endif
-    if (m_path.isEmpty()) {
-        m_image = this->grab().toImage();
-    } else {
-        QPainter painter(&m_image);
+    QPainter painter(&m_image);
+    if (! m_path.isEmpty()) {
         painter.setClipPath(m_path);
-        for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
-            (*iter)->draw(painter);
-        }
-        if (m_shape != nullptr) {
-            m_shape->draw(painter);
-        }
-        painter.end();
     }
+    for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
+        (*iter)->draw(painter);
+    }
+    if (m_shape != nullptr) {
+        m_shape->draw(painter);
+    }
+    painter.end();
     if (path.length() == 0) {
         QClipboard *clipboard = QApplication::clipboard();
         if (clipboard) {

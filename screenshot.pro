@@ -3,22 +3,20 @@ QT       += core gui widgets
 unix: {
     QT += x11extras
     LIBS += -lX11 -lXext -lXtst
-    LIBS += -L$$PWD/opencv/lib/linux
+    LIBS += -L$$PWD/opencv/lib/linux -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
     SOURCES += src/KeyMouseEvent.cpp
     HEADERS += src/KeyMouseEvent.h
     DEFINES += TENCENT_OCR
 }
 win32: {
     LIBS += -lDwmapi  -luser32
-    LIBS += -L$$PWD/opencv/lib/windows
+    LIBS += -L$$PWD/opencv/lib/windows/mingw -lopencv_imgproc480 -lopencv_imgcodecs480 -lopencv_core480
 }
 win32-msvc*: {
     QMAKE_CFLAGS *= /utf-8
     QMAKE_CXXFLAGS *= /utf-8
 }
-
 INCLUDEPATH += $$PWD/opencv/include/opencv4
-LIBS += -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
 
 contains(DEFINES, RAPID_OCR) {
     models.path=$$OUT_PWD
@@ -65,6 +63,7 @@ SOURCES += \
 
 HEADERS += \
     src/BaseWindow.h \
+    src/BlockQueue.h \
     src/GifWidget.h \
     src/LongWidget.h \
     src/SettingWidget.h \

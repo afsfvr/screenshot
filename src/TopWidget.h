@@ -1,4 +1,4 @@
-#ifndef TOPWIDGET_H
+﻿#ifndef TOPWIDGET_H
 #define TOPWIDGET_H
 
 #include <QWidget>
@@ -32,8 +32,8 @@ public slots:
 protected:
 #ifdef OCR
     bool eventFilter(QObject *watched, QEvent *event) override;
-    void timerEvent(QTimerEvent *event) override;
 #endif
+    void timerEvent(QTimerEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
@@ -42,6 +42,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void moveEvent(QMoveEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
     inline void mouseDoubleClickEvent(QMouseEvent *event) override { QWidget::mouseDoubleClickEvent(event); }
     void focusOutEvent(QFocusEvent *event) override;
     inline bool isValid() const override { return true; }
@@ -80,6 +81,10 @@ private:
 #ifdef Q_OS_LINUX
     bool m_move = false;
 #endif
+
+    int m_offsetY = 0;
+    const int m_max_offset = 0;
+    int m_scroll_timer = -1;
 };
 
 #endif // TOPWIDGET_H

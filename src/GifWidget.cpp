@@ -13,15 +13,9 @@
 #include <QComboBox>
 #include <malloc.h>
 
-static void writeGIF(std::atomic<bool> *run, std::mutex *mutex, std::condition_variable *cond, QQueue<GifFrameData> *queue) {
-    std::unique_lock<std::mutex> lock{*mutex};
-    while (true) {
-        cond->wait(lock, [=](){ return ! queue->empty() || ! run->load(); });
-        if (! run->load() && queue->empty()) {
-            break;
-        }
-        GifFrameData &&data = queue->dequeue();
-        lock.unlock();
+static void writeGIF(BlockQueue<GifFrameData> *queue) {
+    GifFrameData data;
+    while (queue->dequeue(&data)) {
         if (data.image[0] == 'b') {
             GifWriteFrame(data.writer, data.image + 1, data.width, data.height, data.delay);
         } else if (data.image[0] == 'f') {
@@ -34,7 +28,6 @@ static void writeGIF(std::atomic<bool> *run, std::mutex *mutex, std::condition_v
             QFile::remove(filename);
         }
         delete[] data.image;
-        lock.lock();
     }
 }
 
@@ -75,15 +68,14 @@ GifWidget::~GifWidget() {
         m_label = nullptr;
         m_box = nullptr;
     }
-    m_run = false;
 
+    m_queue.close();
     QString str = m_menu->title() + " ";
     delete m_menu;
     m_menu = nullptr;
     QAction *action = system_menu->addAction(str + QString::number(m_queue.size()));
     if (m_thread != nullptr) {
-        m_cond.notify_one();
-        while (! m_queue.empty()) {
+        while (! m_queue.isEmpty()) {
             action->setText(str + QString::number(m_queue.size()));
             QApplication::processEvents();
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -165,15 +157,14 @@ void GifWidget::buttonClicked() {
         }
         m_path = QFileDialog::getSaveFileName(this, "选择路径", Tool::savePath, "*.gif");
         if (m_path.isEmpty()) {
-            m_mutex.lock();
-            for (auto iter = m_queue.begin(); iter != m_queue.end(); ++iter) {
-                if (iter->image[0] == 'f') {
-                    QFile::remove(reinterpret_cast<const char*>(iter->image + 1));
+            m_queue.close();
+            GifFrameData data;
+            while (m_queue.dequeue(&data)) {
+                if (data.image[0] == 'f') {
+                    QFile::remove(reinterpret_cast<const char*>(data.image + 1));
                 }
-                delete[] iter->image;
+                delete[] data.image;
             }
-            m_queue.clear();
-            m_mutex.unlock();
         } else {
             QFileInfo fileinfo{m_path};
             Tool::savePath = fileinfo.absolutePath();
@@ -214,12 +205,7 @@ void GifWidget::updateGIF() {
         }
         m_preTime = time;
 
-        m_mutex.lock();
-        if (m_queue.empty()) {
-            m_cond.notify_one();
-        }
-        m_queue.append({m_writer, bits, image.width(), image.height(), delay});
-        m_mutex.unlock();
+        m_queue.enqueue({m_writer, bits, image.width(), image.height(), delay});
     }
 }
 
@@ -284,8 +270,7 @@ void GifWidget::init() {
     m_widget->move(point);
     m_widget->show();
 
-    m_run = true;
-    m_thread = new std::thread{writeGIF, &m_run, &m_mutex, &m_cond, &m_queue};
+    m_thread = new std::thread{writeGIF, &m_queue};
 }
 
 QImage GifWidget::screenshot() {

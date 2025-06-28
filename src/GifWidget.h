@@ -16,6 +16,7 @@
 #include <atomic>
 
 #include "gif.h"
+#include "BlockQueue.h"
 
 class QComboBox;
 struct GifFrameData {
@@ -65,11 +66,8 @@ private:
     QComboBox *m_box;
 
 
-    std::atomic<bool> m_run;
     std::thread *m_thread;
-    std::mutex m_mutex;
-    std::condition_variable m_cond;
-    QQueue<GifFrameData> m_queue;
+    BlockQueue<GifFrameData> m_queue;
 };
 
 #endif // GIFWIDGET_H

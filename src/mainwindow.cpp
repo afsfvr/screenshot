@@ -690,14 +690,6 @@ void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
         }
     }
 }
-
-void MainWindow::longScreenshot() {
-    if (m_state & State::Rect) {
-        if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
-        new LongWidget(m_image.copy(m_rect), m_rect, size(), m_menu, this);
-        end();
-    }
-}
 #endif
 
 #ifdef OCR
@@ -708,6 +700,14 @@ void MainWindow::ocrStart() {
     }
 }
 #endif
+
+void MainWindow::longScreenshot() {
+    if (m_state & State::Rect) {
+        if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
+        new LongWidget(m_image.copy(m_rect), m_rect, size(), m_menu, this);
+        end();
+    }
+}
 
 void MainWindow::updateHotkey() {
     if (m_setting->isMinimized()) {
