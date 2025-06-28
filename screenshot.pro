@@ -3,24 +3,29 @@ QT       += core gui widgets
 unix: {
     QT += x11extras
     LIBS += -lX11 -lXext -lXtst
+    LIBS += -L$$PWD/opencv/lib/linux
     SOURCES += src/KeyMouseEvent.cpp
     HEADERS += src/KeyMouseEvent.h
     DEFINES += TENCENT_OCR
 }
 win32: {
     LIBS += -lDwmapi  -luser32
+    LIBS += -L$$PWD/opencv/lib/windows
 }
 win32-msvc*: {
     QMAKE_CFLAGS *= /utf-8
     QMAKE_CXXFLAGS *= /utf-8
 }
 
+INCLUDEPATH += $$PWD/opencv/include/opencv4
+LIBS += -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
+
 contains(DEFINES, RAPID_OCR) {
     models.path=$$OUT_PWD
     models.files=$$PWD/rapidocr/models
     COPIES += models
     INCLUDEPATH += $$PWD/rapidocr/include
-    LIBS += -L$$PWD/rapidocr/lib -lRapidOcrOnnx -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
+    LIBS += -L$$PWD/rapidocr/lib -lRapidOcrOnnx
     SOURCES += src/OcrImpl/RapidOcr.cpp
     HEADERS += src/OcrImpl/RapidOcr.h
     ! contains(DEFINES, OCR) {
