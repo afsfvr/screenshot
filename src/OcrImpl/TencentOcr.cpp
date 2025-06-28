@@ -10,7 +10,6 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QEventLoop>
-#include <QMessageBox>
 
 QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
     QByteArray bytes;
@@ -114,13 +113,11 @@ bool TencentOcr::init() {
     }
 
     if (m_id.isEmpty()) {
-        qWarning() << "SECRET_ID is empty";
-        QMessageBox::critical(nullptr, "错误", "SECRET_ID为空");
+        qCritical() << "SECRET_ID is empty";
         return false;
     }
     if (m_key.isEmpty()) {
-        qWarning() << "SECRET_KEY is empty";
-        QMessageBox::critical(nullptr, "错误", "SECRET_KEY为空");
+        qCritical() << "SECRET_KEY is empty";
         return false;
     }
     return true;

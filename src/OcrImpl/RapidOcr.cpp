@@ -2,7 +2,6 @@
 
 #include <QApplication>
 #include <QDir>
-#include <QMessageBox>
 
 QVector<Ocr::OcrResult> RapidOcr::ocr(const QImage &img) {
     QVector<Ocr::OcrResult> v;
@@ -55,23 +54,19 @@ bool RapidOcr::init() {
     QString rec = QDir::toNativeSeparators(path + "/rec.onnx");
     QString key = QDir::toNativeSeparators(path + "/keys.txt");
     if (! QFile::exists(det)) {
-        QMessageBox::critical(nullptr, "错误", "det.onnx不存在");
-        qFatal("det.onnx不存在");
+        qCritical() << "det.onnx不存在";
         return false;
     }
     if (! QFile::exists(cls)) {
-        QMessageBox::critical(nullptr, "错误", "cls.onnx不存在");
-        qFatal("cls.onnx不存在");
+        qCritical() << "cls.onnx不存在";
         return false;
     }
     if (! QFile::exists(rec)) {
-        QMessageBox::critical(nullptr, "错误", "rec.onnx不存在");
-        qFatal("rec.onnx不存在");
+        qCritical() << "rec.onnx不存在";
         return false;
     }
     if (! QFile::exists(key)) {
-        QMessageBox::critical(nullptr, "错误", "keys.txt不存在");
-        qFatal("keys.txt不存在");
+        qCritical() << "keys.txt不存在";
         return false;
     }
     return m_ocr.initModels(det.toStdString().c_str(),
