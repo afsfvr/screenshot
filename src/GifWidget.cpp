@@ -281,7 +281,8 @@ QImage GifWidget::screenshot() {
         size.setWidth(std::max(rect.right() + 1, size.width()));
         size.setHeight(std::max(rect.bottom() + 1, size.height()));
         if (rect.contains(m_screen)) {
-            return (*iter)->grabWindow(0, m_screen.x(), m_screen.y(), m_screen.width(), m_screen.height()).toImage().convertToFormat(QImage::Format_RGBA8888);
+            return (*iter)->grabWindow(0, m_screen.x() - rect.left(), m_screen.y() - rect.top(), m_screen.width(), m_screen.height())
+                .toImage().convertToFormat(QImage::Format_RGBA8888);
         }
     }
 

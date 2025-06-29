@@ -7,6 +7,7 @@
 #include <QMenu>
 #include <thread>
 #include <QReadWriteLock>
+#include <QLabel>
 
 #include "BlockQueue.h"
 
@@ -26,6 +27,7 @@ protected:
 private slots:
     void edit();
     void save();
+    void updateLabel();
 
 private:
     friend void mergePicture();
@@ -35,9 +37,12 @@ private:
 
     QImage m_image;
     QWidget *m_widget;
+    QLabel *m_label;
     QRect m_screen;
     QSize m_size;
+
     int m_timer;
+
     QMenu *m_tray_menu;
     QAction *m_action;
     MainWindow *m_main;

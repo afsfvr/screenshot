@@ -14,7 +14,7 @@
 #undef max
 #endif
 
-static void mergePicture(QImage *bigImage, QReadWriteLock *lock, BlockQueue<QImage> *queue) {
+static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, BlockQueue<QImage> *queue) {
     QImage image;
     while (queue->dequeue(&image)) {
         lock->lockForRead();
@@ -41,15 +41,15 @@ static void mergePicture(QImage *bigImage, QReadWriteLock *lock, BlockQueue<QIma
         if (imageHeight <= 0) continue;
         QImage resultImg(QSize(matTop.cols, matTop.rows + imageHeight), QImage::Format_BGR888);
         QPainter painter(&resultImg);
-
         painter.drawImage(img.rect(), img);
-        painter.drawImage(QRect(0, matTop.rows, matTop.cols, imageHeight), image, QRect(0, matBottom.rows - imageHeight, matTop.cols, imageHeight));
+        painter.drawImage(QRect{0, matTop.rows, matTop.cols, imageHeight}, image, QRect{0, matBottom.rows - imageHeight, matTop.cols, imageHeight});
 
         painter.end();
 
         lock->lockForWrite();
         *bigImage = resultImg;
         lock->unlock();
+        QMetaObject::invokeMethod(w, "updateLabel", Qt::QueuedConnection);
     }
 }
 
@@ -71,7 +71,7 @@ LongWidget::LongWidget(const QImage &image, const QRect &rect, const QSize &size
         this,
         &LongWidget::edit);
 
-    m_thread = new std::thread{mergePicture, &m_image, &m_lock, &m_queue};
+    m_thread = new std::thread{mergePicture, this, &m_image, &m_lock, &m_queue};
 
     init();
     show();
@@ -91,6 +91,10 @@ LongWidget::~LongWidget() {
     if (m_widget != nullptr) {
         m_widget->deleteLater();
         m_widget = nullptr;
+    }
+    if (m_label != nullptr) {
+        m_label->deleteLater();
+        m_label = nullptr;
     }
     if (m_action) {
         m_action->deleteLater();
@@ -134,6 +138,49 @@ void LongWidget::save() {
     this->close();
 }
 
+void LongWidget::updateLabel() {
+    if (m_label) {
+        QList<QScreen*> list = QApplication::screens();
+        QSize size;
+        for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
+            QRect rect = (*iter)->geometry();
+            size.setWidth(std::max(rect.right() + 1, size.width()));
+            size.setHeight(std::max(rect.bottom() + 1, size.height()));
+        }
+
+        QPoint point;
+        QRect geometry = this->geometry();
+        int width = geometry.width();
+        int right = size.width() - geometry.right();
+        size.setWidth(width);
+        size.setHeight(geometry.bottom() - 10);
+
+        if (right > width + 10) {
+            point.setX(geometry.right() + 10);
+        } else if (geometry.left() > width + 10) {
+            point.setX(geometry.left() - width - 10);
+        } else {
+            if (geometry.left() > right) {
+                size.setWidth(geometry.left() - 5);
+                point.setX(5);
+            } else {
+                size.setWidth(right - 5);
+                point.setX(geometry.right() + 5);
+            }
+        }
+        if (! point.isNull()) {
+            m_lock.lockForRead();
+            QImage image = m_image.scaled(size, Qt::KeepAspectRatio, Qt::FastTransformation);
+            m_lock.unlock();
+            point.setY(size.height() - image.height() + 11);
+            m_label->setFixedSize(image.size());
+            m_label->clear();
+            m_label->setPixmap(QPixmap::fromImage(image));
+            m_label->move(point);
+        }
+    }
+}
+
 void LongWidget::init() {
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
@@ -144,7 +191,7 @@ void LongWidget::init() {
     activateWindow();
     repaint();
 
-    m_widget = new QWidget;
+    m_widget = new QWidget{this};
     m_widget->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     m_widget->setAttribute(Qt::WA_DeleteOnClose);
     connect(m_widget, &QWidget::destroyed, this, [this](){
@@ -196,6 +243,17 @@ void LongWidget::init() {
     m_widget->show();
     m_widget->activateWindow();
 
+    m_label = new QLabel{this};
+    m_label->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
+    m_label->setAttribute(Qt::WA_DeleteOnClose);
+    m_label->setStyleSheet("border: 1px solid red;");
+    connect(m_label, &QWidget::destroyed, this, [this](){
+        this->m_label = nullptr;
+        this->close();
+    });
+    m_label->show();
+    updateLabel();
+
     m_timer = startTimer(500);
 }
 
@@ -207,7 +265,8 @@ QImage LongWidget::screenshot() {
         size.setWidth(std::max(rect.right() + 1, size.width()));
         size.setHeight(std::max(rect.bottom() + 1, size.height()));
         if (rect.contains(m_screen)) {
-            return (*iter)->grabWindow(0, m_screen.x(), m_screen.y(), m_screen.width(), m_screen.height()).toImage().convertToFormat(QImage::Format_BGR888);
+            return (*iter)->grabWindow(0, m_screen.x() - rect.left(), m_screen.y() - rect.top(), m_screen.width(), m_screen.height())
+                .toImage().convertToFormat(QImage::Format_BGR888);
         }
     }
 
