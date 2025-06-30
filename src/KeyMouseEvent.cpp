@@ -14,6 +14,7 @@ KeyMouseEvent::KeyMouseEvent(QObject *parent)
     : QThread{parent}, running{false}
 {
     qRegisterMetaType<QSharedPointer<QMouseEvent>>("QSharedPointer<QMouseEvent>");
+    qRegisterMetaType<QSharedPointer<QWheelEvent>>("QSharedPointer<QWheelEvent>");
     qRegisterMetaType<Qt::KeyboardModifiers>("Qt::KeyboardModifiers");
     moveToThread(this);
 }
@@ -108,7 +109,11 @@ void KeyMouseEvent::handleEvent(XRecordInterceptData *data) {
                 emit mousePress(QSharedPointer<QMouseEvent>::create(QEvent::MouseButtonPress, point, point, point, Qt::RightButton, m_buttons, m_modifiers, Qt::MouseEventSynthesizedByApplication));
                 break;
             case WheelUp:
+                emit mouseWheel(QSharedPointer<QWheelEvent>::create(point, point, QPoint{0, 120}, QPoint{0, 120}, m_buttons, m_modifiers, Qt::NoScrollPhase, false, Qt::MouseEventSynthesizedByApplication));
+                break;
             case WheelDown:
+                emit mouseWheel(QSharedPointer<QWheelEvent>::create(point, point, QPoint{0, -120}, QPoint{0, -120}, m_buttons, m_modifiers, Qt::NoScrollPhase, false, Qt::MouseEventSynthesizedByApplication));
+                break;
             case WheelLeft:
             case WheelRight:
                 break;

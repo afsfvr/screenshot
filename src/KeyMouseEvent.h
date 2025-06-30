@@ -10,6 +10,7 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/record.h>
 #include <X11/extensions/Xrandr.h>
+#undef Bool
 
 class KeyMouseEvent : public QThread
 {
@@ -31,6 +32,7 @@ signals:
     void mouseRelease(QSharedPointer<QMouseEvent> event);
     void mousePressMove(QSharedPointer<QMouseEvent> event);
     void mouseMove(QSharedPointer<QMouseEvent> event);
+    void mouseWheel(QSharedPointer<QWheelEvent> event);
 
     void keyPress(int code, Qt::KeyboardModifiers modifiers);
     void keyRelease(int code, Qt::KeyboardModifiers modifiers);

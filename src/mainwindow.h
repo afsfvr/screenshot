@@ -76,10 +76,12 @@ protected:
 signals:
     void started();
     void finished();
+    void mouseWheeled(bool down);
 
 private slots:
 #ifdef Q_OS_LINUX
     void keyPress(int code, Qt::KeyboardModifiers modifiers);
+    void mouseWheel(QSharedPointer<QWheelEvent> event);
 #endif
 #ifdef OCR
     void ocrStart();

@@ -51,7 +51,11 @@ public:
         if (m_queue.isEmpty()) {
             return false;
         }
-        *t = m_queue.dequeue();
+        if (t) {
+            *t = std::move(m_queue.dequeue());
+        } else {
+            m_queue.dequeue();
+        }
         return true;
     }
 

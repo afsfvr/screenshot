@@ -17,9 +17,10 @@
 #undef min
 #endif
 
-static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, BlockQueue<QImage> *queue) {
-    QImage image;
-    while (queue->dequeue(&image)) {
+static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, BlockQueue<LongWidget::Data> *queue) {
+    LongWidget::Data data;
+    while (queue->dequeue(&data)) {
+        QImage &image = data.image;
         lock->lockForRead();
         QImage img = bigImage->copy();
         lock->unlock();
@@ -29,56 +30,56 @@ static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, 
         cv::Mat matBig(img.height(), img.width(), CV_8UC3, img.bits(), img.bytesPerLine());
         cv::Mat matNew(image.height(), image.width(), CV_8UC3, image.bits(), image.bytesPerLine());
 
-        // 向下匹配（bigImage底部 和 新图顶部）
-        cv::Mat bottomResult;
-        cv::matchTemplate(matBig, matNew(cv::Rect(0, 0, matNew.cols, matchHeight)), bottomResult, cv::TM_CCOEFF_NORMED);
-
-        double downMinVal, downMaxVal;
-        cv::Point downMinLoc, downMaxLoc;
-        cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
-
-        int downOverlap = matBig.rows - downMaxLoc.y;
-        int downNewHeight = matNew.rows - downOverlap;
-
-        // 向上匹配（bigImage顶部 和 新图底部）
-        cv::Mat topResult;
-        cv::matchTemplate(matBig, matNew(cv::Rect(0, matNew.rows - matchHeight, matNew.cols, matchHeight)), topResult, cv::TM_CCOEFF_NORMED);
-
-        double upMinVal, upMaxVal;
-        cv::Point upMinLoc, upMaxLoc;
-        cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
-
-        int upOverlap = upMaxLoc.y + matchHeight;
-        int upNewHeight = matNew.rows - upOverlap;
-
-        bool appendDown = (downMaxVal > 0.8 || downMaxVal >= upMaxVal);
-
         QImage resultImg;
-        if (appendDown && downNewHeight > 0 && downMaxVal > 0.5) {
-            resultImg = QImage(QSize(matBig.cols, matBig.rows + downNewHeight), QImage::Format_BGR888);
-            QPainter painter(&resultImg);
-            painter.drawImage(QRect{0, 0, matBig.cols, matBig.rows - downOverlap}, img, QRect{0, 0, matBig.cols, matBig.rows - downOverlap});
-            painter.drawImage(QRect{0, matBig.rows - downOverlap, matNew.cols, matNew.rows}, image);
-            painter.end();
-        } else if (!appendDown && upNewHeight > 0 && upMaxVal > 0.5) {
-            resultImg = QImage(QSize(matBig.cols, matBig.rows + upNewHeight), QImage::Format_BGR888);
-            QPainter painter(&resultImg);
-            painter.drawImage(image.rect(), image);
-            painter.drawImage(QRect{0, matNew.rows, matBig.cols, matBig.rows - upOverlap}, img, QRect{0, upOverlap, matBig.cols, matBig.rows - upOverlap});
-            painter.end();
+        if (data.down) {
+            // 向下匹配（bigImage底部 和 新图顶部）
+            cv::Mat bottomResult;
+            cv::matchTemplate(matBig, matNew(cv::Rect(0, 0, matNew.cols, matchHeight)), bottomResult, cv::TM_CCOEFF_NORMED);
+
+            double downMinVal, downMaxVal;
+            cv::Point downMinLoc, downMaxLoc;
+            cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
+
+            int downOverlap = matBig.rows - downMaxLoc.y;
+            int downNewHeight = matNew.rows - downOverlap;
+            if (downNewHeight > 0 && downMaxVal > 0.5) {
+                resultImg = QImage(QSize(matBig.cols, matBig.rows + downNewHeight), QImage::Format_BGR888);
+                QPainter painter(&resultImg);
+                painter.drawImage(QRect{0, 0, matBig.cols, matBig.rows - downOverlap}, img, QRect{0, 0, matBig.cols, matBig.rows - downOverlap});
+                painter.drawImage(QRect{0, matBig.rows - downOverlap, matNew.cols, matNew.rows}, image);
+                painter.end();
+            }
         } else {
-            continue;
+            // 向上匹配（bigImage顶部 和 新图底部）
+            cv::Mat topResult;
+            cv::matchTemplate(matBig, matNew(cv::Rect(0, matNew.rows - matchHeight, matNew.cols, matchHeight)), topResult, cv::TM_CCOEFF_NORMED);
+
+            double upMinVal, upMaxVal;
+            cv::Point upMinLoc, upMaxLoc;
+            cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
+
+            int upOverlap = upMaxLoc.y + matchHeight;
+            int upNewHeight = matNew.rows - upOverlap;
+            if (upNewHeight > 0 && upMaxVal > 0.5) {
+                resultImg = QImage(QSize(matBig.cols, matBig.rows + upNewHeight), QImage::Format_BGR888);
+                QPainter painter(&resultImg);
+                painter.drawImage(image.rect(), image);
+                painter.drawImage(QRect{0, matNew.rows, matBig.cols, matBig.rows - upOverlap}, img, QRect{0, upOverlap, matBig.cols, matBig.rows - upOverlap});
+                painter.end();
+            }
         }
 
-        lock->lockForWrite();
-        *bigImage = resultImg;
-        lock->unlock();
-        QMetaObject::invokeMethod(w, "updateLabel", Qt::QueuedConnection);
+        if (! resultImg.isNull()) {
+            lock->lockForWrite();
+            *bigImage = resultImg;
+            lock->unlock();
+            QMetaObject::invokeMethod(w, "updateLabel", Qt::QueuedConnection);
+        }
     }
 }
 
 LongWidget::LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, MainWindow *main):
-    m_widget{nullptr}, m_size{size}, m_timer{-1}, m_tray_menu{menu}, m_main{main} {
+    m_widget{nullptr}, m_size{size}, m_tray_menu{menu}, m_main{main} {
     m_image = image.convertToFormat(QImage::Format_BGR888);
 
     QRect geometry;
@@ -102,28 +103,21 @@ LongWidget::LongWidget(const QImage &image, const QRect &rect, const QSize &size
 }
 
 LongWidget::~LongWidget() {
-    m_queue.close();
+    stop();
     if (m_thread) {
+        while (m_queue.dequeue(nullptr));
         m_thread->join();
         delete m_thread;
         m_thread = nullptr;
-    }
-    if (m_timer != -1) {
-        killTimer(m_timer);
-        m_timer = -1;
-    }
-    if (m_widget != nullptr) {
-        m_widget->deleteLater();
-        m_widget = nullptr;
-    }
-    if (m_label != nullptr) {
-        m_label->deleteLater();
-        m_label = nullptr;
     }
     if (m_action) {
         m_action->deleteLater();
         m_action = nullptr;
     }
+}
+
+void LongWidget::mouseWheel(bool down) {
+    m_queue.enqueue({screenshot(), down});
 }
 
 void LongWidget::paintEvent(QPaintEvent *event) {
@@ -135,16 +129,15 @@ void LongWidget::paintEvent(QPaintEvent *event) {
     painter.drawRect(0, 0, width() - 1, height() - 1);
 }
 
-void LongWidget::timerEvent(QTimerEvent *event) {
-    if (event->timerId() == m_timer) {
-        m_queue.enqueue(screenshot());
-    } else {
-        QWidget::timerEvent(event);
-    }
-}
-
 void LongWidget::edit() {
-    m_queue.close();
+    stop();
+    while (! m_queue.isEmpty()) {
+        if (m_action) {
+            m_action->setText(QString("long(%1,%2 %3x%4) %5").arg(m_screen.x()).arg(m_screen.y()).arg(m_screen.width()).arg(m_screen.height()).arg(m_queue.size()));
+        }
+        QApplication::processEvents();
+        QThread::usleep(20);
+    }
     m_lock.lockForWrite();
     m_main->connectTopWidget(new TopWidget(m_image, geometry(), m_tray_menu));
     m_lock.unlock();
@@ -152,7 +145,14 @@ void LongWidget::edit() {
 }
 
 void LongWidget::save() {
-    m_queue.close();
+    stop();
+    while (! m_queue.isEmpty()) {
+        if (m_action) {
+            m_action->setText(QString("long(%1,%2 %3x%4) %5").arg(m_screen.x()).arg(m_screen.y()).arg(m_screen.width()).arg(m_screen.height()).arg(m_queue.size()));
+        }
+        QApplication::processEvents();
+        QThread::usleep(20);
+    }
     QClipboard *clipboard = QApplication::clipboard();
     if (clipboard) {
         m_lock.lockForWrite();
@@ -277,8 +277,21 @@ void LongWidget::init() {
     });
     m_label->show();
     updateLabel();
+}
 
-    m_timer = startTimer(200);
+void LongWidget::stop() {
+    hide();
+    m_queue.close();
+    if (m_widget != nullptr) {
+        m_widget->close();
+        m_widget->deleteLater();
+        m_widget = nullptr;
+    }
+    if (m_label != nullptr) {
+        m_label->close();
+        m_label->deleteLater();
+        m_label = nullptr;
+    }
 }
 
 QImage LongWidget::screenshot() {

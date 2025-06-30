@@ -15,14 +15,20 @@ class MainWindow;
 class LongWidget : public QWidget {
     Q_OBJECT
 public:
+    struct Data {
+        QImage image;
+        bool down;
+    };
     explicit LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, MainWindow *main);
     ~LongWidget();
 
     void showTool();
 
+public slots:
+    void mouseWheel(bool down);
+
 protected:
     void paintEvent(QPaintEvent *event) override;
-    void timerEvent(QTimerEvent *event) override;
 
 private slots:
     void edit();
@@ -30,9 +36,9 @@ private slots:
     void updateLabel();
 
 private:
-    friend void mergePicture();
     void init();
     void join();
+    void stop();
     QImage screenshot();
 
     QImage m_image;
@@ -41,14 +47,12 @@ private:
     QRect m_screen;
     QSize m_size;
 
-    int m_timer;
-
     QMenu *m_tray_menu;
     QAction *m_action;
     MainWindow *m_main;
 
     QReadWriteLock m_lock;
-    BlockQueue<QImage> m_queue;
+    BlockQueue<Data> m_queue;
     std::thread *m_thread;
 };
 

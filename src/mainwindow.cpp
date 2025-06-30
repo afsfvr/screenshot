@@ -43,6 +43,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_monitor->start();
     m_monitor->resume();
     connect(m_monitor, &KeyMouseEvent::keyPress, this, &MainWindow::keyPress);
+    connect(m_monitor, &KeyMouseEvent::mouseWheel, this, &MainWindow::mouseWheel);
 #endif
     setMouseTracking(true);
 
@@ -690,6 +691,10 @@ void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
         }
     }
 }
+
+void MainWindow::mouseWheel(QSharedPointer<QWheelEvent> event) {
+    emit mouseWheeled(event->angleDelta().y() <= 0);
+}
 #endif
 
 #ifdef OCR
@@ -704,7 +709,8 @@ void MainWindow::ocrStart() {
 void MainWindow::longScreenshot() {
     if (m_state & State::Rect) {
         if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
-        new LongWidget(m_image.copy(m_rect), m_rect, size(), m_menu, this);
+        auto *l = new LongWidget(m_image.copy(m_rect), m_rect, size(), m_menu, this);
+        connect(this, &MainWindow::mouseWheeled, l, &LongWidget::mouseWheel);
         end();
     }
 }
