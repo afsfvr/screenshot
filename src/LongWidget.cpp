@@ -3,19 +3,13 @@
 #include <QScreen>
 #include <QHBoxLayout>
 #include <QTimerEvent>
+#include <QThread>
 #include <QDebug>
 #include <opencv2/opencv.hpp>
 
 #include "LongWidget.h"
 #include "TopWidget.h"
 #include "mainwindow.h"
-
-#ifdef max
-#undef max
-#endif
-#ifdef min
-#undef min
-#endif
 
 static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, BlockQueue<LongWidget::Data> *queue) {
     LongWidget::Data data;
@@ -179,29 +173,29 @@ void LongWidget::updateLabel() {
         size.setWidth(width);
         size.setHeight(geometry.bottom() - 10);
 
+        bool showRight = true;
         if (right > width + 10) {
-            point.setX(geometry.right() + 10);
+            showRight = true;
         } else if (geometry.left() > width + 10) {
-            point.setX(geometry.left() - width - 10);
+            showRight = false;
         } else {
             if (geometry.left() > right) {
-                size.setWidth(geometry.left() - 5);
-                point.setX(5);
+                showRight = false;
+                size.setWidth(geometry.left() - 10);
             } else {
-                size.setWidth(right - 5);
-                point.setX(geometry.right() + 5);
+                showRight = true;
+                size.setWidth(right - 10);
             }
         }
-        if (! point.isNull()) {
-            m_lock.lockForRead();
-            QImage image = m_image.scaled(size, Qt::KeepAspectRatio, Qt::FastTransformation);
-            m_lock.unlock();
-            point.setY(size.height() - image.height() + 11);
-            m_label->setFixedSize(image.size());
-            m_label->clear();
-            m_label->setPixmap(QPixmap::fromImage(image));
-            m_label->move(point);
-        }
+        m_lock.lockForRead();
+        QImage image = m_image.scaled(size, Qt::KeepAspectRatio, Qt::FastTransformation);
+        m_lock.unlock();
+        point.setX(showRight ? geometry.right() + 10 : geometry.left() - image.width() - 10);
+        point.setY(size.height() - image.height() + 11);
+        m_label->setFixedSize(image.size());
+        m_label->clear();
+        m_label->setPixmap(QPixmap::fromImage(image));
+        m_label->move(point);
     }
 }
 

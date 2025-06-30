@@ -1,4 +1,4 @@
-#ifndef KEYMOUSEEVENT_H
+﻿#ifndef KEYMOUSEEVENT_H
 #define KEYMOUSEEVENT_H
 
 #include <QSharedPointer>
@@ -11,6 +11,8 @@
 #include <X11/extensions/record.h>
 #include <X11/extensions/Xrandr.h>
 #undef Bool
+#undef max
+#undef min
 
 class KeyMouseEvent : public QThread
 {

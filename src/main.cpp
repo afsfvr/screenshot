@@ -1,4 +1,4 @@
-#include <QApplication>
+﻿#include <QApplication>
 #include <QProcessEnvironment>
 #include <QStandardPaths>
 #include <QLockFile>
@@ -7,7 +7,7 @@
 #include "mainwindow.h"
 #include "TopWidget.h"
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX)
 void signal_handler(int x) {
     switch (x) {
     case SIGINT:  qInfo() << QString("收到信号SIGINT，退出程序");    break;
@@ -17,6 +17,17 @@ void signal_handler(int x) {
     }
 
     QApplication::quit();
+}
+#elif defined(Q_OS_WINDOWS)
+static HHOOK hHook;
+static HWND targetHwnd = nullptr;
+static LRESULT CALLBACK mouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (wParam == WM_MOUSEWHEEL && targetHwnd != nullptr) {
+        MSLLHOOKSTRUCT * msll = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
+        int delta = GET_WHEEL_DELTA_WPARAM(msll->mouseData);
+        PostMessageW(targetHwnd, WM_USER + 1024, delta <= 0, 0);
+    }
+    return CallNextHookEx(hHook, nCode, wParam, lParam);
 }
 #endif
 
@@ -67,6 +78,10 @@ int main(int argc, char *argv[])
     QApplication::setWindowIcon(QIcon(":/images/screenshot.ico"));
     QApplication::setQuitOnLastWindowClosed(false);
     MainWindow w;
+#ifdef Q_OS_WINDOWS
+    hHook = SetWindowsHookExW(WH_MOUSE_LL, mouseProc, NULL, 0);
+    targetHwnd = reinterpret_cast<HWND>(w.winId());
+#endif
 #ifdef OCR
     qRegisterMetaType<QVector<Ocr::OcrResult>>("QVector<Ocr::OcrResult>");
     OcrInstance->start();
@@ -75,6 +90,10 @@ int main(int argc, char *argv[])
 #ifdef OCR
     OcrInstance->quit();
     OcrInstance->wait();
+#endif
+#ifdef Q_OS_WINDOWS
+    targetHwnd = nullptr;
+    UnhookWindowsHookEx(hHook);
 #endif
     return ret;
 }

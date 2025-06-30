@@ -431,7 +431,7 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr
 bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result) {
 #endif
     if (! this->isVisible() && eventType == "windows_generic_MSG") {
-        MSG *msg = static_cast<MSG *>(message);
+        MSG *msg = reinterpret_cast<MSG*>(message);
         if (msg->message == WM_HOTKEY) {
             if (msg->wParam == 1) {
                 saveImage();
@@ -443,6 +443,8 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *r
                 gifStart();
                 return true;
             }
+        } else if (msg->message == WM_USER + 1024) {
+            emit mouseWheeled(msg->wParam);
         }
     }
     return QWidget::nativeEvent(eventType, message, result);

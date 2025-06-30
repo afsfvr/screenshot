@@ -8,8 +8,6 @@
 #ifdef Q_OS_LINUX
 #include <X11/Xlib.h>
 #include <QX11Info>
-#endif
-#ifdef KeyPress
 #undef KeyPress
 #endif
 
