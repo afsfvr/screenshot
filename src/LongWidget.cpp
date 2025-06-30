@@ -13,38 +13,62 @@
 #ifdef max
 #undef max
 #endif
+#ifdef min
+#undef min
+#endif
 
 static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, BlockQueue<QImage> *queue) {
     QImage image;
     while (queue->dequeue(&image)) {
         lock->lockForRead();
-        QImage img = *bigImage;
+        QImage img = bigImage->copy();
         lock->unlock();
-        cv::Mat matTop(img.height(), img.width(), CV_8UC3, img.bits(), img.bytesPerLine());
-        cv::Mat matBottom(image.height(), image.width(), CV_8UC3, image.bits(), image.bytesPerLine());
 
-        int matchHeight = 200;
-        if (matBottom.rows < matchHeight) {
-            matchHeight = matBottom.rows;
+        const int matchHeight = std::min(200, image.height());
+
+        cv::Mat matBig(img.height(), img.width(), CV_8UC3, img.bits(), img.bytesPerLine());
+        cv::Mat matNew(image.height(), image.width(), CV_8UC3, image.bits(), image.bytesPerLine());
+
+        // 向下匹配（bigImage底部 和 新图顶部）
+        cv::Mat bottomResult;
+        cv::matchTemplate(matBig, matNew(cv::Rect(0, 0, matNew.cols, matchHeight)), bottomResult, cv::TM_CCOEFF_NORMED);
+
+        double downMinVal, downMaxVal;
+        cv::Point downMinLoc, downMaxLoc;
+        cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
+
+        int downOverlap = matBig.rows - downMaxLoc.y;
+        int downNewHeight = matNew.rows - downOverlap;
+
+        // 向上匹配（bigImage顶部 和 新图底部）
+        cv::Mat topResult;
+        cv::matchTemplate(matBig, matNew(cv::Rect(0, matNew.rows - matchHeight, matNew.cols, matchHeight)), topResult, cv::TM_CCOEFF_NORMED);
+
+        double upMinVal, upMaxVal;
+        cv::Point upMinLoc, upMaxLoc;
+        cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
+
+        int upOverlap = upMaxLoc.y + matchHeight;
+        int upNewHeight = matNew.rows - upOverlap;
+
+        bool appendDown = (downMaxVal > 0.8 || downMaxVal >= upMaxVal);
+
+        QImage resultImg;
+        if (appendDown && downNewHeight > 0 && downMaxVal > 0.5) {
+            resultImg = QImage(QSize(matBig.cols, matBig.rows + downNewHeight), QImage::Format_BGR888);
+            QPainter painter(&resultImg);
+            painter.drawImage(QRect{0, 0, matBig.cols, matBig.rows - downOverlap}, img, QRect{0, 0, matBig.cols, matBig.rows - downOverlap});
+            painter.drawImage(QRect{0, matBig.rows - downOverlap, matNew.cols, matNew.rows}, image);
+            painter.end();
+        } else if (!appendDown && upNewHeight > 0 && upMaxVal > 0.5) {
+            resultImg = QImage(QSize(matBig.cols, matBig.rows + upNewHeight), QImage::Format_BGR888);
+            QPainter painter(&resultImg);
+            painter.drawImage(image.rect(), image);
+            painter.drawImage(QRect{0, matNew.rows, matBig.cols, matBig.rows - upOverlap}, img, QRect{0, upOverlap, matBig.cols, matBig.rows - upOverlap});
+            painter.end();
+        } else {
+            continue;
         }
-        cv::Mat result;
-        cv::matchTemplate(matTop, matBottom(cv::Rect(0, 0, matBottom.cols, matchHeight)), result, cv::TM_CCOEFF_NORMED);
-
-        double minVal, maxVal;
-        cv::Point minLoc, maxLoc;
-        cv::minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc);
-        int overlapHeight = matTop.rows - maxLoc.y;
-        int imageHeight = matBottom.rows - overlapHeight;
-        // qDebug() << QString("匹配得分：%1，位置：[%2, %3], 重叠高度: %4, 新图使用高度: %5")
-        //                 .arg(maxVal, 0, 'f', 6).arg(maxLoc.x).arg(maxLoc.y).arg(overlapHeight).arg(imageHeight);
-
-        if (imageHeight <= 0) continue;
-        QImage resultImg(QSize(matTop.cols, matTop.rows + imageHeight), QImage::Format_BGR888);
-        QPainter painter(&resultImg);
-        painter.drawImage(img.rect(), img);
-        painter.drawImage(QRect{0, matTop.rows, matTop.cols, imageHeight}, image, QRect{0, matBottom.rows - imageHeight, matTop.cols, imageHeight});
-
-        painter.end();
 
         lock->lockForWrite();
         *bigImage = resultImg;
@@ -254,7 +278,7 @@ void LongWidget::init() {
     m_label->show();
     updateLabel();
 
-    m_timer = startTimer(500);
+    m_timer = startTimer(200);
 }
 
 QImage LongWidget::screenshot() {

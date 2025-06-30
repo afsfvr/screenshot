@@ -161,10 +161,5 @@ QByteArray TencentOcr::sendRequest(const QString &action, const QByteArray &payl
 
 QByteArray TencentOcr::sha256Hex(const QByteArray &array) {
     QByteArray hash = QCryptographicHash::hash(array, QCryptographicHash::Sha256);
-    const unsigned char *udata = reinterpret_cast<const unsigned char*>(hash.constData());
-    QString ret;
-    for (int i = 0; i < hash.size(); ++i) {
-        ret.append(QString("%1").arg(static_cast<int>(udata[i]), 2, 16, QLatin1Char('0')));
-    }
-    return ret.toUtf8();
+    return hash.toHex();
 }
