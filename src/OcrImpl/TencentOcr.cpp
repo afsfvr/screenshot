@@ -35,8 +35,13 @@ QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
         if (code == "ResourcesSoldOut.ChargeStatusException" ||
             code == "ResourceUnavailable.ResourcePackageRunOut" ||
             code == "ResourceUnavailable.InArrears") {
-            object = QJsonDocument::fromJson(sendRequest("GeneralAccurateOCR", payload)).object();
+            object = QJsonDocument::fromJson(sendRequest("GeneralBasicOCR", payload)).object();
             response = object.value("Response").toObject();
+            error = response.value("Error").toObject();
+            if (! error.isEmpty()) {
+                qWarning() << error.value("Message").toString();
+                return {};
+            }
         } else {
             QString message = error.value("Message").toString();
             qWarning() << message;
