@@ -252,23 +252,15 @@ void TopWidget::paintEvent(QPaintEvent *event) {
     if (m_shape != nullptr) {
         m_shape->draw(painter);
     }
+
+#ifdef OCR
+    painter.setPen(Qt::red);
+    for (auto iter = m_ocr.cbegin(); iter != m_ocr.cend(); ++iter) {
+        painter.drawPath(iter->path);
+    }
     if (m_max_offset > 0) {
         painter.restore();
     }
-    if (m_scroll_timer != -1) {
-        int maxH = m_image.height();
-        int h = height();
-
-        int sliderHeight = std::max(h / maxH * h, 20); // 最小高度为20
-        float offsetRatio = static_cast<float>(m_offsetY) / m_max_offset;
-        int sliderY = static_cast<int>((h - sliderHeight) * offsetRatio);
-
-        QRect sliderRect(width() - 10, sliderY, 10, sliderHeight);
-
-        painter.fillRect(sliderRect, QColor(100, 100, 100));
-    }
-
-#ifdef OCR
     if (m_ocr_timer != -1) {
         painter.setRenderHint(QPainter::Antialiasing);
         painter.fillRect(this->rect(), QColor(255, 255, 255, 150));
@@ -285,11 +277,23 @@ void TopWidget::paintEvent(QPaintEvent *event) {
             painter.drawEllipse(QPoint(x, y), m_radius1, m_radius1);
         }
     }
-    painter.setPen(Qt::red);
-    for (auto iter = m_ocr.cbegin(); iter != m_ocr.cend(); ++iter) {
-        painter.drawPath(iter->path);
+#else
+    if (m_max_offset > 0) {
+        painter.restore();
     }
 #endif
+    if (m_scroll_timer != -1) {
+        int maxH = m_image.height();
+        int h = height();
+
+        int sliderHeight = std::max(h / maxH * h, 20); // 最小高度为20
+        float offsetRatio = static_cast<float>(m_offsetY) / m_max_offset;
+        int sliderY = static_cast<int>((h - sliderHeight) * offsetRatio);
+
+        QRect sliderRect(width() - 10, sliderY, 10, sliderHeight);
+
+        painter.fillRect(sliderRect, QColor(100, 100, 100));
+    }
 
     drawTips(painter);
 }
@@ -364,8 +368,12 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
 #ifdef OCR
         if (m_widget->isHidden() || ! m_widget->geometry().contains(gpos)) {
             bool hide = true;
+            QPoint point = event->pos();
+            if (m_max_offset > 0) {
+                point.ry() += m_offsetY;
+            }
             for (auto iter = m_ocr.cbegin(); iter != m_ocr.cend(); ++iter) {
-                if (iter->path.contains(event->pos())) {
+                if (iter->path.contains(point)) {
                     QString ptr = QString::number(reinterpret_cast<quintptr>(&(iter->text)));
                     if (ptr != m_text->statusTip()) {
                         QRect rect = iter->path.boundingRect().toRect();
@@ -375,7 +383,13 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                         m_label->setText(iter->score >= 0 ? QString("%1%").arg(iter->score, 0, 'f', 0) : "");
                         m_widget->setFixedWidth(std::max(95, rect.width()));
                         m_widget->show();
-                        m_widget->move(mapToGlobal(rect.bottomLeft()));
+                        if (m_max_offset > 0) {
+                            QPoint bottomLeft = rect.bottomLeft();
+                            bottomLeft.ry() -= m_offsetY;
+                            m_widget->move(mapToGlobal(bottomLeft));
+                        } else {
+                            m_widget->move(mapToGlobal(rect.bottomLeft()));
+                        }
                     }
                     hide = false;
                     break;
