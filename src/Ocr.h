@@ -6,6 +6,8 @@
 #include <QVector>
 #include <QPainterPath>
 #include <QDebug>
+#include <QList>
+#include <QMutex>
 
 class TopWidget;
 class OcrBase;
@@ -19,6 +21,7 @@ public:
     ~Ocr();
     static Ocr* instance();
     void ocr(TopWidget *t, const QImage &image);
+    void cancel(const TopWidget *t);
 
     struct OcrResult {
         QPainterPath path;
@@ -38,6 +41,8 @@ private slots:
 
 private:
     OcrBase *m_ocr;
+    QList<TopWidget*> m_list;
+    QMutex m_mutex;
 };
 
 class OcrBase {

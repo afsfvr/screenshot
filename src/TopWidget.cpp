@@ -59,6 +59,11 @@ TopWidget::TopWidget(QImage &image, QPainterPath &&path, QVector<Shape *> &vecto
 TopWidget::~TopWidget() {
     delete m_menu;
 #ifdef OCR
+    if (m_ocr_timer != -1) {
+        OcrInstance->cancel(this);
+        killTimer(m_ocr_timer);
+        m_ocr_timer = -1;
+    }
     if (m_widget != nullptr) {
         delete m_widget;
         m_widget = nullptr;
