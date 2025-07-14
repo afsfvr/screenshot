@@ -19,7 +19,7 @@ static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, 
         QImage img = bigImage->copy();
         lock->unlock();
 
-        const int matchHeight = std::min(200, image.height());
+        const int matchHeight = image.height() <= 300 ? image.height() / 2 : 200;
 
         cv::Mat matBig(img.height(), img.width(), CV_8UC3, img.bits(), img.bytesPerLine());
         cv::Mat matNew(image.height(), image.width(), CV_8UC3, image.bits(), image.bytesPerLine());
