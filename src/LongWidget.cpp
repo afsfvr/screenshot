@@ -28,11 +28,19 @@ static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, 
         if (data.down) {
             // 向下匹配（bigImage底部 和 新图顶部）
             cv::Mat bottomResult;
-            cv::matchTemplate(matBig, matNew(cv::Rect(0, 0, matNew.cols, matchHeight)), bottomResult, cv::TM_CCOEFF_NORMED);
+            cv::Mat matchNew = matNew(cv::Rect(0, 0, matNew.cols, matchHeight));
 
-            double downMinVal, downMaxVal;
+            double downMinVal, downMaxVal = 0;
             cv::Point downMinLoc, downMaxLoc;
-            cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
+            if (int difference = (matBig.rows - matNew.rows); difference > 0) {
+                cv::matchTemplate(matBig(cv::Rect(0, difference, matBig.cols, matNew.rows)), matchNew, bottomResult, cv::TM_CCOEFF_NORMED);
+                cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
+                downMaxLoc.y += difference;
+            }
+            if (downMaxVal < 0.5) {
+                cv::matchTemplate(matBig, matchNew, bottomResult, cv::TM_CCOEFF_NORMED);
+                cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
+            }
 
             int downOverlap = matBig.rows - downMaxLoc.y;
             int downNewHeight = matNew.rows - downOverlap;
@@ -46,11 +54,18 @@ static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, 
         } else {
             // 向上匹配（bigImage顶部 和 新图底部）
             cv::Mat topResult;
-            cv::matchTemplate(matBig, matNew(cv::Rect(0, matNew.rows - matchHeight, matNew.cols, matchHeight)), topResult, cv::TM_CCOEFF_NORMED);
+            cv::Mat matchNew = matNew(cv::Rect(0, matNew.rows - matchHeight, matNew.cols, matchHeight));
 
-            double upMinVal, upMaxVal;
+            double upMinVal, upMaxVal = 0;
             cv::Point upMinLoc, upMaxLoc;
-            cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
+            if (matBig.rows > matNew.rows) {
+                cv::matchTemplate(matBig(cv::Rect(0, 0, matBig.cols, matNew.rows)), matchNew, topResult, cv::TM_CCOEFF_NORMED);
+                cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
+            }
+            if (upMaxVal < 0.5) {
+                cv::matchTemplate(matBig, matchNew, topResult, cv::TM_CCOEFF_NORMED);
+                cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
+            }
 
             int upOverlap = upMaxLoc.y + matchHeight;
             int upNewHeight = matNew.rows - upOverlap;
@@ -65,7 +80,7 @@ static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, 
 
         if (! resultImg.isNull()) {
             lock->lockForWrite();
-            *bigImage = resultImg;
+            bigImage->swap(resultImg);
             lock->unlock();
             QMetaObject::invokeMethod(w, "updateLabel", Qt::QueuedConnection);
         }
@@ -193,7 +208,6 @@ void LongWidget::updateLabel() {
         point.setX(showRight ? geometry.right() + 10 : geometry.left() - image.width() - 10);
         point.setY(size.height() - image.height() + 11);
         m_label->setFixedSize(image.size());
-        m_label->clear();
         m_label->setPixmap(QPixmap::fromImage(image));
         m_label->move(point);
     }
