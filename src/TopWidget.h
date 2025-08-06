@@ -67,7 +67,7 @@ private:
     QMenu *m_menu;
 
 #ifdef OCR
-    void hideWidget();
+    void hideWidget(bool clearTip = true);
     int m_ocr_timer = -1;
     QPoint m_center;
     int m_radius, m_radius1, m_angle;

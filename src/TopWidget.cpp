@@ -183,8 +183,10 @@ bool TopWidget::eventFilter(QObject *watched, QEvent *event) {
         } else if (event->type() == QEvent::KeyPress){
             QKeyEvent *e = dynamic_cast<QKeyEvent*>(event);
             if (e && e->key() == Qt::Key_Escape) {
-                hideWidget();
+                hideWidget(false);
             }
+        } else if (event->type() == QEvent::Wheel) {
+            wheelEvent(dynamic_cast<QWheelEvent*>(event));
         }
     }
     return BaseWindow::eventFilter(watched, event);
@@ -472,6 +474,7 @@ void TopWidget::wheelEvent(QWheelEvent *event) {
             killTimer(m_scroll_timer);
         }
         m_scroll_timer = startTimer(3000);
+        hideWidget();
     } else {
         BaseWindow::wheelEvent(event);
     }
@@ -658,11 +661,13 @@ bool TopWidget::contains(const QPoint &point) {
 }
 
 #ifdef OCR
-void TopWidget::hideWidget() {
+void TopWidget::hideWidget(bool clearTip) {
     if (m_widget) {
         m_widget->hide();
         m_text->setReadOnly(true);
-        m_text->setStatusTip("");
+        if (clearTip) {
+            m_text->setStatusTip("");
+        }
         m_text->clear();
     }
 }
