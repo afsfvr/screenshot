@@ -82,6 +82,7 @@ private slots:
 #ifdef Q_OS_LINUX
     void keyPress(int code, Qt::KeyboardModifiers modifiers);
     void mouseWheel(QSharedPointer<QWheelEvent> event);
+    void grabMouseEvent();
 #endif
 #ifdef OCR
     void ocrStart();
@@ -108,6 +109,7 @@ private:
 
 #ifdef Q_OS_LINUX
     KeyMouseEvent *m_monitor;
+    bool m_grab_mouse = false;
 #endif
     QVector<QRect> m_windows;
     int m_index;

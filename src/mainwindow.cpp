@@ -15,6 +15,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
 #ifdef OCR
     connect(m_tool, &Tool::ocr, this, &MainWindow::ocrStart);
+    connect(this, &MainWindow::started, this, &MainWindow::grabMouseEvent);
 #endif
 
     m_menu = new QMenu(this);
@@ -51,7 +52,6 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     connect(m_tool, &Tool::clickTop, this, &MainWindow::top);
     connect(m_tool, &Tool::longScreenshot, this, &MainWindow::longScreenshot);
     m_setting->readConfig();
-
 }
 
 MainWindow::~MainWindow() {
@@ -68,14 +68,20 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::connectTopWidget(TopWidget *t) {
-    connect(this, &MainWindow::started, t, &TopWidget::hide);
-    connect(this, &MainWindow::finished, t, &TopWidget::show);
 #if defined(Q_OS_LINUX)
     connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
+#else
+    Q_UNUSED(t);
 #endif
 }
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
+#ifdef Q_OS_LINUX
+    if (m_grab_mouse) {
+        this->releaseMouse();
+        m_grab_mouse = false;
+    }
+#endif
     if (event->buttons() == event->button()) {
         m_press = true;
         m_point = event->pos();
@@ -696,6 +702,11 @@ void MainWindow::keyPress(int code, Qt::KeyboardModifiers modifiers) {
 
 void MainWindow::mouseWheel(QSharedPointer<QWheelEvent> event) {
     emit mouseWheeled(event->angleDelta().y() <= 0);
+}
+
+void MainWindow::grabMouseEvent() {
+    this->grabMouse();
+    m_grab_mouse = true;
 }
 #endif
 
