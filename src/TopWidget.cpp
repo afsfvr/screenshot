@@ -140,7 +140,12 @@ void TopWidget::ocrStart() {
 }
 
 void TopWidget::ocrEnd(const QVector<Ocr::OcrResult> &result) {
-    m_ocr = result;
+    if (result.size() == 1 && result[0].score == -1) {
+        m_ocr.clear();
+        addTip(result[0].text, 3000);
+    } else {
+        m_ocr = result;
+    }
 
     if (m_ocr_timer != -1) {
         killTimer(m_ocr_timer);

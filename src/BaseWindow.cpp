@@ -193,7 +193,7 @@ int BaseWindow::addTip(const QString &text, int duration) {
     }
 
     qint64 time = QDateTime::currentMSecsSinceEpoch();
-    m_tips.push_back({ id, text, time, duration });
+    m_tips.insert(0, { id, text, time, duration });
     repaint();
     return id;
 }
@@ -256,15 +256,23 @@ void BaseWindow::drawTips(QPainter &painter) {
 
     QFontMetrics fm{painter.font()};
     int centerX = this->width() / 2;
-    int y = this->height() - fm.height() / 2;
+    int maxTextWidth = this->width() * 0.9;
+    int y = this->height() - fm.height() / 2 - 10;
     qint64 time = QDateTime::currentMSecsSinceEpoch();
-    for (auto iter = m_tips.begin(); iter < m_tips.end(); ++iter) {
+
+    for (auto iter = m_tips.begin(); iter < m_tips.end();) {
         if (time < iter->time + iter->duration) {
-            int width = fm.horizontalAdvance(iter->text);
-            int x = centerX - width / 2;
-            painter.fillRect(x, y - fm.ascent(), fm.horizontalAdvance(iter->text), fm.height(), QColor(0, 0, 0, 150));
-            painter.drawText(x, y, iter->text);
-            y -= 1.5 * fm.height();
+            QString text = iter->text;
+
+            QRect textRect = fm.boundingRect(0, 0, maxTextWidth, 1000, Qt::TextWordWrap, text);
+            int x = centerX - textRect.width() / 2;
+            QRect drawRect(x, y - textRect.height() + fm.ascent(), textRect.width(), textRect.height());
+
+            painter.fillRect(drawRect, QColor(0, 0, 0, 150));
+            painter.drawText(drawRect, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, text);
+
+            y -= textRect.height() + 10;
+            ++iter;
         } else {
             killTimer(iter->id);
             iter = m_tips.erase(iter);

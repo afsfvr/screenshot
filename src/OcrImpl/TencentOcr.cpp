@@ -12,6 +12,7 @@
 #include <QEventLoop>
 
 QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
+    QVector<Ocr::OcrResult> vector;
     QByteArray bytes;
     QBuffer buffer{&bytes};
     if (! buffer.open(QBuffer::WriteOnly)) {
@@ -39,17 +40,19 @@ QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
             response = object.value("Response").toObject();
             error = response.value("Error").toObject();
             if (! error.isEmpty()) {
-                qWarning() << error.value("Message").toString();
-                return {};
+                QString message = error.value("Message").toString();
+                qWarning() << "ocr fail: " << message;
+                vector.push_back({{}, error.value("Message").toString(), -1});
+                return vector;
             }
         } else {
             QString message = error.value("Message").toString();
-            qWarning() << message;
-            return {};
+            qWarning() << "ocr fail: " << message;
+            vector.push_back({{}, message, -1});
+            return vector;
         }
     }
 
-    QVector<Ocr::OcrResult> vector;
     QJsonArray texts = response.value("TextDetections").toArray();
     for (auto iter = texts.cbegin(); iter != texts.cend(); ++iter) {
         QJsonObject obj = (*iter).toObject();

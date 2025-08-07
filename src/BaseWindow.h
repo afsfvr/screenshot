@@ -41,7 +41,7 @@ protected slots:
     virtual void save(const QString &path="") = 0;
     virtual void end() = 0;
     virtual void saveColor();
-    virtual int addTip(const QString &text, int duration = 2000);
+    virtual int addTip(const QString &text, int duration = 3000);
     virtual bool removeTip(int id);
     virtual bool removeTip(const QString &text);
     void clearDraw();
