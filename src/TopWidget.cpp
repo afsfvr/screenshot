@@ -670,6 +670,9 @@ void TopWidget::hideWidget(bool clearTip) {
     if (m_widget) {
         m_widget->hide();
         m_text->setReadOnly(true);
+        if (m_button) {
+            m_button->setIcon(QIcon(":/images/pencil.png"));
+        }
         if (clearTip) {
             m_text->setStatusTip("");
         }
