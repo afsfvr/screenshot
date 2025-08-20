@@ -479,7 +479,9 @@ void TopWidget::wheelEvent(QWheelEvent *event) {
             killTimer(m_scroll_timer);
         }
         m_scroll_timer = startTimer(3000);
+#ifdef OCR
         hideWidget();
+#endif
     } else {
         BaseWindow::wheelEvent(event);
     }

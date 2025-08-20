@@ -15,7 +15,6 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
 #ifdef OCR
     connect(m_tool, &Tool::ocr, this, &MainWindow::ocrStart);
-    connect(this, &MainWindow::started, this, &MainWindow::grabMouseEvent);
 #endif
 
     m_menu = new QMenu(this);
@@ -45,6 +44,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     m_monitor->resume();
     connect(m_monitor, &KeyMouseEvent::keyPress, this, &MainWindow::keyPress);
     connect(m_monitor, &KeyMouseEvent::mouseWheel, this, &MainWindow::mouseWheel);
+    connect(this, &MainWindow::started, this, &MainWindow::grabMouseEvent);
 #endif
     setMouseTracking(true);
 
