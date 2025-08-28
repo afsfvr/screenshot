@@ -144,6 +144,9 @@ void TopWidget::ocrEnd(const QVector<Ocr::OcrResult> &result) {
         m_ocr.clear();
         addTip(result[0].text, 3000);
     } else {
+        if (result.size() == 0) {
+            addTip("无结果");
+        }
         m_ocr = result;
     }
 

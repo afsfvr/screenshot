@@ -971,6 +971,9 @@ TopWidget *MainWindow::top() {
 
 void MainWindow::openSaveDir() {
     QString path = m_setting->autoSavePath();
+    if (path.isEmpty()) {
+        QMessageBox::warning(this, "打开目录失败", "未设置自动保存路径");
+    }
     QFileInfo info{path};
     if (! info.exists()) {
         QDir{path}.mkpath(path);

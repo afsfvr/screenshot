@@ -195,7 +195,10 @@ void SettingWidget::confirm() {
     key1.key = 'A' + ui->key1->currentIndex();
     checkData(key1);
     if (savePath.length() == 0) {
-        key1.modifiers = Qt::NoModifier;
+        if (key1.modifiers != Qt::NoModifier) {
+            QMessageBox::warning(this, "错误", "未设置自动保存路径");
+            return;
+        }
     }
     if (key1.modifiers != m_auto_save_key.modifiers && key1.modifiers == Qt::NoModifier) {
         msg.append("自动保存、");
@@ -229,7 +232,7 @@ void SettingWidget::confirm() {
     }
     key3.key = 'A' + ui->key3->currentIndex();
     checkData(key3);
-    if (key3.modifiers != m_record.modifiers && key2.modifiers == Qt::NoModifier) {
+    if (key3.modifiers != m_record.modifiers && key3.modifiers == Qt::NoModifier) {
         msg.append("GIF、");
     }
 
