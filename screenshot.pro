@@ -1,21 +1,25 @@
 QT       += core gui widgets
 
+CONFIG += c++17
+
+DEFINES += TENCENT_OCR
+
 unix: {
     QT += x11extras
     LIBS += -lX11 -lXext -lXtst
     LIBS += -L$$PWD/opencv/lib/linux -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
     SOURCES += src/KeyMouseEvent.cpp
     HEADERS += src/KeyMouseEvent.h
-    DEFINES += TENCENT_OCR
 }
 win32: {
     LIBS += -lDwmapi  -luser32
-    LIBS += -L$$PWD/opencv/lib/windows/mingw -lopencv_imgproc480 -lopencv_imgcodecs480 -lopencv_core480
+    LIBS += -L$$PWD/opencv/lib/windows/mingw -lopencv_imgproc480 -lopencv_imgcodecs480 -lopencv_core480 -lz
 }
 win32-msvc*: {
     QMAKE_CFLAGS *= /utf-8
     QMAKE_CXXFLAGS *= /utf-8
 }
+
 INCLUDEPATH += $$PWD/opencv/include/opencv4
 
 contains(DEFINES, RAPID_OCR) {
@@ -43,7 +47,6 @@ contains(DEFINES, OCR) {
     HEADERS += src/Ocr.h
 }
 
-CONFIG += c++17
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -87,7 +90,7 @@ RESOURCES += \
     res.qrc
 
 
-OTHER_FILES += resource.rc
+OTHER_FILES += resource.rc README.md
 RC_FILE = resource.rc
 
 # RC_ICONS = ./images/screenshot.ico

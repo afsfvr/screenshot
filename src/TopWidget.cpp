@@ -558,6 +558,12 @@ void TopWidget::moveTop() {
     this->raise();
 }
 
+void TopWidget::updateOpacity(int value){
+    double opacity = value / 100.;
+    this->setWindowOpacity(opacity);
+    m_tool->setWindowOpacity(opacity);
+}
+
 #ifdef OCR
 void TopWidget::copyText() {
     if (m_text) {
@@ -608,6 +614,7 @@ void TopWidget::init() {
     m_tool->topChange();
     connect(m_tool, &Tool::clickTop, m_tool, &Tool::topChange);
     connect(m_tool, &Tool::topChanged, this, &TopWidget::topChange);
+    connect(m_tool, &Tool::opacityChanged, this, &TopWidget::updateOpacity);
 
     QString text = QString("(%1,%2 %3x%4)").arg(x()).arg(y()).arg(m_image.width()).arg(m_image.height());
     // QString text = QString("0x%1(%2,%3 %4x%5)").arg(reinterpret_cast<quintptr>(this), QT_POINTER_SIZE, 16).arg(x()).arg(y()).arg(m_image.width()).arg(m_image.height());

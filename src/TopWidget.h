@@ -53,6 +53,7 @@ private slots:
     void end() override;
     void topChange(bool top);
     void moveTop();
+    void updateOpacity(int value);
 #ifdef OCR
     void copyText();
     void editText();

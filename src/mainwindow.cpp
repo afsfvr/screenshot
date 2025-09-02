@@ -48,7 +48,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
 #endif
     setMouseTracking(true);
 
-    m_tool->setLongShow(true);
+    m_tool->setInMainWindow(true);
     connect(m_tool, &Tool::clickTop, this, &MainWindow::top);
     connect(m_tool, &Tool::longScreenshot, this, &MainWindow::longScreenshot);
     m_setting->readConfig();

@@ -1,4 +1,4 @@
-#ifndef TOOL_H
+﻿#ifndef TOOL_H
 #define TOOL_H
 
 #include <QWidget>
@@ -37,13 +37,14 @@ public:
     void focusOutEvent(QFocusEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void setEditShow(bool show);
-    void setLongShow(bool show);
+    void setInMainWindow(bool show);
 
 public slots:
     void choosePath();
     void penChange(int value = -1);
     void setDraw(ShapeEnum shape);
     void topChange();
+    void clickTransparency();
 
 signals:
     void undo();
@@ -53,6 +54,7 @@ signals:
     void penChanged(const QPen &pen, bool draw);
     void clickTop();
     void topChanged(bool top);
+    void opacityChanged(int value);
     void longScreenshot();
 #ifdef OCR
     void ocr();
@@ -66,7 +68,7 @@ private:
     Shape *m_shape;
     bool m_ignore;
     QFont m_font;
-    bool m_show_long;
+    bool m_is_main;
 #ifdef OCR
     QPushButton *m_ocr = nullptr;
 #endif

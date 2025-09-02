@@ -19,5 +19,6 @@
         <file>images/exit.png</file>
         <file>images/ocr.png</file>
         <file>images/long_screenshot.png</file>
+        <file>images/transparency.png</file>
     </qresource>
 </RCC>
