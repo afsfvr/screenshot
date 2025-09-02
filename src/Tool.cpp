@@ -1,5 +1,6 @@
 ﻿#include "Tool.h"
 #include "ui_Tool.h"
+#include "MySliderStyle.h"
 
 #include <QDebug>
 #include <QDir>
@@ -28,7 +29,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     connect(ui->btn_long,   SIGNAL(clicked()),         this, SIGNAL(longScreenshot()));
     connect(ui->btn_undo,   SIGNAL(clicked()),         this, SIGNAL(undo()));
     connect(ui->btn_redo,   SIGNAL(clicked()),         this, SIGNAL(redo()));
-    connect(ui->opacity,    SIGNAL(sliderMoved(int)),  this, SIGNAL(opacityChanged(int)));
+    connect(ui->opacity,    SIGNAL(valueChanged(int)), this, SIGNAL(opacityChanged(int)));
 
     connect(ui->btn_rectangle, &QPushButton::clicked, this, [=](){
         setDraw(! ui->btn_rectangle->isFlat() ? ShapeEnum::Rectangle : ShapeEnum::Null);
@@ -87,6 +88,9 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     });
 
     setDraw(ShapeEnum::Null);
+
+    m_style = new MySliderStyle(ui->opacity->style());
+    ui->opacity->setStyle(m_style);
 
     m_pen.setWidth(ui->pen_size->value());
     int index = ui->pen_color->styleSheet().indexOf("#");

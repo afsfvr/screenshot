@@ -615,6 +615,9 @@
        <property name="toolTip">
         <string>透明度</string>
        </property>
+       <property name="minimum">
+        <number>10</number>
+       </property>
        <property name="maximum">
         <number>100</number>
        </property>

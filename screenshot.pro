@@ -56,6 +56,7 @@ SOURCES += \
     src/BaseWindow.cpp \
     src/GifWidget.cpp \
     src/LongWidget.cpp \
+    src/MySliderStyle.cpp \
     src/SettingWidget.cpp \
     src/Shape.cpp \
     src/Tool.cpp \
@@ -69,6 +70,7 @@ HEADERS += \
     src/BlockQueue.h \
     src/GifWidget.h \
     src/LongWidget.h \
+    src/MySliderStyle.h \
     src/SettingWidget.h \
     src/Shape.h \
     src/Tool.h \

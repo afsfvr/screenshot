@@ -7,6 +7,7 @@
 #include <QColorDialog>
 
 #include "Shape.h"
+#include "MySliderStyle.h"
 namespace Ui {
 class Tool;
 }
@@ -69,6 +70,7 @@ private:
     bool m_ignore;
     QFont m_font;
     bool m_is_main;
+    MySliderStyle *m_style;
 #ifdef OCR
     QPushButton *m_ocr = nullptr;
 #endif
