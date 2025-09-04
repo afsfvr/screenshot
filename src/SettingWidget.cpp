@@ -112,7 +112,7 @@ void SettingWidget::saveConfig() {
 }
 
 const QString& SettingWidget::getConfigPath() const {
-    static QString applicationPath = QDir::toNativeSeparators(QApplication::applicationDirPath() + QDir::separator() + QApplication::applicationName() + ".data");
+    static QString applicationPath = QDir::toNativeSeparators(QApplication::applicationDirPath() + "/screenshot.data");
     if (QFile::exists(applicationPath)) {
         return applicationPath;
     } else {
@@ -120,7 +120,7 @@ const QString& SettingWidget::getConfigPath() const {
         if (! QFile::exists(userDir)) {
             qDebug() << QString("创建文件夹%1: %2").arg(userDir, QDir{}.mkpath(userDir) ? "成功" : "失败");
         }
-        static QString userPath = userDir + QDir::separator() + QApplication::applicationName() + ".data";
+        static QString userPath = QDir::toNativeSeparators(userDir + "/screenshot.data");
         return userPath;
     }
 }
@@ -490,9 +490,32 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
         return {};
     }
 #elif defined(Q_OS_WINDOWS)
+    if (allUser) {
+        wchar_t path[1024];
+        GetModuleFileNameW(NULL, path, 1024);
+
+        SHELLEXECUTEINFOW sei;
+        ZeroMemory(&sei, sizeof(sei));
+        sei.cbSize = sizeof(sei);
+        sei.lpVerb = L"runas";
+        sei.lpFile = path;
+        sei.nShow = SW_NORMAL;
+        sei.lpParameters = start ? L"--enable-startup" : L"--disable-startup";
+        sei.fMask = SEE_MASK_NOCLOSEPROCESS; // 获取进程句柄
+        if (! ShellExecuteExW(&sei)) {
+            return getWindowsError(GetLastError());
+        }
+        WaitForSingleObject(sei.hProcess, INFINITE);
+        DWORD exitCode = 0;
+        if (! GetExitCodeProcess(sei.hProcess, &exitCode)) {
+            exitCode = static_cast<DWORD>(-1);
+        }
+        CloseHandle(sei.hProcess);
+        return getWindowsError(exitCode);
+    }
     HKEY hKey = nullptr;
     LONG result = RegCreateKeyExW(
-        allUser ? HKEY_LOCAL_MACHINE : HKEY_CURRENT_USER,
+        HKEY_CURRENT_USER,
         L"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
         0,
         nullptr,
@@ -504,11 +527,11 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
         );
 
     if (result != ERROR_SUCCESS) {
-        return QString("RegCreateKeyExW failed: %1").arg(result);
+        return QString("RegCreateKeyExW failed: %1").arg(getWindowsError(result));
     }
 
     if (start) {
-        std::wstring wAppPath = QCoreApplication::applicationFilePath().toStdWString();
+        std::wstring wAppPath = QString("\"%1\"").arg(QDir::toNativeSeparators(QCoreApplication::applicationFilePath())).toStdWString();
 
         result = RegSetValueExW(
             hKey,
@@ -522,14 +545,14 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
         RegCloseKey(hKey);
 
         if (result != ERROR_SUCCESS) {
-            return QString("RegSetValueExW failed: %1").arg(result);
+            return QString("RegSetValueExW failed: %1").arg(getWindowsError(result));
         }
     } else {
         result = RegDeleteValueW(hKey, L"screenshot");
         RegCloseKey(hKey);
 
         if (result != ERROR_SUCCESS && result != ERROR_FILE_NOT_FOUND) {
-            return QString("RegDeleteValueW failed: %1").arg(result);
+            return QString("RegDeleteValueW failed: %1").arg(getWindowsError(result));
         }
     }
 
@@ -590,3 +613,25 @@ bool SettingWidget::isSelfStart(bool allUser) {
     return (result == ERROR_SUCCESS && type == REG_SZ);
 #endif
 }
+
+#ifdef Q_OS_WINDOWS
+QString SettingWidget::getWindowsError(quint32 error) {
+    if (error == 0) return {};
+    wchar_t *wstr = nullptr;
+    int count = FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+        nullptr,
+        error,
+        0,
+        reinterpret_cast<LPWSTR>(&wstr),
+        0,
+        nullptr
+        );
+    QString ret;
+    if (count != 0) {
+        ret = QString::fromWCharArray(wstr, count);
+        LocalFree(wstr);
+    }
+    return ret.trimmed();
+}
+#endif

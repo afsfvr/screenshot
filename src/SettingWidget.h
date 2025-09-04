@@ -56,6 +56,9 @@ private:
     void updateKey3();
     QString setSelfStart(bool start, bool allUser);
     bool isSelfStart(bool allUser);
+#ifdef Q_OS_WINDOWS
+    QString getWindowsError(quint32 error);
+#endif
 
 signals:
     void autoSaveChanged(const HotKey &key, quint8 mode, const QString &path);
