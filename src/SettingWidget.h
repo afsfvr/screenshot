@@ -54,6 +54,8 @@ private:
     void updateKey1();
     void updateKey2();
     void updateKey3();
+    QString setSelfStart(bool start, bool allUser);
+    bool isSelfStart(bool allUser);
 
 signals:
     void autoSaveChanged(const HotKey &key, quint8 mode, const QString &path);

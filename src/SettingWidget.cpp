@@ -7,6 +7,11 @@
 #include <QStandardPaths>
 #include <QFileDialog>
 #include <QImageWriter>
+#if defined(Q_OS_LINUX)
+#include <pwd.h>
+#elif defined(Q_OS_WINDOWS)
+#include <windows.h>
+#endif
 
 QDataStream& operator<<(QDataStream& stream, const HotKey &key) {
     stream << static_cast<quint32>(key.modifiers) << key.key;
@@ -140,6 +145,22 @@ void SettingWidget::showEvent(QShowEvent *event) {
     updateKey1();
     updateKey2();
     updateKey3();
+    bool b1 = isSelfStart(true);
+    bool b2 = isSelfStart(false);
+    if (b1 && b2) {
+        ui->self_start->setChecked(true);
+        ui->all_user->setChecked(true);
+        setSelfStart(false, false);
+    } else if (b1) {
+        ui->self_start->setChecked(true);
+        ui->all_user->setChecked(true);
+    } else if (b2) {
+        ui->self_start->setChecked(true);
+        ui->all_user->setChecked(false);
+    } else {
+        ui->self_start->setChecked(false);
+        ui->all_user->setChecked(false);
+    }
 }
 
 void SettingWidget::openFile(const QString &link) {
@@ -175,6 +196,57 @@ void SettingWidget::choosePath(const QString &link) {
 }
 
 void SettingWidget::confirm() {
+    bool b1 = isSelfStart(true);
+    bool b2 = isSelfStart(false);
+    if (ui->self_start->isChecked()) {
+        if (ui->all_user->isChecked()) {
+            if (b2) {
+                QString error = setSelfStart(false, false);
+                if (! error.isEmpty()) {
+                    QMessageBox::warning(this, "取消用户自启动失败", error);
+                    return;
+                }
+            }
+            if (! b1) {
+                QString error = setSelfStart(true, true);
+                if (! error.isEmpty()) {
+                    QMessageBox::warning(this, "设置全局自启动失败", error);
+                    return;
+                }
+            }
+        } else {
+            if (b1) {
+                QString error = setSelfStart(false, true);
+                if (!error.isEmpty()) {
+                    QMessageBox::warning(this, "取消全局自启动失败", error);
+                    return;
+                }
+            }
+            if (! b2) {
+                QString error = setSelfStart(true, false);
+                if (!error.isEmpty()) {
+                    QMessageBox::warning(this, "设置用户自启动失败", error);
+                    return;
+                }
+            }
+        }
+    } else {
+        if (b1) {
+            QString error = setSelfStart(false, true);
+            if (!error.isEmpty()) {
+                QMessageBox::warning(this, "取消全局自启动失败", error);
+                return;
+            }
+        }
+        if (b2) {
+            QString error = setSelfStart(false, false);
+            if (!error.isEmpty()) {
+                QMessageBox::warning(this, "取消用户自启动失败", error);
+                return;
+            }
+        }
+    }
+
     HotKey key1;
     HotKey key2;
     HotKey key3;
@@ -340,4 +412,181 @@ void SettingWidget::updateKey3() {
     ui->alt3->setChecked(m_record.modifiers & Qt::AltModifier);
     ui->shift3->setChecked(m_record.modifiers & Qt::ShiftModifier);
     ui->key3->setCurrentIndex(m_record.key - 'A');
+}
+
+QString SettingWidget::setSelfStart(bool start, bool allUser) {
+#if defined(Q_OS_LINUX)
+    QFile file;
+    if (allUser) {
+        if (start) {
+            file.setFileName(QDir::toNativeSeparators(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/screenshot.tmp"));
+        } else {
+            file.setFileName("/etc/systemd/system/screenshot.service");
+        }
+    } else {
+        QString path;
+        QFile loginUid{"/proc/self/loginuid"};
+        if (loginUid.open(QFile::ReadOnly)) {
+            bool ok;
+            quint32 uid = loginUid.readAll().toUInt(&ok);
+            loginUid.close();
+            if (ok) {
+                struct passwd *pw = getpwuid(uid);
+                if (pw) path = QString::fromStdString(pw->pw_dir);
+            }
+        }
+        if (path.isEmpty()) {
+            path = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+        }
+        path = QDir::toNativeSeparators(path + "/.config/systemd/user");
+        QDir{}.mkpath(path);
+        file.setFileName(QDir::toNativeSeparators(path + "/screenshot.service"));
+    }
+    if (start) {
+        if (! file.open(QFile::WriteOnly | QFile::Truncate)) {
+            return file.errorString();
+        }
+        file.write(QString("[Unit]\n"
+                           "Description=screenshot\n"
+                           "After=graphical-session.target\n\n"
+                           "[Service]\n"
+                           "ExecStartPre=/bin/bash -c 'uptime_sec=$(cut -d. -f1 /proc/uptime); if [ \"$uptime_sec\" -lt 180 ]; then sleep 3; fi;'\n"
+                           "ExecStart=%1\n"
+                           "Restart=on-failure\n"
+                           "RestartSec=5\n"
+                           "Environment=XDG_SESSION_TYPE=x11 DISPLAY=:0\n"
+                           "SuccessExitStatus=0 1 2\n\n"
+                           "[Install]\n"
+                           "WantedBy=graphical-session.target\n").arg(QCoreApplication::applicationFilePath()).toUtf8());
+        file.close();
+        QString command;
+        if (allUser) {
+            command = QString("pkexec bash -c 'mv \"%1\" /etc/systemd/system/screenshot.service && systemctl daemon-reload && systemctl enable screenshot.service'").arg(file.fileName());
+        } else {
+            command = QString("systemctl --user daemon-reload && systemctl --user enable screenshot.service");
+        }
+        int ret = system(command.toStdString().c_str());
+        if (allUser) file.remove();
+        if (ret != 0) {
+            return QString("Failed to enable service, code: %1").arg(ret);
+        }
+        return {};
+    } else {
+        if (file.exists()) {
+            QString command;
+            if (allUser) {
+                command = QString("pkexec bash -c 'systemctl disable screenshot.service && systemctl daemon-reload && rm \"%1\"'").arg(file.fileName());
+            } else {
+                command = QString("systemctl --user disable screenshot.service && systemctl --user daemon-reload");
+            }
+            int ret = system(command.toStdString().c_str());
+            if (ret != 0) {
+                return QString("Failed to stop/disable service, code: %1").arg(ret);
+            }
+            if (! allUser && ! file.remove()) {
+                return file.errorString();
+            }
+        }
+        return {};
+    }
+#elif defined(Q_OS_WINDOWS)
+    HKEY hKey = nullptr;
+    LONG result = RegCreateKeyExW(
+        allUser ? HKEY_LOCAL_MACHINE : HKEY_CURRENT_USER,
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        0,
+        nullptr,
+        REG_OPTION_NON_VOLATILE,
+        KEY_SET_VALUE | KEY_QUERY_VALUE,
+        nullptr,
+        &hKey,
+        nullptr
+        );
+
+    if (result != ERROR_SUCCESS) {
+        return QString("RegCreateKeyExW failed: %1").arg(result);
+    }
+
+    if (start) {
+        std::wstring wAppPath = QCoreApplication::applicationFilePath().toStdWString();
+
+        result = RegSetValueExW(
+            hKey,
+            L"screenshot",
+            0,
+            REG_SZ,
+            reinterpret_cast<const BYTE*>(wAppPath.c_str()),
+            static_cast<DWORD>((wAppPath.size() + 1) * sizeof(wchar_t))
+            );
+
+        RegCloseKey(hKey);
+
+        if (result != ERROR_SUCCESS) {
+            return QString("RegSetValueExW failed: %1").arg(result);
+        }
+    } else {
+        result = RegDeleteValueW(hKey, L"screenshot");
+        RegCloseKey(hKey);
+
+        if (result != ERROR_SUCCESS && result != ERROR_FILE_NOT_FOUND) {
+            return QString("RegDeleteValueW failed: %1").arg(result);
+        }
+    }
+
+    return {};
+#endif
+}
+
+bool SettingWidget::isSelfStart(bool allUser) {
+#if defined(Q_OS_LINUX)
+    if (allUser) {
+        return QFile::exists("/etc/systemd/system/screenshot.service");
+    } else {
+        QString path;
+        QFile loginUid{"/proc/self/loginuid"};
+        if (loginUid.open(QFile::ReadOnly)) {
+            bool ok;
+            quint32 uid = loginUid.readAll().toUInt(&ok);
+            loginUid.close();
+            if (ok) {
+                struct passwd *pw = getpwuid(uid);
+                if (pw) path = QString::fromStdString(pw->pw_dir);
+            }
+        }
+        if (path.isEmpty()) {
+            path = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+        }
+        path = QDir::toNativeSeparators(path + "/.config/systemd/user");
+        QDir{}.mkpath(path);
+        return QFile::exists(QDir::toNativeSeparators(path + "/screenshot.service"));
+    }
+#elif defined(Q_OS_WINDOWS)
+    HKEY hKey = nullptr;
+    LONG result = RegOpenKeyExW(
+        allUser ? HKEY_LOCAL_MACHINE : HKEY_CURRENT_USER,
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        0,
+        KEY_QUERY_VALUE,
+        &hKey
+        );
+
+    if (result != ERROR_SUCCESS) {
+        return false;
+    }
+
+    DWORD type = 0;
+    DWORD dataSize = 0;
+    result = RegQueryValueExW(
+        hKey,
+        L"screenshot",
+        nullptr,
+        &type,
+        nullptr,
+        &dataSize
+        );
+
+    RegCloseKey(hKey);
+
+    return (result == ERROR_SUCCESS && type == REG_SZ);
+#endif
 }
