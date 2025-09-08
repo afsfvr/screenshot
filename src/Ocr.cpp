@@ -1,6 +1,4 @@
-#include <QMutexLocker>
-
-#include "Ocr.h"
+﻿#include "Ocr.h"
 #include "TopWidget.h"
 #if defined(RAPID_OCR)
 #include "OcrImpl/RapidOcr.h"
@@ -8,7 +6,7 @@
 #include "OcrImpl/TencentOcr.h"
 #endif
 
-Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr} {
+Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr}, m_init{false} {
     moveToThread(this);
 }
 
@@ -24,7 +22,23 @@ Ocr* Ocr::instance() {
     return &self;
 }
 
+bool Ocr::init() {
+    if (! m_init && m_ocr) {
+        m_init = m_ocr->init();
+        if (! m_init) {
+            qCritical("ocr初始化失败");
+        }
+    }
+    return m_init;
+}
+
 void Ocr::ocr(TopWidget *t, const QImage &image) {
+    if (! m_init) {
+        QVector<Ocr::OcrResult> v;
+        v.push_back({{}, "ocr初始化失败", -1});
+        QMetaObject::invokeMethod(t, "ocrEnd", Qt::QueuedConnection, Q_ARG(QVector<Ocr::OcrResult>, v));
+        return;
+    }
     m_mutex.lock();
     for (auto iter = m_list.cbegin(); iter != m_list.cend(); ++iter) {
         if (*iter == t) {
@@ -55,10 +69,7 @@ void Ocr::run() {
 #elif defined(TENCENT_OCR)
     m_ocr = new TencentOcr;
 #endif
-    if (! m_ocr || ! m_ocr->init()) {
-        qFatal("ocr初始化失败");
-        return;
-    }
+    init();
     exec();
 }
 

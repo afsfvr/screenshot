@@ -1,4 +1,4 @@
-#ifndef OCR_H
+﻿#ifndef OCR_H
 #define OCR_H
 
 #include <QImage>
@@ -20,6 +20,7 @@ class Ocr: public QThread
 public:
     ~Ocr();
     static Ocr* instance();
+    bool init();
     void ocr(TopWidget *t, const QImage &image);
     void cancel(const TopWidget *t);
 
@@ -43,6 +44,7 @@ private:
     OcrBase *m_ocr;
     QList<TopWidget*> m_list;
     QMutex m_mutex;
+    bool m_init;
 };
 
 class OcrBase {
