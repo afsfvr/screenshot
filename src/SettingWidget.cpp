@@ -562,27 +562,34 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
 
 bool SettingWidget::isSelfStart(bool allUser) {
 #if defined(Q_OS_LINUX)
+    QStringList arguments;
     if (allUser) {
-        return QFile::exists("/etc/systemd/system/screenshot.service");
+        arguments << "is-enabled" << "screenshot";
     } else {
-        QString path;
-        QFile loginUid{"/proc/self/loginuid"};
-        if (loginUid.open(QFile::ReadOnly)) {
-            bool ok;
-            quint32 uid = loginUid.readAll().toUInt(&ok);
-            loginUid.close();
-            if (ok) {
-                struct passwd *pw = getpwuid(uid);
-                if (pw) path = QString::fromStdString(pw->pw_dir);
-            }
-        }
-        if (path.isEmpty()) {
-            path = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
-        }
-        path = QDir::toNativeSeparators(path + "/.config/systemd/user");
-        QDir{}.mkpath(path);
-        return QFile::exists(QDir::toNativeSeparators(path + "/screenshot.service"));
+        arguments << "--user" << "is-enabled" << "screenshot";
     }
+    QProcess process;
+    process.start("systemctl", arguments);
+    process.waitForFinished();
+    if (process.readAllStandardOutput().trimmed() != "enabled") {
+        return false;
+    }
+
+    arguments.clear();
+    if (allUser) {
+        arguments << "cat" << "screenshot";
+    } else {
+        arguments << "--user" << "cat" << "screenshot";
+    }
+    process.start("systemctl", arguments);
+    process.waitForFinished();
+    for (QString line: QString::fromLocal8Bit(process.readAllStandardOutput()).split('\n')) {
+        line = line.trimmed();
+        if (line.startsWith("ExecStart=") && line.contains(QCoreApplication::applicationFilePath())) {
+            return true;
+        }
+    }
+    return false;
 #elif defined(Q_OS_WINDOWS)
     HKEY hKey = nullptr;
     LONG result = RegOpenKeyExW(
@@ -597,20 +604,26 @@ bool SettingWidget::isSelfStart(bool allUser) {
         return false;
     }
 
-    DWORD type = 0;
-    DWORD dataSize = 0;
+    wchar_t value[512];
+    DWORD type = 0, dataSize = sizeof(value);
     result = RegQueryValueExW(
         hKey,
         L"screenshot",
         nullptr,
         &type,
-        nullptr,
+        reinterpret_cast<LPBYTE>(value),
         &dataSize
         );
-
     RegCloseKey(hKey);
 
-    return (result == ERROR_SUCCESS && type == REG_SZ);
+    if (result == ERROR_SUCCESS && type == REG_SZ) {
+        QString regPath = QString::fromWCharArray(value).trimmed();
+        if (regPath.startsWith('"') && regPath.endsWith('"')) {
+            regPath = regPath.mid(1, regPath.size() - 2);
+        }
+        return regPath.toLower().replace('/', '\\') == QCoreApplication::applicationFilePath().toLower().replace('/', '\\');
+    }
+    return false;
 #endif
 }
 
