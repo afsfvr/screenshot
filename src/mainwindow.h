@@ -97,6 +97,7 @@ private slots:
     void end() override;
     TopWidget *top();
 private:
+    void initTray();
     void openSaveDir();
     bool contains(const QPoint &point);
     void updateWindows();
@@ -113,16 +114,16 @@ private:
 #endif
     QVector<QRect> m_windows;
     int m_index;
-    QSystemTrayIcon *m_tray;
-    QMenu *m_menu;
+    QSystemTrayIcon *m_tray = nullptr;
+    QMenu *m_menu = nullptr;
     States m_state;
     ResizeImages m_resize;
     QImage m_gray_image;
     bool m_gif;
 
-    QAction *m_action1;
-    QAction *m_action2;
-    QAction *m_action3;
+    QAction *m_action1 = nullptr;
+    QAction *m_action2 = nullptr;
+    QAction *m_action3 = nullptr;
     SettingWidget *m_setting;
 };
 

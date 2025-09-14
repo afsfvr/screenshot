@@ -94,11 +94,7 @@ int main(int argc, char *argv[])
             return static_cast<int>(setStartup(true));
         } else if (QString::compare(argv[1], "--disable-startup") == 0) {
             return static_cast<int>(setStartup(false));
-        } else {
-            argc = 1;
         }
-    } else {
-        argc = 1;
     }
 #endif
     const QString &tmpFile = QStandardPaths::writableLocation(QStandardPaths::TempLocation);

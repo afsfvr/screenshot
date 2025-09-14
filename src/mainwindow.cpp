@@ -8,36 +8,10 @@
 #include <QTimer>
 #include <QStandardPaths>
 
-MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
-    m_setting = new SettingWidget;
-    connect(m_setting, &SettingWidget::autoSaveChanged, this, &MainWindow::updateAutoSave);
-    connect(m_setting, &SettingWidget::captureChanged, this, &MainWindow::updateCapture);
-    connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
-#ifdef OCR
-    connect(m_tool, &Tool::ocr, this, &MainWindow::ocrStart);
-#endif
+MainWindow::MainWindow(QWidget *parent): BaseWindow(parent),
+    m_state{State::Null}, m_resize{ResizeImage::NoResize}, m_gif{false}, m_setting{new SettingWidget} {
 
-    m_menu = new QMenu(this);
-    m_menu->addAction(QIcon(":/images/setting.png"), "设置", this, &MainWindow::updateHotkey);
-    m_action1 = m_menu->addAction(QIcon(":/images/save.png"), "自动保存(未设置)", this, &MainWindow::openSaveDir);
-    m_action1->setToolTip("点击进入目录");
-    m_action2 = m_menu->addAction(QIcon(":/images/screenshot.ico"), "截图(未设置)", this, &MainWindow::start);
-    m_action2->setToolTip("点击截图");
-    m_action3 = m_menu->addAction(QIcon(":/images/gif.png"), "录制GIF(未设置)", this, &MainWindow::gifStart);
-    m_action3->setToolTip("点击录制GIF");
-    m_menu->addAction(QIcon(":/images/exit.png"), "退出", this, &MainWindow::quit);
-    m_menu->addSeparator();
-    m_tray = new QSystemTrayIcon(this);
-    m_tray->setContextMenu(m_menu);
-    m_tray->setIcon(QIcon(":/images/screenshot.ico"));
-    m_tray->setToolTip("截图");
-    m_tray->show();
-    connect(m_tray, &QSystemTrayIcon::messageClicked, this, &MainWindow::openSaveDir);
-
-    m_state = State::Null;
-    m_resize = ResizeImage::NoResize;
-    m_gif = false;
-
+    initTray();
 #ifdef Q_OS_LINUX
     m_monitor = new KeyMouseEvent;
     m_monitor->start();
@@ -46,11 +20,17 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent) {
     connect(m_monitor, &KeyMouseEvent::mouseWheel, this, &MainWindow::mouseWheel);
     connect(this, &MainWindow::started, this, &MainWindow::grabMouseEvent);
 #endif
+#ifdef OCR
+    connect(m_tool, &Tool::ocr, this, &MainWindow::ocrStart);
+#endif
     setMouseTracking(true);
 
     m_tool->setInMainWindow(true);
     connect(m_tool, &Tool::clickTop, this, &MainWindow::top);
     connect(m_tool, &Tool::longScreenshot, this, &MainWindow::longScreenshot);
+    connect(m_setting, &SettingWidget::autoSaveChanged, this, &MainWindow::updateAutoSave);
+    connect(m_setting, &SettingWidget::captureChanged, this, &MainWindow::updateCapture);
+    connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
     m_setting->readConfig();
 }
 
@@ -101,7 +81,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         if (m_resize != ResizeImage::NoResize) {
             clearDraw();
             m_tool->hide();
-            repaint();
+            update();
         } else if (contains(event->pos())) {
             if (event->button() == Qt::LeftButton) {
                 if (m_tool->isDraw()) {
@@ -154,7 +134,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
                 m_state = State::RectEdit;
                 showTool();
             }
-            repaint();
+            update();
         } else if (m_state & State::Edit) {
             if (m_cursor == Qt::BitmapCursor) {
                 if (! contains(event->pos())) {
@@ -170,7 +150,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
                 }
             }
             m_resize = ResizeImage::NoResize;
-            repaint();
+            update();
             showTool();
         }
     } else if (event->button() == Qt::RightButton) {
@@ -178,7 +158,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
             m_state = State::FreeEdit;
             m_path.closeSubpath();
             showTool();
-            repaint();
+            update();
         }
     }
     if (event->buttons() == Qt::NoButton) {
@@ -190,7 +170,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
                 clearDraw();
                 m_state = State::Null;
                 m_tool->hide();
-                repaint();
+                update();
             } else {
                 setCursorShape();
                 end();
@@ -202,10 +182,10 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
 void MainWindow::mouseMoveEvent(QMouseEvent *event) {
     if (m_state == State::RectScreen && (event->buttons() & Qt::LeftButton)) {
         m_rect = getRect(m_point, event->pos());
-        repaint();
+        update();
     } else if (m_state == State::FreeScreen && (event->buttons() & Qt::RightButton)) {
         m_path.lineTo(event->pos());
-        repaint();
+        update();
     } else if ((m_state & State::Edit) && (event->buttons() & Qt::LeftButton)) {
         if (m_resize != ResizeImage::NoResize) {
             QPoint point = event->pos();
@@ -247,7 +227,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                     m_rect.setRight(point.x());
                 }
             }
-            repaint();
+            update();
         } else if (m_cursor == Qt::SizeAllCursor) {
             QPoint point = event->pos() - m_point;
             m_point = event->pos();
@@ -269,7 +249,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
             for (auto iter = m_stack.begin(); iter != m_stack.end(); ++iter) {
                 (*iter)->translate(point);
             }
-            repaint();
+            update();
         } else if (m_cursor == Qt::BitmapCursor) {
             QRect &&rect = getGeometry();
             if (m_shape != nullptr && rect.isValid()) {
@@ -290,7 +270,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                     m_shape->addPoint(point);
                 }
             }
-            repaint();
+            update();
         }
     } else if (event->buttons() == Qt::NoButton) {
         if (m_state == State::Null) {
@@ -303,7 +283,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                     break;
                 }
             }
-            repaint();
+            update();
         } else if (m_state == State::RectEdit) {
             m_resize = ResizeImage::NoResize;
             QPoint point = event->pos();
@@ -608,7 +588,7 @@ void MainWindow::start() {
     m_path.clear();
     m_press = false;
     activateWindow();
-    repaint();
+    update();
     emit started();
 }
 
@@ -932,7 +912,7 @@ void MainWindow::end() {
     clearDraw();
     safeDelete(m_shape);
     resize(1, 1);
-    repaint();
+    update();
     emit finished();
 }
 
@@ -967,6 +947,25 @@ TopWidget *MainWindow::top() {
         return t;
     }
     return nullptr;
+}
+
+void MainWindow::initTray() {
+    m_menu = new QMenu(this);
+    m_menu->addAction(QIcon(":/images/setting.png"), "设置", this, &MainWindow::updateHotkey);
+    m_action1 = m_menu->addAction(QIcon(":/images/save.png"), "自动保存(未设置)", this, &MainWindow::openSaveDir);
+    m_action1->setToolTip("点击进入目录");
+    m_action2 = m_menu->addAction(QIcon(":/images/screenshot.ico"), "截图(未设置)", this, &MainWindow::start);
+    m_action2->setToolTip("点击截图");
+    m_action3 = m_menu->addAction(QIcon(":/images/gif.png"), "录制GIF(未设置)", this, &MainWindow::gifStart);
+    m_action3->setToolTip("点击录制GIF");
+    m_menu->addAction(QIcon(":/images/exit.png"), "退出", this, &MainWindow::quit);
+    m_menu->addSeparator();
+    m_tray = new QSystemTrayIcon(this);
+    m_tray->setContextMenu(m_menu);
+    m_tray->setIcon(QIcon(":/images/screenshot.ico"));
+    m_tray->setToolTip("截图");
+    m_tray->show();
+    connect(m_tray, &QSystemTrayIcon::messageClicked, this, &MainWindow::openSaveDir);
 }
 
 void MainWindow::openSaveDir() {

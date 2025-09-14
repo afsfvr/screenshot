@@ -75,7 +75,7 @@ bool BaseWindow::eventFilter(QObject *watched, QEvent *event) {
         }
         m_edit->clear();
         m_edit->hide();
-        repaint();
+        update();
         return true;
     }
     return QWidget::eventFilter(watched, event);
@@ -158,14 +158,14 @@ void BaseWindow::setShape(const QPoint &point) {
 void BaseWindow::undo() {
     if (! m_vector.empty() && ! m_press) {
         m_stack.push(m_vector.takeLast());
-        repaint();
+        update();
     }
 }
 
 void BaseWindow::redo() {
     if (! m_stack.empty() && ! m_press) {
         m_vector.push_back(m_stack.pop());
-        repaint();
+        update();
     }
 }
 
@@ -194,7 +194,7 @@ int BaseWindow::addTip(const QString &text, int duration) {
 
     qint64 time = QDateTime::currentMSecsSinceEpoch();
     m_tips.insert(0, { id, text, time, duration });
-    repaint();
+    update();
     return id;
 }
 
@@ -206,7 +206,7 @@ bool BaseWindow::removeTip(int id) {
         if (id == iter->id) {
             killTimer(id);
             m_tips.erase(iter);
-            repaint();
+            update();
             return true;
         }
     }
@@ -223,7 +223,7 @@ bool BaseWindow::removeTip(const QString &text) {
         }
     }
     if (ret) {
-        repaint();
+        update();
     }
     return ret;
 }

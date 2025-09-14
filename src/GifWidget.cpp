@@ -217,7 +217,7 @@ void GifWidget::init() {
 
     setVisible(true);
     activateWindow();
-    repaint();
+    update();
 
     m_widget = new QWidget;
     m_widget->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);

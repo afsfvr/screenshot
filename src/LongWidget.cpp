@@ -221,7 +221,7 @@ void LongWidget::init() {
 
     setVisible(true);
     activateWindow();
-    repaint();
+    update();
 
     m_widget = new QWidget{this};
     m_widget->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);

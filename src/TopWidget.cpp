@@ -135,7 +135,7 @@ void TopWidget::ocrStart() {
             killTimer(m_ocr_timer);
             m_ocr_timer = -1;
         }
-        repaint();
+        update();
     }
 }
 
@@ -153,7 +153,7 @@ void TopWidget::ocrEnd(const QVector<Ocr::OcrResult> &result) {
     if (m_ocr_timer != -1) {
         killTimer(m_ocr_timer);
         m_ocr_timer = -1;
-        repaint();
+        update();
     }
 }
 #endif
@@ -205,11 +205,11 @@ void TopWidget::timerEvent(QTimerEvent *event) {
     if (event->timerId() == m_scroll_timer) {
         killTimer(m_scroll_timer);
         m_scroll_timer = -1;
-        repaint();
+        update();
 #ifdef OCR
     } else if (event->timerId() == m_ocr_timer) {
         m_angle = (m_angle + 30) % 360;
-        repaint();
+        update();
 #endif
     } else {
         BaseWindow::timerEvent(event);
@@ -358,7 +358,7 @@ void TopWidget::mouseReleaseEvent(QMouseEvent *event) {
             } else {
                 safeDelete(m_shape);
             }
-            repaint();
+            update();
         }
 #ifdef Q_OS_LINUX
         m_move = false;
@@ -435,7 +435,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                 m_shape->addPoint(QPoint{point.x(), point.y() + m_offsetY});
             }
         }
-        repaint();
+        update();
     } else if (m_cursor == Qt::SizeAllCursor && m_press) {
 #if defined (Q_OS_LINUX)
         m_move = true;
@@ -473,10 +473,10 @@ void TopWidget::wheelEvent(QWheelEvent *event) {
         int delta = event->angleDelta().y();
         if (delta < 0) {
             m_offsetY = std::min(m_offsetY + 30, m_max_offset);
-            repaint();
+            update();
         } else if (delta > 0) {
             m_offsetY = std::max(m_offsetY - 30, 0);
-            repaint();
+            update();
         }
         if (m_scroll_timer != -1) {
             killTimer(m_scroll_timer);
