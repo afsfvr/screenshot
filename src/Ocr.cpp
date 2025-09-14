@@ -6,7 +6,7 @@
 #include "OcrImpl/TencentOcr.h"
 #endif
 
-Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr}, m_init{false}, m_setting{nullptr} {
+Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr}, m_setting{nullptr} {
     moveToThread(this);
 }
 
@@ -29,17 +29,15 @@ Ocr* Ocr::instance() {
 }
 
 bool Ocr::init() {
-    if (! m_init && m_ocr) {
-        m_init = m_ocr->init();
-        if (! m_init) {
-            qCritical("ocr初始化失败");
-        }
+    if (m_ocr && m_ocr->init()) {
+            return true;
     }
-    return m_init;
+    qCritical("ocr初始化失败");
+    return false;
 }
 
 void Ocr::ocr(TopWidget *t, const QImage &image) {
-    if (! m_init) {
+    if (! init()) {
         QVector<Ocr::OcrResult> v;
         v.push_back({{}, "ocr初始化失败", -1});
         QMetaObject::invokeMethod(t, "ocrEnd", Qt::QueuedConnection, Q_ARG(QVector<Ocr::OcrResult>, v));

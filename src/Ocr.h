@@ -49,7 +49,6 @@ private:
     OcrBase *m_ocr;
     QList<TopWidget*> m_list;
     QMutex m_mutex;
-    bool m_init;
     QWidget *m_setting;
     QMutex m_setting_mutex;
 };
