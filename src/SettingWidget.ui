@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>302</width>
-    <height>391</height>
+    <width>304</width>
+    <height>397</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -600,6 +600,13 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QPushButton" name="ocr_setting">
+     <property name="text">
+      <string>Ocr设置</string>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">

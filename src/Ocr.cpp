@@ -6,11 +6,17 @@
 #include "OcrImpl/TencentOcr.h"
 #endif
 
-Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr}, m_init{false} {
+Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr}, m_init{false}, m_setting{nullptr} {
     moveToThread(this);
 }
 
 Ocr::~Ocr() {
+    m_setting_mutex.lock();
+    if (m_setting) {
+        m_setting->deleteLater();
+        m_setting = nullptr;
+    }
+    m_setting_mutex.unlock();
     if (m_ocr) {
         delete m_ocr;
         m_ocr = nullptr;
@@ -63,6 +69,35 @@ void Ocr::cancel(const TopWidget *t) {
     m_mutex.unlock();
 }
 
+QWidget *Ocr::getSettingWidget() {
+    if (! m_ocr) return nullptr;
+    if (m_setting) return m_setting;
+    m_setting_mutex.lock();
+    if (m_setting) return m_setting;
+    if (QThread::currentThread() == qApp->thread()) {
+        m_setting = m_ocr->settingWidget();
+    } else {
+        QWidget *widget = nullptr;
+        QMetaObject::invokeMethod(qApp, [&](){ widget = m_ocr->settingWidget(); }, Qt::BlockingQueuedConnection);
+        m_setting = widget;
+    }
+    m_setting_mutex.unlock();
+
+    if (m_setting) {
+        connect(m_setting, &QWidget::destroyed, this, &Ocr::clearWidget);
+    }
+    return m_setting;
+}
+
+void Ocr::restore(const QByteArray &array) {
+    if (m_ocr) m_ocr->restore(array);
+}
+
+QByteArray Ocr::save() {
+    if (m_ocr) return m_ocr->save();
+    return {};
+}
+
 void Ocr::run() {
 #if defined(RAPID_OCR)
     m_ocr = new RapidOcr;
@@ -93,4 +128,9 @@ void Ocr::_ocr(TopWidget *t, const QImage &img) {
         }
     }
     m_mutex.unlock();
+}
+
+void Ocr::clearWidget() {
+    QMutexLocker lock{&this->m_mutex};
+    this->m_setting = nullptr;
 }

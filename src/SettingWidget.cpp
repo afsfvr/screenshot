@@ -7,6 +7,9 @@
 #include <QStandardPaths>
 #include <QFileDialog>
 #include <QImageWriter>
+#ifdef OCR
+#include "Ocr.h"
+#endif
 #if defined(Q_OS_LINUX)
 #include <pwd.h>
 #elif defined(Q_OS_WINDOWS)
@@ -50,6 +53,7 @@ SettingWidget::SettingWidget(QWidget *parent): QWidget(parent), ui(new Ui::Setti
     }
     ui->format->setCurrentIndex(index);
     m_save_format = ui->format->currentText();
+    ui->ocr_setting->setVisible(false);
 }
 
 SettingWidget::~SettingWidget() {
@@ -64,6 +68,11 @@ void SettingWidget::readConfig() {
         QString format;
         stream >> m_auto_save_key >> m_auto_save_path >> format >> m_full_screen;
         stream >> m_capture >> m_record;
+#ifdef OCR
+        QByteArray ocrArray;
+        stream >> ocrArray;
+        OcrInstance->restore(ocrArray);
+#endif
         checkData(m_auto_save_key);
         checkData(m_capture);
         checkData(m_record);
@@ -103,6 +112,10 @@ void SettingWidget::saveConfig() {
         QDataStream stream{&file};
         stream << m_auto_save_key << m_auto_save_path << m_save_format << m_full_screen;
         stream << m_capture << m_record;
+#ifdef OCR
+        QByteArray ocrArray = OcrInstance->save();
+        stream << ocrArray;
+#endif
         file.flush();
         file.close();
     } else {
@@ -161,6 +174,19 @@ void SettingWidget::showEvent(QShowEvent *event) {
         ui->self_start->setChecked(false);
         ui->all_user->setChecked(false);
     }
+#ifdef OCR
+    if (! ui->ocr_setting->isVisible()) {
+        QWidget *w = OcrInstance->getSettingWidget();
+        if (w) {
+            ui->ocr_setting->setVisible(true);
+            w->setParent(this);
+            w->setWindowModality(Qt::WindowModal);
+            w->setAttribute(Qt::WA_ShowModal, true);
+            w->setWindowFlag(Qt::Dialog, true);
+            connect(ui->ocr_setting, &QPushButton::clicked, w, &QWidget::show, static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::UniqueConnection));
+        }
+    }
+#endif
 }
 
 void SettingWidget::openFile(const QString &link) {

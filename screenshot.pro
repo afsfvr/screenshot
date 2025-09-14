@@ -63,7 +63,8 @@ SOURCES += \
     src/TopWidget.cpp \
     src/gif.cpp \
     src/main.cpp \
-    src/mainwindow.cpp
+    src/mainwindow.cpp \
+    src/qaesencryption.cpp
 
 HEADERS += \
     src/BaseWindow.h \
@@ -76,7 +77,8 @@ HEADERS += \
     src/Tool.h \
     src/TopWidget.h \
     src/gif.h \
-    src/mainwindow.h
+    src/mainwindow.h \
+    src/qaesencryption.h
 
 # DESTDIR = build/Desktop_Qt_5_15_2_GCC_64bit-Debug
 # UI_DIR  = build/Desktop_Qt_5_15_2_GCC_64bit-Debug

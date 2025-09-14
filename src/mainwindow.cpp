@@ -31,7 +31,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent),
     connect(m_setting, &SettingWidget::autoSaveChanged, this, &MainWindow::updateAutoSave);
     connect(m_setting, &SettingWidget::captureChanged, this, &MainWindow::updateCapture);
     connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
-    m_setting->readConfig();
+    QTimer::singleShot(500, this, [=](){ m_setting->readConfig(); });
 }
 
 MainWindow::~MainWindow() {
