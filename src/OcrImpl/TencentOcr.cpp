@@ -187,7 +187,7 @@ void TencentOcr::restore(QByteArray array) {
     QAESEncryption aes{QAESEncryption::AES_256, QAESEncryption::CBC, QAESEncryption::PKCS7};
     QByteArray key = QCryptographicHash::hash("screenshot", QCryptographicHash::Sha256), iv = array.right(16);
     array.remove(array.size() - 16, 16);
-    array = aes.decode(array, key, iv);
+    array = aes.removePadding(aes.decode(array, key, iv));
 
     if (array.size() < 8) return;
     const char *data = array.constData();
