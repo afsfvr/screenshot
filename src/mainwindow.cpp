@@ -336,6 +336,74 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
     }
 }
 
+void MainWindow::keyPressEvent(QKeyEvent *event) {
+    BaseWindow::keyPressEvent(event);
+    if (event->modifiers() == Qt::NoModifier) {
+        switch (event->key()) {
+        case Qt::Key_Left:
+            if (m_state & State::Free) {
+                if (m_path.boundingRect().left() > 0) {
+                    m_path.translate(-1, 0);
+                    update();
+                    showTool();
+                }
+            } else if (m_state & State::Rect) {
+                if (m_rect.left() > 0) {
+                    m_rect.translate(-1, 0);
+                    update();
+                    showTool();
+                }
+            }
+            break;
+        case Qt::Key_Right:
+            if (m_state & State::Free) {
+                if (m_path.boundingRect().right() < m_image.width()) {
+                    m_path.translate(1, 0);
+                    update();
+                    showTool();
+                }
+            } else if (m_state & State::Rect) {
+                if (m_rect.right() < m_image.width()) {
+                    m_rect.translate(1, 0);
+                    update();
+                    showTool();
+                }
+            }
+            break;
+        case Qt::Key_Up:
+            if (m_state & State::Free) {
+                if (m_path.boundingRect().top() > 0) {
+                    m_path.translate(0, -1);
+                    update();
+                    showTool();
+                }
+            } else if (m_state & State::Rect) {
+                if (m_rect.top() > 0) {
+                    m_rect.translate(0, -1);
+                    update();
+                    showTool();
+                }
+            }
+            break;
+        case Qt::Key_Down:
+            if (m_state & State::Free) {
+                if (m_path.boundingRect().bottom() < m_image.height()) {
+                    m_path.translate(0, 1);
+                    update();
+                    showTool();
+                }
+            } else if (m_state & State::Rect) {
+                if (m_rect.bottom() < m_image.height()) {
+                    m_rect.translate(0, 1);
+                    update();
+                    showTool();
+                }
+            }
+            break;
+        }
+    }
+}
+
 void MainWindow::paintEvent(QPaintEvent *event) {
     BaseWindow::paintEvent(event);
     if (m_image.isNull() || m_gray_image.isNull()) {

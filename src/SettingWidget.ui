@@ -599,6 +599,13 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QPushButton" name="key_help">
+       <property name="text">
+        <string>按键帮助</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>

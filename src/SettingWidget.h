@@ -48,6 +48,7 @@ private slots:
     void openFile(const QString &link);
     void choosePath(const QString &link);
     void confirm();
+    void keyHelp();
 
 private:
     void checkData(HotKey &key);

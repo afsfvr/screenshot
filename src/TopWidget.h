@@ -86,6 +86,7 @@ private:
     int m_offsetY = 0;
     const int m_max_offset = 0;
     int m_scroll_timer = -1;
+    const QSize m_origin;
 };
 
 #endif // TOPWIDGET_H

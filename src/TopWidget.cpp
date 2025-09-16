@@ -11,7 +11,7 @@
 #undef KeyPress
 #endif
 
-TopWidget::TopWidget(QImage &image, const QRect &rect, QMenu *menu): m_max_offset{image.height() - rect.height()} {
+TopWidget::TopWidget(QImage &image, const QRect &rect, QMenu *menu): m_max_offset{image.height() - rect.height()}, m_origin{rect.size()} {
     m_image = std::move(image);
     tray_menu = menu;
     QSize size = rect.size();
@@ -25,7 +25,7 @@ TopWidget::TopWidget(QImage &image, const QRect &rect, QMenu *menu): m_max_offse
     init();
 }
 
-TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect, QMenu *menu) {
+TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect, QMenu *menu): m_origin{rect.size()} {
     m_image = std::move(image);
     m_vector = std::move(vector);
     tray_menu = menu;
@@ -40,7 +40,7 @@ TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect
     init();
 }
 
-TopWidget::TopWidget(QImage &image, QPainterPath &&path, QVector<Shape *> &vector, const QRect &rect, QMenu *menu) {
+TopWidget::TopWidget(QImage &image, QPainterPath &&path, QVector<Shape *> &vector, const QRect &rect, QMenu *menu): m_origin{rect.size()} {
     m_image = std::move(image);
     m_path = std::move(path);
     m_vector = std::move(vector);
@@ -241,7 +241,7 @@ void TopWidget::keyPressEvent(QKeyEvent *event) {
 }
 
 void TopWidget::closeEvent(QCloseEvent *event) {
-    qInfo() << QString("关闭置顶窗口:(%1,%2 %3x%4)").arg(x()).arg(y()).arg(m_image.width()).arg(m_image.height());
+    qInfo().noquote() << QString("关闭置顶窗口:(%1,%2 %3x%4)").arg(x()).arg(y()).arg(m_image.width()).arg(m_image.height());
     m_tool->close();
     QWidget::closeEvent(event);
     this->deleteLater();
@@ -250,8 +250,10 @@ void TopWidget::closeEvent(QCloseEvent *event) {
 void TopWidget::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event);
     QPainter painter(this);
+    painter.scale(width()  / static_cast<float>(m_origin.width()), height() / static_cast<float>(m_origin.height()));
     if (m_path.elementCount() < 2) {
-        painter.drawImage(rect(), m_image, QRect(QPoint(0, m_offsetY), size()));
+        painter.drawImage(m_image.rect(), m_image, QRect(QPoint(0, m_offsetY), m_image.size()));
+        // painter.drawImage(rect(), m_image, QRect(0, m_offsetY, m_image.width(), m_image.width() / m_ratio));
     } else {
         painter.fillPath(m_path, m_image);
         painter.setClipPath(m_path);
@@ -301,7 +303,7 @@ void TopWidget::paintEvent(QPaintEvent *event) {
         int maxH = m_image.height();
         int h = height();
 
-        int sliderHeight = std::max(h / maxH * h, 20); // 最小高度为20
+        int sliderHeight = std::max<int>(static_cast<float>(h) / maxH * h, 20); // 最小高度为20
         float offsetRatio = static_cast<float>(m_offsetY) / m_max_offset;
         int sliderY = static_cast<int>((h - sliderHeight) * offsetRatio);
 
@@ -469,7 +471,20 @@ void TopWidget::moveEvent(QMoveEvent *event) {
 }
 
 void TopWidget::wheelEvent(QWheelEvent *event) {
-    if (m_max_offset) {
+    if (event->modifiers() == Qt::ControlModifier) {
+        int w = width(), h = height(), delta = event->angleDelta().y();;
+        if (w < 10 || h < 10) return;
+        if (delta < 0) {
+            w -= w * 0.05;
+        } else if (delta > 0) {
+            w += w * 0.05;
+        }
+        if (w < 10) w = 10;
+        float ratio = static_cast<float>(m_origin.width()) / m_origin.height();
+        h = static_cast<int>(w / ratio);
+        setFixedSize(w, h);
+        m_tool->hide();
+    } else if (m_max_offset) {
         int delta = event->angleDelta().y();
         if (delta < 0) {
             m_offsetY = std::min(m_offsetY + 30, m_max_offset);
@@ -526,7 +541,7 @@ void TopWidget::save(const QString &path) {
         m_shape->draw(painter);
     }
     painter.end();
-    if (path.length() == 0) {
+    if (path.isEmpty()) {
         QClipboard *clipboard = QApplication::clipboard();
         if (clipboard) {
             clipboard->setImage(m_image);

@@ -37,6 +37,7 @@ SettingWidget::SettingWidget(QWidget *parent): QWidget(parent), ui(new Ui::Setti
     connect(ui->ok, &QPushButton::clicked, this, &SettingWidget::confirm);
     connect(ui->savePath, &QLabel::linkActivated, this, &SettingWidget::openFile);
     connect(ui->autoSavePath, &QLabel::linkActivated, this, &SettingWidget::choosePath);
+    connect(ui->key_help, &QPushButton::clicked, this, &SettingWidget::keyHelp);
 
     const QString &path = getConfigPath();
     ui->savePath->setText(QString("<a href=\"%1\" style=\"color:black; text-decoration: none;\">配置路径: %2</a>").arg(path, QDir::toNativeSeparators(QFileInfo{path}.absolutePath())));
@@ -400,6 +401,26 @@ void SettingWidget::confirm() {
     if (save) {
         saveConfig();
     }
+}
+
+void SettingWidget::keyHelp() {
+    QString helpText =
+        "<h3>截图和置顶窗口</h3>"
+        "<ul>"
+        "<li><b>ESC</b>: 关闭</li>"
+        "<li><b>Ctrl+C</b>: 复制图片到剪贴板</li>"
+        "<li><b>Ctrl+S</b>: 保存图片到电脑</li>"
+        "<li><b>Ctrl+Z</b>: 撤销对图片的编辑</li>"
+        "<li><b>Ctrl+Y</b>: 恢复对图片的编辑</li>"
+        "<li><b>C</b>: 复制鼠标位置的 RGB 到剪贴板</li>"
+        "<li><b>← ↑ → ↓</b>: 微调位置</li>"
+        "</ul>"
+        "<h3>置顶窗口</h3>"
+        "<ul>"
+        "<li><b>鼠标滚轮</b>: 长截图上下滑动</li>"
+        "<li><b>Ctrl + 鼠标滚轮</b>: 调整窗口大小</li>"
+        "</ul>";
+    QMessageBox::about(this, "按键帮助", helpText);
 }
 
 void SettingWidget::checkData(HotKey &key) {
