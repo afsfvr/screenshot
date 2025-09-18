@@ -184,6 +184,7 @@ void SettingWidget::showEvent(QShowEvent *event) {
             w->setWindowModality(Qt::WindowModal);
             w->setAttribute(Qt::WA_ShowModal, true);
             w->setWindowFlag(Qt::Dialog, true);
+            connect(this, &SettingWidget::destroyed, w, &QWidget::deleteLater);
             connect(ui->ocr_setting, &QPushButton::clicked, w, &QWidget::show, static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::UniqueConnection));
         }
     }

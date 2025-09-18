@@ -11,12 +11,7 @@ Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr}, m_setting{nullptr} {
 }
 
 Ocr::~Ocr() {
-    m_setting_mutex.lock();
-    if (m_setting) {
-        m_setting->deleteLater();
-        m_setting = nullptr;
-    }
-    m_setting_mutex.unlock();
+    m_setting = nullptr;
     if (m_ocr) {
         delete m_ocr;
         m_ocr = nullptr;
@@ -70,8 +65,6 @@ void Ocr::cancel(const TopWidget *t) {
 QWidget *Ocr::getSettingWidget() {
     if (! m_ocr) return nullptr;
     if (m_setting) return m_setting;
-    m_setting_mutex.lock();
-    if (m_setting) return m_setting;
     if (QThread::currentThread() == qApp->thread()) {
         m_setting = m_ocr->settingWidget();
     } else {
@@ -79,7 +72,6 @@ QWidget *Ocr::getSettingWidget() {
         QMetaObject::invokeMethod(qApp, [&](){ widget = m_ocr->settingWidget(); }, Qt::BlockingQueuedConnection);
         m_setting = widget;
     }
-    m_setting_mutex.unlock();
 
     if (m_setting) {
         connect(m_setting, &QWidget::destroyed, this, &Ocr::clearWidget);
@@ -129,6 +121,5 @@ void Ocr::_ocr(TopWidget *t, const QImage &img) {
 }
 
 void Ocr::clearWidget() {
-    QMutexLocker lock{&this->m_mutex};
     this->m_setting = nullptr;
 }

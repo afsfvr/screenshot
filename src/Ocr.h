@@ -50,7 +50,6 @@ private:
     QList<TopWidget*> m_list;
     QMutex m_mutex;
     QWidget *m_setting;
-    QMutex m_setting_mutex;
 };
 
 class OcrBase {
