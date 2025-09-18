@@ -55,6 +55,14 @@ SettingWidget::SettingWidget(QWidget *parent): QWidget(parent), ui(new Ui::Setti
     ui->format->setCurrentIndex(index);
     m_save_format = ui->format->currentText();
     ui->ocr_setting->setVisible(false);
+
+#ifdef Q_OS_LINUX
+    QString outPath = QDir::toNativeSeparators(getUserHomePath() + "/.config/screenshot/screenshot.png");
+    if (! QFile::exists(outPath)) {
+        QImage image{":/images/screenshot.ico"};
+        image.save(outPath, "png");
+    }
+#endif
 }
 
 SettingWidget::~SettingWidget() {
@@ -130,7 +138,7 @@ const QString& SettingWidget::getConfigPath() const {
     if (QFile::exists(applicationPath)) {
         return applicationPath;
     } else {
-        static QString userDir = QDir::toNativeSeparators(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/screenshot");
+        static QString userDir = QDir::toNativeSeparators(getUserHomePath() + "/.config/screenshot");
         if (! QFile::exists(userDir)) {
             qDebug() << QString("创建文件夹%1: %2").arg(userDir, QDir{}.mkpath(userDir) ? "成功" : "失败");
         }
@@ -469,70 +477,54 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
         if (start) {
             file.setFileName(QDir::toNativeSeparators(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/screenshot.tmp"));
         } else {
-            file.setFileName("/etc/systemd/system/screenshot.service");
+            file.setFileName("/etc/xdg/autostart/screenshot.desktop");
         }
     } else {
-        QString path;
-        QFile loginUid{"/proc/self/loginuid"};
-        if (loginUid.open(QFile::ReadOnly)) {
-            bool ok;
-            quint32 uid = loginUid.readAll().toUInt(&ok);
-            loginUid.close();
-            if (ok) {
-                struct passwd *pw = getpwuid(uid);
-                if (pw) path = QString::fromStdString(pw->pw_dir);
-            }
-        }
-        if (path.isEmpty()) {
-            path = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
-        }
-        path = QDir::toNativeSeparators(path + "/.config/systemd/user");
+        QString path = QDir::toNativeSeparators(getUserHomePath() + "/.config/autostart");
         QDir{}.mkpath(path);
-        file.setFileName(QDir::toNativeSeparators(path + "/screenshot.service"));
+        file.setFileName(QDir::toNativeSeparators(path + "/screenshot.desktop"));
     }
     if (start) {
         if (! file.open(QFile::WriteOnly | QFile::Truncate)) {
             return file.errorString();
         }
-        file.write(QString("[Unit]\n"
-                           "Description=screenshot\n"
-                           "After=graphical-session.target\n\n"
-                           "[Service]\n"
-                           "ExecStartPre=/bin/bash -c 'uptime_sec=$(cut -d. -f1 /proc/uptime); if [ \"$uptime_sec\" -lt 180 ]; then sleep 3; fi;'\n"
-                           "ExecStart=%1\n"
-                           "Restart=on-failure\n"
-                           "RestartSec=5\n"
-                           "Environment=XDG_SESSION_TYPE=x11 DISPLAY=:0\n"
-                           "SuccessExitStatus=0 1 2\n\n"
-                           "[Install]\n"
-                           "WantedBy=graphical-session.target\n").arg(QCoreApplication::applicationFilePath()).toUtf8());
+        QString imgPath = QDir::toNativeSeparators(getUserHomePath() + "/.config/screenshot/screenshot.ico");
+        QString content = QString("[Desktop Entry]\n"
+                                  "Type=Application\n"
+                                  "Name=截图工具\n"
+                                  "Comment=一个简单的截图工具\n"
+                                  "Exec=%1\n"
+                                  "Icon=%2\n"
+                                  "Terminal=false\n"
+                                  "X-GNOME-Autostart-enabled=true\n"
+                                  "X-GNOME-Autostart-Delay=3\n"
+                                  "Categories=Utility;Graphics;\n"
+                                  "StartupNotify=false\n"
+                                  "NoDisplay=false\n").arg(QCoreApplication::applicationFilePath(), imgPath);
+        file.write(content.toUtf8());
         file.close();
-        QString command;
         if (allUser) {
-            command = QString("pkexec bash -c 'mv \"%1\" /etc/systemd/system/screenshot.service && systemctl daemon-reload && systemctl enable screenshot.service'").arg(file.fileName());
-        } else {
-            command = QString("systemctl --user daemon-reload && systemctl --user enable screenshot.service");
-        }
-        int ret = system(command.toStdString().c_str());
-        if (allUser) file.remove();
-        if (ret != 0) {
-            return QString("Failed to enable service, code: %1").arg(ret);
+            QString command;
+            command = QString("pkexec bash -c 'mv \"%1\" /etc/xdg/autostart/screenshot.desktop'").arg(file.fileName());
+            int ret = system(command.toStdString().c_str());
+            file.remove();
+            if (ret != 0) {
+                return QString("Failed to create file, code: %1").arg(ret);
+            }
         }
         return {};
     } else {
         if (file.exists()) {
-            QString command;
             if (allUser) {
-                command = QString("pkexec bash -c 'systemctl disable screenshot.service && systemctl daemon-reload && rm \"%1\"'").arg(file.fileName());
+                QString command = QString("pkexec bash -c 'rm \"%1\"'").arg(file.fileName());
+                int ret = system(command.toStdString().c_str());
+                if (ret != 0) {
+                    return QString("Failed to remove file, code: %1").arg(ret);
+                }
             } else {
-                command = QString("systemctl --user disable screenshot.service && systemctl --user daemon-reload");
-            }
-            int ret = system(command.toStdString().c_str());
-            if (ret != 0) {
-                return QString("Failed to stop/disable service, code: %1").arg(ret);
-            }
-            if (! allUser && ! file.remove()) {
-                return file.errorString();
+                if (! file.remove()) {
+                    return file.errorString();
+                }
             }
         }
         return {};
@@ -610,30 +602,19 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
 
 bool SettingWidget::isSelfStart(bool allUser) {
 #if defined(Q_OS_LINUX)
-    QStringList arguments;
+    QFile file;
     if (allUser) {
-        arguments << "is-enabled" << "screenshot";
+        file.setFileName("/etc/xdg/autostart/screenshot.desktop");
     } else {
-        arguments << "--user" << "is-enabled" << "screenshot";
+        file.setFileName(QDir::toNativeSeparators(getUserHomePath() + "/.config/autostart/screenshot.desktop"));
     }
-    QProcess process;
-    process.start("systemctl", arguments);
-    process.waitForFinished();
-    if (process.readAllStandardOutput().trimmed() != "enabled") {
-        return false;
-    }
-
-    arguments.clear();
-    if (allUser) {
-        arguments << "cat" << "screenshot";
-    } else {
-        arguments << "--user" << "cat" << "screenshot";
-    }
-    process.start("systemctl", arguments);
-    process.waitForFinished();
-    for (QString line: QString::fromLocal8Bit(process.readAllStandardOutput()).split('\n')) {
+    if (! file.exists() || ! file.open(QFile::ReadOnly | QFile::Text)) return false;
+    const QStringList lines = QString::fromUtf8(file.readAll()).split('\n', Qt::SkipEmptyParts);
+    file.close();
+    const QString appPath = QCoreApplication::applicationFilePath();
+    for (QString line: lines) {
         line = line.trimmed();
-        if (line.startsWith("ExecStart=") && line.contains(QCoreApplication::applicationFilePath())) {
+        if (line.startsWith("Exec=") && line.contains(appPath)) {
             return true;
         }
     }
@@ -675,8 +656,8 @@ bool SettingWidget::isSelfStart(bool allUser) {
 #endif
 }
 
-#ifdef Q_OS_WINDOWS
-QString SettingWidget::getWindowsError(quint32 error) {
+#if defined(Q_OS_WINDOWS)
+QString SettingWidget::getWindowsError(quint32 error) const {
     if (error == 0) return {};
     wchar_t *wstr = nullptr;
     int count = FormatMessageW(
@@ -694,5 +675,25 @@ QString SettingWidget::getWindowsError(quint32 error) {
         LocalFree(wstr);
     }
     return ret.trimmed();
+}
+#elif defined(Q_OS_LINUX)
+QString SettingWidget::getUserHomePath() const {
+    static QString homePath;
+    if (homePath.isEmpty()) {
+        QFile loginUid{"/proc/self/loginuid"};
+        if (loginUid.open(QFile::ReadOnly)) {
+            bool ok;
+            quint32 uid = loginUid.readAll().toUInt(&ok);
+            loginUid.close();
+            if (ok) {
+                struct passwd *pw = getpwuid(uid);
+                if (pw) homePath = QString::fromStdString(pw->pw_dir);
+            }
+        }
+        if (homePath.isEmpty()) {
+            homePath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+        }
+    }
+    return homePath;
 }
 #endif

@@ -10,10 +10,10 @@
 #if defined(Q_OS_LINUX)
 static void signal_handler(int x) {
     switch (x) {
-    case SIGINT:  qInfo() << QString("收到信号SIGINT，退出程序");    break;
-    case SIGQUIT: qInfo() << QString("收到信号SIGQUIT，退出程序");   break;
-    case SIGTERM: qInfo() << QString("收到信号SIGTERM，退出程序");   break;
-    default:      qInfo() << QString("收到信号%1，退出程序").arg(x); break;
+    case SIGINT:  qInfo().noquote() << QString("收到信号SIGINT，退出程序");    break;
+    case SIGQUIT: qInfo().noquote() << QString("收到信号SIGQUIT，退出程序");   break;
+    case SIGTERM: qInfo().noquote() << QString("收到信号SIGTERM，退出程序");   break;
+    default:      qInfo().noquote() << QString("收到信号%1，退出程序").arg(x); break;
     }
 
     QApplication::quit();

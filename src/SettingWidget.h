@@ -57,8 +57,10 @@ private:
     void updateKey3();
     QString setSelfStart(bool start, bool allUser);
     bool isSelfStart(bool allUser);
-#ifdef Q_OS_WINDOWS
-    QString getWindowsError(quint32 error);
+#if defined(Q_OS_WINDOWS)
+    QString getWindowsError(quint32 error) const;
+#elif defined(Q_OS_LINUX)
+    QString getUserHomePath() const;
 #endif
 
 signals:
