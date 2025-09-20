@@ -138,7 +138,11 @@ const QString& SettingWidget::getConfigPath() const {
     if (QFile::exists(applicationPath)) {
         return applicationPath;
     } else {
+#if defined(Q_OS_WINDOWS)
+        static QString userDir = QDir::toNativeSeparators(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/screenshot");
+#elif defined(Q_OS_LINUX)
         static QString userDir = QDir::toNativeSeparators(getUserHomePath() + "/.config/screenshot");
+#endif
         if (! QFile::exists(userDir)) {
             qDebug() << QString("创建文件夹%1: %2").arg(userDir, QDir{}.mkpath(userDir) ? "成功" : "失败");
         }
