@@ -19,7 +19,7 @@ public:
         QImage image;
         bool down;
     };
-    explicit LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, MainWindow *main);
+    explicit LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, MainWindow *main, qreal ratio);
     ~LongWidget();
 
     void showTool();
@@ -40,6 +40,7 @@ private:
     void join();
     void stop();
     QImage screenshot();
+    QRect getScreenRect(const QRect &rect);
 
     QImage m_image;
     QWidget *m_widget;
@@ -54,6 +55,7 @@ private:
     QReadWriteLock m_lock;
     BlockQueue<Data> m_queue;
     std::thread *m_thread;
+    qreal m_ratio;
 };
 
 #endif // LONGWIDGET_H

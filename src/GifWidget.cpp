@@ -11,6 +11,7 @@
 #include <QDateTime>
 #include <QTimer>
 #include <QComboBox>
+#include <QtMath>
 #include <malloc.h>
 
 static void writeGIF(BlockQueue<GifFrameData> *queue) {
@@ -31,18 +32,20 @@ static void writeGIF(BlockQueue<GifFrameData> *queue) {
     }
 }
 
-GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent):
-    QWidget{parent}, m_writer{nullptr}, m_timerId{-1}, m_updateTimerId{-1}, m_size{screenSize}, m_preTime{0} {
+GifWidget::GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, qreal ratio, QWidget *parent):
+    QWidget{parent}, m_writer{nullptr}, m_timerId{-1}, m_updateTimerId{-1}, m_size{screenSize}, m_preTime{0}, m_ratio{ratio} {
     m_tmp = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + QUuid::createUuid().toString();
-    setFixedSize(rect.size());
-    setGeometry(rect);
-    m_screen.setTop(rect.top() + 1);
-    m_screen.setLeft(rect.left() + 1);
-    m_screen.setRight(rect.right() - 1);
-    m_screen.setBottom(rect.bottom() - 1);
+    m_screen = getScreenRect(rect.adjusted(-1, -1, 1, 1));
+    setFixedSize(m_screen.size());
+    setGeometry(m_screen);
+    m_screen.adjust(1, 1, -1, -1);
 
     m_menu = new QMenu{this};
-    m_menu->setTitle(QString("gif(%1,%2 %3x%4)").arg(rect.x()).arg(rect.y()).arg(rect.width()).arg(rect.height()));
+    m_menu->setTitle(QString("gif(%1,%2 %3x%4)")
+                         .arg(m_screen.x())
+                         .arg(m_screen.y())
+                         .arg(m_screen.width() * m_ratio)
+                         .arg(m_screen.height() * m_ratio));
     m_action = m_menu->addAction("开始", this, &GifWidget::buttonClicked);
     m_menu->addAction("关闭", this, &GifWidget::close);
     menu->addMenu(m_menu);
@@ -144,7 +147,7 @@ void GifWidget::buttonClicked() {
         m_delay = 100 / value;
         memset(m_writer, 0, sizeof(GifWriter));
         m_startTime = QDateTime::currentMSecsSinceEpoch();
-        GifBegin(m_writer, m_tmp.toUtf8().data(), m_screen.width(), m_screen.height(), m_delay);
+        GifBegin(m_writer, m_tmp.toUtf8().data(), qCeil(m_screen.width() * m_ratio), qCeil(m_screen.height() * m_ratio), m_delay);
         updateGIF();
     } else {
         if (m_timerId != -1) {
@@ -276,13 +279,24 @@ void GifWidget::init() {
 QImage GifWidget::screenshot() {
     QList<QScreen*> list = QApplication::screens();
     QSize size;
+    QRect rect = m_screen;
+    rect.setWidth(rect.width() * m_ratio);
+    rect.setHeight(rect.height() * m_ratio);
     for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
-        QRect rect = (*iter)->geometry();
-        size.setWidth(std::max(rect.right() + 1, size.width()));
-        size.setHeight(std::max(rect.bottom() + 1, size.height()));
-        if (rect.contains(m_screen)) {
-            return (*iter)->grabWindow(0, m_screen.x() - rect.left(), m_screen.y() - rect.top(), m_screen.width(), m_screen.height())
-                .toImage().convertToFormat(QImage::Format_RGBA8888);
+        QRect tmp = (*iter)->geometry();
+        qreal ratio = (*iter)->devicePixelRatio();
+        tmp.setWidth(tmp.width() * ratio);
+        tmp.setHeight(tmp.height() * ratio);
+        size.setWidth(std::max<int>(tmp.right() + 1, size.width()));
+        size.setHeight(std::max<int>(tmp.bottom() + 1, size.height()));
+        if (tmp.contains(rect)) {
+            return (*iter)->grabWindow(0)
+            .copy((rect.left() - tmp.left()) * m_ratio,
+                  (rect.top() - tmp.top()) * m_ratio,
+                  rect.width(),
+                  rect.height())
+                .toImage()
+                .convertToFormat(QImage::Format_RGBA8888);
         }
     }
 
@@ -290,8 +304,35 @@ QImage GifWidget::screenshot() {
     QPainter painter(&image);
     for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
         QScreen *screen = (*iter);
-        painter.drawImage(screen->geometry(), screen->grabWindow(0).toImage());
+        painter.drawPixmap(screen->geometry(), screen->grabWindow(0));
     }
     painter.end();
-    return image.copy(m_screen);
+    return image.copy(rect);
+}
+
+QRect GifWidget::getScreenRect(const QRect &rect) {
+    if (m_ratio == 1) return rect;
+
+    QPoint pos = rect.topLeft() * m_ratio;
+    QList<QScreen*> list = QApplication::screens();
+    QScreen* targetScreen = nullptr;
+    for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
+        QRect tmp = (*iter)->geometry();
+        qreal ratio = (*iter)->devicePixelRatio();
+        tmp.setWidth(tmp.width() * ratio);
+        tmp.setHeight(tmp.height() * ratio);
+        if (tmp.contains(pos)) {
+            targetScreen = *iter;
+            break;
+        }
+    }
+    if (! targetScreen) {
+        targetScreen = QApplication::primaryScreen();
+    }
+
+    QRect targetRect = targetScreen->geometry();
+    int x = (pos.x() - targetRect.left()) / m_ratio + targetRect.left();
+    int y = (pos.y() - targetRect.top()) / m_ratio + targetRect.top();
+
+    return {x, y, rect.width(), rect.height()};
 }

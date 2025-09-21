@@ -102,6 +102,7 @@ private:
     void openSaveDir();
     bool contains(const QPoint &point);
     void updateWindows();
+    QImage fullScreenshot();
 #ifdef Q_OS_LINUX
     QString getWindowTitle(Display *display, Window window);
 #endif

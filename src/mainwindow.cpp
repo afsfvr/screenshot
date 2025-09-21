@@ -56,6 +56,7 @@ void MainWindow::connectTopWidget(TopWidget *t) {
 }
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
+    m_mouse_pos = event->pos();
 #ifdef Q_OS_LINUX
     if (m_grab_mouse) {
         this->releaseMouse();
@@ -64,7 +65,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 #endif
     if (event->buttons() == event->button()) {
         m_press = true;
-        m_point = event->pos();
+        m_point = m_mouse_pos;
     }
     if (m_state == State::Null) {
         clearDraw();
@@ -74,7 +75,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
             m_state = State::RectScreen;
         } else if (! m_gif && event->button() == Qt::RightButton) {
             m_state = State::FreeScreen;
-            m_path.moveTo(event->pos());
+            m_path.moveTo(m_mouse_pos);
         }
         m_tool->hide();
     } else if (m_state & State::Edit) {
@@ -82,10 +83,10 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
             clearDraw();
             m_tool->hide();
             update();
-        } else if (contains(event->pos())) {
+        } else if (contains(m_mouse_pos)) {
             if (event->button() == Qt::LeftButton) {
                 if (m_tool->isDraw()) {
-                    setShape(event->pos());
+                    setShape(m_mouse_pos);
                 } else {
                     m_tool->hide();
                 }
@@ -99,7 +100,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
                 clearDraw();
                 m_state = State::FreeScreen;
                 m_path.clear();
-                m_path.moveTo(event->pos());
+                m_path.moveTo(m_mouse_pos);
             }
             m_tool->hide();
         }
@@ -107,6 +108,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 }
 
 void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
+    m_mouse_pos = event->pos();
     if (event->button() == Qt::LeftButton) {
         if (m_state == State::RectScreen) {
             m_rect = getRect(m_point, event->pos());
@@ -180,6 +182,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void MainWindow::mouseMoveEvent(QMouseEvent *event) {
+    m_mouse_pos = event->pos();
     if (m_state == State::RectScreen && (event->buttons() & Qt::LeftButton)) {
         m_rect = getRect(m_point, event->pos());
         update();
@@ -357,13 +360,13 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
             break;
         case Qt::Key_Right:
             if (m_state & State::Free) {
-                if (m_path.boundingRect().right() < m_image.width()) {
+                if (m_path.boundingRect().right() * m_ratio < m_image.width()) {
                     m_path.translate(1, 0);
                     update();
                     showTool();
                 }
             } else if (m_state & State::Rect) {
-                if (m_rect.right() < m_image.width()) {
+                if (m_rect.right() * m_ratio < m_image.width()) {
                     m_rect.translate(1, 0);
                     update();
                     showTool();
@@ -387,13 +390,13 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
             break;
         case Qt::Key_Down:
             if (m_state & State::Free) {
-                if (m_path.boundingRect().bottom() < m_image.height()) {
+                if (m_path.boundingRect().bottom() * m_ratio < m_image.height()) {
                     m_path.translate(0, 1);
                     update();
                     showTool();
                 }
             } else if (m_state & State::Rect) {
-                if (m_rect.bottom() < m_image.height()) {
+                if (m_rect.bottom() * m_ratio < m_image.height()) {
                     m_rect.translate(0, 1);
                     update();
                     showTool();
@@ -418,17 +421,29 @@ void MainWindow::paintEvent(QPaintEvent *event) {
     if (m_state & State::Free) {
         rect = m_path.boundingRect().toRect();
         painter.drawPath(m_path);
-        painter.fillPath(m_path, m_image);
+        QBrush brush{m_image};
+        QTransform transform;
+        transform.scale(1.0 / m_ratio, 1.0 / m_ratio);
+        brush.setTransform(transform);
+        painter.fillPath(m_path, brush);
         painter.setClipPath(m_path);
     } else if (m_state & State::Rect) {
         rect = m_rect;
-        painter.drawImage(m_rect, m_image, m_rect);
-        painter.drawRect(m_rect.adjusted(- 1, - 1, 1, 1));
-        painter.setClipRect(m_rect);
+        QRectF sourceRect = QRectF(rect.left() * m_ratio,
+                                   rect.top() * m_ratio,
+                                   rect.width() * m_ratio,
+                                   rect.height() * m_ratio);
+        painter.drawImage(rect, m_image, sourceRect);
+        painter.drawRect(rect.adjusted(- 1, - 1, 1, 1));
+        painter.setClipRect(rect);
     } else {
         if (m_index >= 0 && m_index < m_windows.size()) {
             rect = m_windows[m_index];
-            painter.drawImage(rect, m_image, rect);
+            QRectF sourceRect = QRectF(rect.left() * m_ratio,
+                                       rect.top() * m_ratio,
+                                       rect.width() * m_ratio,
+                                       rect.height() * m_ratio);
+            painter.drawImage(rect, m_image, sourceRect);
             painter.drawRect(rect);
             painter.setClipRect(rect);
         }
@@ -443,7 +458,7 @@ void MainWindow::paintEvent(QPaintEvent *event) {
     painter.setClipping(false);
 
     if (m_state == State::Null || (m_state & State::Screen) || m_resize != ResizeImage::NoResize) {
-        const QPoint &cursor = QCursor::pos();
+        const QPoint &cursor = m_mouse_pos;
         QPoint point;
         if (cursor.x() + 85 + 10 <= this->width()) {
             point.setX(cursor.x() + 10);
@@ -457,17 +472,17 @@ void MainWindow::paintEvent(QPaintEvent *event) {
         }
         painter.fillRect(point.x() - 3, point.y() - 3 ,90, 145, QColor(0, 0, 0, 150));
         painter.drawRect(point.x() - 1, point.y() - 1, 84 + 2, 84 + 2);
-        painter.drawImage(QRect(point.x(), point.y(), 84, 84), m_image, QRect(cursor.x() - 10, cursor.y() - 10, 21, 21));
+        painter.drawImage(QRect(point.x(), point.y(), 84, 84), m_image, QRect((cursor.x() - 10) * m_ratio, (cursor.y() - 10) * m_ratio, 21 * m_ratio, 21 * m_ratio));
         painter.drawLine(point.x(), point.y() + 42, point.x() + 84, point.y() + 42);
         painter.drawLine(point.x() + 42, point.y(), point.x() + 42, point.y() + 84);
-        QColor color = m_image.pixelColor(cursor);
+        QColor color = m_image.pixelColor(cursor * m_ratio);
         QFont font = painter.font();
         font.setPixelSize(13);
         painter.setFont(font);
         painter.drawText(point.x(), point.y() + 97, QString("RGB: %1").arg(color.name().toUpper()));
         painter.drawText(point.x(), point.y() + 111, QString("按C复制颜色"));
-        painter.drawText(point.x(), point.y() + 125, QString("%1, %2").arg(cursor.x()).arg(cursor.y()));
-        painter.drawText(point.x(), point.y() + 138, QString("(%1 x %2)").arg(rect.width()).arg(rect.height()));
+        painter.drawText(point.x(), point.y() + 125, QString("%1, %2").arg(cursor.x() * m_ratio).arg(cursor.y() * m_ratio));
+        painter.drawText(point.x(), point.y() + 138, QString("(%1 x %2)").arg(rect.width() * m_ratio).arg(rect.height() * m_ratio));
     }
 
     drawTips(painter);
@@ -591,6 +606,8 @@ void MainWindow::saveImage() {
         QList<QScreen*> list = QApplication::screens();
         for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
             QRect r = (*iter)->geometry();
+            r.setWidth(r.width() * (*iter)->devicePixelRatio());
+            r.setHeight(r.height() * (*iter)->devicePixelRatio());
             if (r.contains(rect, false)) {
                 QScreen *screen = (*iter);
                 image = screen->grabWindow(0, rect.x(), rect.y(), rect.width(), rect.height()).toImage();
@@ -626,7 +643,7 @@ void MainWindow::saveImage() {
 }
 
 void MainWindow::start() {
-    updateWindows();
+    m_ratio = 1;
     disconnect(SIGNAL(choosePath()));
     m_tool->setEditShow(! m_gif);
     if (m_gif) {
@@ -646,9 +663,10 @@ void MainWindow::start() {
             m_gray_image.setPixel(x, y, qRgb(r, g, b));
         }
     }
+    updateWindows();
     setWindowState((windowState() & ~(Qt::WindowMinimized | Qt::WindowMaximized)) | Qt::WindowFullScreen);
-    setFixedSize(m_image.size());
-    setGeometry(0, 0, m_image.width(), m_image.height());
+    setFixedSize(m_image.size() / m_ratio);
+    setGeometry(0, 0, m_image.width() / m_ratio, m_image.height() / m_ratio);
     setCursorShape(Qt::CrossCursor);
     setVisible(true);
     m_state = State::Null;
@@ -693,7 +711,7 @@ void MainWindow::showTool() {
         point.setY(rect.bottom() - m_tool->height());
     }
     m_tool->show();
-    m_tool->move(point);
+    m_tool->move(getScreenPoint(point));
 }
 
 bool MainWindow::isValid() const {
@@ -770,7 +788,8 @@ void MainWindow::ocrStart() {
 void MainWindow::longScreenshot() {
     if (m_state & State::Rect) {
         if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
-        auto *l = new LongWidget(m_image.copy(m_rect), m_rect, size(), m_menu, this);
+        QImage image = m_image.copy(m_rect.left() * m_ratio, m_rect.top() * m_ratio, m_rect.width() * m_ratio, m_rect.height() * m_ratio);
+        auto *l = new LongWidget(image, m_rect, size(), m_menu, this, m_ratio);
         connect(this, &MainWindow::mouseWheeled, l, &LongWidget::mouseWheel);
         end();
     }
@@ -927,7 +946,7 @@ void MainWindow::quit() {
 void MainWindow::save(const QString &path) {
     if (m_gif) {
         if (m_rect.isValid()) {
-            new GifWidget{size(), m_rect, m_menu};
+            new GifWidget{size(), m_rect, m_menu, m_ratio};
         }
     } else {
         QImage image;
@@ -935,22 +954,26 @@ void MainWindow::save(const QString &path) {
         if (m_state & State::Free) {
             QRect rect = m_path.boundingRect().toRect();
             if (rect.width() <= 0 || rect.height() <= 0) return;
-            image = QImage(rect.size(), QImage::Format_ARGB32);
+            image = QImage(rect.size() * m_ratio, QImage::Format_ARGB32);
             painter.begin(&image);
             painter.fillRect(image.rect(), QColor(0, 0, 0, 0));
-            painter.translate(- rect.topLeft());
-            painter.fillPath(m_path, m_image);
-            painter.setClipPath(m_path);
+            painter.translate(- rect.topLeft() * m_ratio);
+            QTransform transform;
+            transform.scale(m_ratio, m_ratio);
+            QPainterPath path = transform.map(m_path);
+            painter.fillPath(path, m_image);
+            painter.setClipPath(path);
         } else if (m_state & State::Rect) {
             if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
-            image = m_image.copy(m_rect);
+            image = m_image.copy(m_rect.left() * m_ratio, m_rect.top() * m_ratio, m_rect.width() * m_ratio, m_rect.height() * m_ratio);
             painter.begin(&image);
-            painter.translate(- m_rect.topLeft());
+            painter.translate(- m_rect.topLeft() * m_ratio);
         } else {
             return;
         }
         if (! m_vector.empty() || (m_shape != nullptr && ! m_shape->isNull())) {
             for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+                (*iter)->scale(m_ratio, m_ratio);
                 (*iter)->draw(painter);
             }
             if (m_shape != nullptr && ! m_shape->isNull()) {
@@ -992,13 +1015,15 @@ TopWidget *MainWindow::top() {
         for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
             (*iter)->translate(- point);
         }
-        QImage image = QImage(rect.size(), QImage::Format_ARGB32);
+        QImage image = QImage(rect.size() * m_ratio, QImage::Format_ARGB32);
         QPainter painter(&image);
-        painter.fillRect(rect, QColor(0, 0, 0, 0));
-        painter.translate(- point);
-        painter.fillPath(m_path, m_image);
+        painter.fillRect(image.rect(), QColor(0, 0, 0, 0));
+        painter.translate(- point * m_ratio);
+        QTransform transform;
+        transform.scale(m_ratio, m_ratio);
+        painter.fillPath(transform.map(m_path), m_image);
         painter.end();
-        auto *t = new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu);
+        auto *t = new TopWidget(image, m_path.translated(- point), m_vector, rect, m_menu, m_ratio);
         connectTopWidget(t);
         end();
         return t;
@@ -1009,7 +1034,8 @@ TopWidget *MainWindow::top() {
             (*iter)->translate(- point);
         }
 
-        auto *t = new TopWidget(m_image.copy(m_rect), m_vector, m_rect, m_menu);
+        QImage image = m_image.copy(m_rect.left() * m_ratio, m_rect.top() * m_ratio, m_rect.width() * m_ratio, m_rect.height() * m_ratio);
+        auto *t = new TopWidget(std::move(image), m_vector, m_rect, m_menu, m_ratio);
         connectTopWidget(t);
         end();
         return t;
@@ -1088,13 +1114,13 @@ void MainWindow::updateWindows() {
     HWND hwnd = GetTopWindow(nullptr);
     QRect rect = getRectByHwnd(hwnd);
     if (rect.isValid()) {
-        m_windows.push_back(rect);
+        m_windows.push_back(QRect(rect.left() / m_ratio, rect.top() / m_ratio, rect.width() / m_ratio, rect.height() / m_ratio));
     }
 
     while ((hwnd = GetNextWindow(hwnd, GW_HWNDNEXT)) != nullptr) {
         QRect rect = getRectByHwnd(hwnd);
         if (rect.isValid()) {
-            m_windows.push_back(rect);
+            m_windows.push_back(QRect(rect.left() / m_ratio, rect.top() / m_ratio, rect.width() / m_ratio, rect.height() / m_ratio));
         }
     }
 #else
@@ -1112,7 +1138,7 @@ void MainWindow::updateWindows() {
             if ((attributes.map_state != IsViewable) || (attributes.width == attributes.height && attributes.width <= 5)) {
                 continue;
             }
-            m_windows.push_back({attributes.x, attributes.y, attributes.width, attributes.height});
+            m_windows.push_back({attributes.x / m_ratio, attributes.y / m_ratio, attributes.width / m_ratio, attributes.height / m_ratio});
         }
 
         XFree(children);
@@ -1127,6 +1153,41 @@ void MainWindow::updateWindows() {
             break;
         }
     }
+}
+
+QImage MainWindow::fullScreenshot() {
+    QList<QScreen*> list = QApplication::screens();
+    QSize size;
+    m_ratio = -1;
+    for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
+        QRect rect = (*iter)->geometry();
+        qreal ratio = (*iter)->devicePixelRatio();
+        if (m_ratio == -1) {
+            m_ratio = ratio;
+        } else if (m_ratio != ratio) {
+            m_ratio = 0;
+        }
+        size.setWidth(std::max<int>((rect.right() + 1 - rect.left()) * ratio + rect.left(), size.width()));
+        size.setHeight(std::max<int>((rect.bottom() + 1 - rect.top()) * ratio + rect.top(), size.height()));
+    }
+    if (m_ratio <= 0) m_ratio = 1;
+
+    QImage image(size, QImage::Format_ARGB32);
+    QPainter painter(&image);
+    for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
+        QScreen *screen = (*iter);
+        qreal ratio = (*iter)->devicePixelRatio();
+        if (ratio == 1) {
+            painter.drawPixmap(screen->geometry(), screen->grabWindow(0));
+        } else {
+            QRect rect = screen->geometry();
+            QPixmap pixmap = screen->grabWindow(0);
+            qreal ratio = (*iter)->devicePixelRatio();
+            painter.drawPixmap(rect.left(), rect.top(), rect.width() * ratio, rect.height() * ratio, pixmap);
+        }
+    }
+    painter.end();
+    return image;
 }
 
 #ifdef Q_OS_LINUX

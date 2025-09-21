@@ -145,6 +145,7 @@ bool TencentOcr::init() {
 
 QWidget *TencentOcr::settingWidget() {
     QWidget *widget = new QWidget;
+    widget->setWindowTitle("腾讯云Ocr");
 
     QLineEdit *id = new QLineEdit{widget};
     QLineEdit *key = new QLineEdit{widget};

@@ -11,12 +11,13 @@
 #undef KeyPress
 #endif
 
-TopWidget::TopWidget(QImage &image, const QRect &rect, QMenu *menu): m_max_offset{image.height() - rect.height()}, m_origin{rect.size()} {
+TopWidget::TopWidget(QImage &image, const QRect &rect, QMenu *menu, qreal ratio): m_max_offset{image.height() - qRound(rect.height() * ratio)}, m_origin{rect.size()} {
+    m_ratio = ratio;
     m_image = std::move(image);
     tray_menu = menu;
     QSize size = rect.size();
     setFixedSize(size);
-    setGeometry(rect);
+    setGeometry(getScreenRect(rect));
 #ifdef OCR
     m_center = QPoint(size.width() / 2, size.height() / 2);
     m_radius = qMin(size.width(), size.height()) / 4;
@@ -25,13 +26,14 @@ TopWidget::TopWidget(QImage &image, const QRect &rect, QMenu *menu): m_max_offse
     init();
 }
 
-TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect, QMenu *menu): m_origin{rect.size()} {
+TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect, QMenu *menu, qreal ratio): m_origin{rect.size()} {
+    m_ratio = ratio;
     m_image = std::move(image);
     m_vector = std::move(vector);
     tray_menu = menu;
     QSize size = rect.size();
     setFixedSize(size);
-    setGeometry(rect);
+    setGeometry(getScreenRect(rect));
 #ifdef OCR
     m_center = QPoint(size.width() / 2, size.height() / 2);
     m_radius = qMin(size.width(), size.height()) / 4;
@@ -40,14 +42,15 @@ TopWidget::TopWidget(QImage &&image, QVector<Shape *> &vector, const QRect &rect
     init();
 }
 
-TopWidget::TopWidget(QImage &image, QPainterPath &&path, QVector<Shape *> &vector, const QRect &rect, QMenu *menu): m_origin{rect.size()} {
+TopWidget::TopWidget(QImage &image, QPainterPath &&path, QVector<Shape *> &vector, const QRect &rect, QMenu *menu, qreal ratio): m_origin{rect.size()} {
+    m_ratio = ratio;
     m_image = std::move(image);
     m_path = std::move(path);
     m_vector = std::move(vector);
     tray_menu = menu;
     QSize size = rect.size();
     setFixedSize(size);
-    setGeometry(rect);
+    setGeometry(getScreenRect(rect));
 #ifdef OCR
     m_center = QPoint(size.width() / 2, size.height() / 2);
     m_radius = qMin(size.width(), size.height()) / 4;
@@ -77,17 +80,10 @@ void TopWidget::showTool() {
     QPoint point;
 
     QRect rect = geometry();
-    QList<QScreen*> list = QApplication::screens();
-    QSize size;
-    for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
-        QRect rect = (*iter)->geometry();
-        size.setWidth(std::max(rect.right(), size.width()));
-        size.setHeight(std::max(rect.bottom(), size.height()));
-    }
 
-    if (rect.bottom() + m_tool->height() < size.height()) {
-        if (rect.right() > size.width()) { // 左下
-            if (rect.left() + m_tool->width() > size.width()) {
+    if (rect.bottom() + m_tool->height() < m_screen_size.height()) {
+        if (rect.right() > m_screen_size.width()) { // 左下
+            if (rect.left() + m_tool->width() > m_screen_size.width()) {
                 point.setX(rect.left() - m_tool->width());
             } else {
                 point.setX(rect.left());
@@ -101,8 +97,8 @@ void TopWidget::showTool() {
         }
         point.setY(rect.bottom());
     } else if (rect.top() >= m_tool->height()) {
-        if (rect.right() > size.width()) { // 左上
-            if (rect.left() + m_tool->width() > size.width()) {
+        if (rect.right() > m_screen_size.width()) { // 左上
+            if (rect.left() + m_tool->width() > m_screen_size.width()) {
                 point.setX(rect.left() - m_tool->width());
             } else {
                 point.setX(rect.left());
@@ -148,6 +144,15 @@ void TopWidget::ocrEnd(const QVector<Ocr::OcrResult> &result) {
             addTip("无结果");
         }
         m_ocr = result;
+        if (m_ratio != 1) {
+            for (auto iter = result.begin(); iter != result.end(); ++iter) {
+                QTransform transform;
+                transform.scale(1 / m_ratio, 1 / m_ratio);
+                m_ocr.push_back({transform.map(iter->path), iter->text, iter->score});
+            }
+        } else {
+            m_ocr = result;
+        }
     }
 
     if (m_ocr_timer != -1) {
@@ -252,10 +257,17 @@ void TopWidget::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
     painter.scale(width()  / static_cast<float>(m_origin.width()), height() / static_cast<float>(m_origin.height()));
     if (m_path.elementCount() < 2) {
-        painter.drawImage(m_image.rect(), m_image, QRect(QPoint(0, m_offsetY), m_image.size()));
-        // painter.drawImage(rect(), m_image, QRect(0, m_offsetY, m_image.width(), m_image.width() / m_ratio));
+        QRect target = QRect(0, 0, m_image.width() / m_ratio, m_image.height() / m_ratio);
+        QRect source = QRect(0, m_offsetY, m_image.width(), m_image.height());
+        painter.drawImage(target, m_image, source);
     } else {
-        painter.fillPath(m_path, m_image);
+        QBrush brush{m_image};
+        if (m_ratio != 1) {
+            QTransform transform;
+            transform.scale(1.0 / m_ratio, 1.0 / m_ratio);
+            brush.setTransform(transform);
+        }
+        painter.fillPath(m_path, brush);
         painter.setClipPath(m_path);
     }
 
@@ -300,7 +312,7 @@ void TopWidget::paintEvent(QPaintEvent *event) {
     }
 #endif
     if (m_scroll_timer != -1) {
-        int maxH = m_image.height();
+        int maxH = m_image.height() / m_ratio;
         int h = height();
 
         int sliderHeight = std::max<int>(static_cast<float>(h) / maxH * h, 20); // 最小高度为20
@@ -321,6 +333,7 @@ void TopWidget::hideEvent(QHideEvent *event) {
 }
 
 void TopWidget::mousePressEvent(QMouseEvent *event) {
+    m_mouse_pos = event->pos();
     if (event->buttons() == Qt::LeftButton) {
         m_press = true;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -350,6 +363,7 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
 }
 
 void TopWidget::mouseReleaseEvent(QMouseEvent *event) {
+    m_mouse_pos = event->pos();
     if (event->button() == Qt::LeftButton) {
         if (m_cursor == Qt::BitmapCursor) {
             if (m_shape == nullptr) {
@@ -371,6 +385,7 @@ void TopWidget::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void TopWidget::mouseMoveEvent(QMouseEvent *event) {
+    m_mouse_pos = event->pos();
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QPoint gpos = event->globalPosition().toPoint();
 #else
@@ -534,10 +549,12 @@ void TopWidget::save(const QString &path) {
     if (! m_path.isEmpty()) {
         painter.setClipPath(m_path);
     }
-    for (auto iter = m_vector.cbegin(); iter != m_vector.cend(); ++iter) {
+    for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+        (*iter)->scale(m_ratio, m_ratio);
         (*iter)->draw(painter);
     }
     if (m_shape != nullptr) {
+        m_shape->scale(m_ratio, m_ratio);
         m_shape->draw(painter);
     }
     painter.end();
@@ -632,7 +649,6 @@ void TopWidget::init() {
     connect(m_tool, &Tool::opacityChanged, this, &TopWidget::updateOpacity);
 
     QString text = QString("(%1,%2 %3x%4)").arg(x()).arg(y()).arg(m_image.width()).arg(m_image.height());
-    // QString text = QString("0x%1(%2,%3 %4x%5)").arg(reinterpret_cast<quintptr>(this), QT_POINTER_SIZE, 16).arg(x()).arg(y()).arg(m_image.width()).arg(m_image.height());
 
     m_menu = new QMenu(this);
     m_menu->setIcon(QIcon(QPixmap::fromImage(m_image)));
@@ -640,6 +656,14 @@ void TopWidget::init() {
     m_menu->addAction("显示", this, &TopWidget::moveTop);
     m_menu->addAction("关闭", this, &TopWidget::close);
     tray_menu->addMenu(m_menu);
+
+    QList<QScreen*> list = QApplication::screens();
+    for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
+        QRect rect = (*iter)->geometry();
+        qreal ratio = (*iter)->devicePixelRatio();
+        m_screen_size.setWidth(std::max<int>((rect.right() + 1 - rect.left()) * ratio + rect.left(), m_screen_size.width()));
+        m_screen_size.setHeight(std::max<int>((rect.bottom() + 1 - rect.top()) * ratio + rect.top(), m_screen_size.height()));
+    }
 
     show();
     showTool();

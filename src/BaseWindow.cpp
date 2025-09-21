@@ -85,25 +85,6 @@ void BaseWindow::timerEvent(QTimerEvent *event) {
     BaseWindow::removeTip(event->timerId());
 }
 
-QImage BaseWindow::fullScreenshot() {
-    QList<QScreen*> list = QApplication::screens();
-    QSize size;
-    for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
-        QRect rect = (*iter)->geometry();
-        size.setWidth(std::max(rect.right() + 1, size.width()));
-        size.setHeight(std::max(rect.bottom() + 1, size.height()));
-    }
-
-    QImage image(size, QImage::Format_ARGB32);
-    QPainter painter(&image);
-    for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
-        QScreen *screen = (*iter);
-        painter.drawImage(screen->geometry(), screen->grabWindow(0).toImage());
-    }
-    painter.end();
-    return image;
-}
-
 QRect BaseWindow::getRect(const QPoint &p1, const QPoint &p2) {
     int x = p1.x();
     int y = p1.y();
@@ -155,6 +136,39 @@ void BaseWindow::setShape(const QPoint &point) {
     }
 }
 
+QPoint BaseWindow::getScreenPoint(const QPoint &point) {
+    if (m_ratio == 1) return point;
+
+    QPoint pos = point * m_ratio;
+    QList<QScreen*> list = QApplication::screens();
+    QScreen* targetScreen = nullptr;
+    for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
+        QRect tmp = (*iter)->geometry();
+        qreal ratio = (*iter)->devicePixelRatio();
+        tmp.setWidth(tmp.width() * ratio);
+        tmp.setHeight(tmp.height() * ratio);
+        if (tmp.contains(pos)) {
+            targetScreen = *iter;
+            break;
+        }
+    }
+    if (! targetScreen) {
+        targetScreen = QApplication::primaryScreen();
+    }
+
+    QRect targetRect = targetScreen->geometry();
+    int x = (pos.x() - targetRect.left()) / m_ratio + targetRect.left();
+    int y = (pos.y() - targetRect.top()) / m_ratio + targetRect.top();
+
+    return {x, y};
+}
+
+QRect BaseWindow::getScreenRect(const QRect &rect) {
+    if (m_ratio == 1) return rect;
+
+    return {getScreenPoint(rect.topLeft()), rect.size()};
+}
+
 void BaseWindow::undo() {
     if (! m_vector.empty() && ! m_press) {
         m_stack.push(m_vector.takeLast());
@@ -171,10 +185,9 @@ void BaseWindow::redo() {
 
 void BaseWindow::saveColor() {
     if (! m_image.isNull()) {
-        QPoint point = mapFromGlobal(QCursor::pos());
         QClipboard *clipboard = QApplication::clipboard();
         if (clipboard) {
-            clipboard->setText(m_image.pixelColor(point).name().toUpper());
+            clipboard->setText(m_image.pixelColor(m_mouse_pos * m_ratio).name().toUpper());
             addTip("复制颜色成功");
         } else {
             addTip("复制颜色失败");

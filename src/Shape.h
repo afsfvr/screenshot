@@ -1,4 +1,4 @@
-#ifndef SHAPE_H
+﻿#ifndef SHAPE_H
 #define SHAPE_H
 #include <QPainter>
 #include <QPen>
@@ -17,6 +17,7 @@ public:
     virtual Shape *getInstance(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false) = 0;
     virtual void addPoint(const QPoint &point) = 0;
     virtual bool isNull() = 0;
+    virtual void scale(qreal sx, qreal sy) = 0;
     virtual void translate(const QPoint &point) = 0;
     void translate(int x, int y);
     void draw(QPainter &painter);
@@ -38,6 +39,7 @@ public:
     Rectangle(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
     virtual void addPoint(const QPoint &point) override;
     virtual bool isNull() override;
+    virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
 protected:
     virtual void paint(QPainter &painter) override;
@@ -51,6 +53,7 @@ public:
     Ellipse(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
     virtual void addPoint(const QPoint &point) override;
     virtual bool isNull() override;
+    virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
 protected:
     virtual void paint(QPainter &painter) override;
@@ -64,6 +67,7 @@ public:
     StraightLine(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
     virtual void addPoint(const QPoint &point) override;
     virtual bool isNull() override;
+    virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
 protected:
     virtual void paint(QPainter &painter) override;
@@ -77,6 +81,7 @@ public:
     Line(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
     virtual void addPoint(const QPoint &point) override;
     virtual bool isNull() override;
+    virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
 protected:
     virtual void paint(QPainter &painter) override;
@@ -90,6 +95,7 @@ public:
     Arrow(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
     virtual void addPoint(const QPoint &point) override;
     virtual bool isNull() override;
+    virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
 protected:
     virtual void paint(QPainter &painter) override;
@@ -106,6 +112,7 @@ public:
     Text(const QPoint &point, const QPen &pen, const QFont &font, float opacity = 1.0f, bool fill = false);
     virtual void addPoint(const QPoint &point) override;
     virtual bool isNull() override;
+    virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
     void setText(const QString &text);
     const QFont &font() const;

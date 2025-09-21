@@ -1,4 +1,4 @@
-#ifndef BASEWINDOW_H
+﻿#ifndef BASEWINDOW_H
 #define BASEWINDOW_H
 
 #include <QWidget>
@@ -30,11 +30,12 @@ protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
     virtual void timerEvent(QTimerEvent *event) override;
 
-    QImage fullScreenshot();
     QRect getRect(const QPoint &p1, const QPoint &p2);
     void setShape(const QPoint &point);
     virtual bool isValid() const = 0;
     virtual QRect getGeometry() const = 0;
+    QPoint getScreenPoint(const QPoint &point);
+    QRect getScreenRect(const QRect &rect);
 protected slots:
     virtual void undo();
     virtual void redo();
@@ -63,6 +64,8 @@ protected:
     QLineEdit *m_edit;
     bool m_ignore;
     Qt::CursorShape m_cursor;
+    qreal m_ratio;
+    QPoint m_mouse_pos;
 
     struct TipStruct {
         int id;

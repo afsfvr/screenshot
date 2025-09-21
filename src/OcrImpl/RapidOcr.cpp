@@ -110,6 +110,7 @@ bool RapidOcr::init() {
 
 QWidget *RapidOcr::settingWidget() {
     QWidget *widget = new QWidget;
+    widget->setWindowTitle("RapidOcr");
 
     QPushButton *det = new QPushButton{"选择路径", widget};
     QPushButton *cls = new QPushButton{"选择路径", widget};

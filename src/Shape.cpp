@@ -1,4 +1,4 @@
-#if defined(_WIN32) || defined(_WIN64)
+﻿#if defined(_WIN32) || defined(_WIN64)
 #define _USE_MATH_DEFINES
 #endif
 #include "Shape.h"
@@ -61,6 +61,14 @@ bool Rectangle::isNull() {
     return (p2.x() == -1 && p2.y() == -1) || p1 == p2;
 }
 
+void Rectangle::scale(qreal sx, qreal sy) {
+    if (isNull()) return;
+    p1.rx() *= sx;
+    p1.ry() *= sy;
+    p2.rx() *= sx;
+    p2.ry() *= sy;
+}
+
 void Rectangle::translate(const QPoint &point) {
     p1 += point;
     p2 += point;
@@ -95,6 +103,14 @@ void Ellipse::addPoint(const QPoint &point) {
 
 bool Ellipse::isNull() {
     return (p2.x() == -1 && p2.y() == -1) || p1 == p2;
+}
+
+void Ellipse::scale(qreal sx, qreal sy) {
+    if (isNull()) return;
+    p1.rx() *= sx;
+    p1.ry() *= sy;
+    p2.rx() *= sx;
+    p2.ry() *= sy;
 }
 
 void Ellipse::translate(const QPoint &point) {
@@ -134,6 +150,14 @@ bool StraightLine::isNull() {
     return (p2.x() == -1 && p2.y() == -1) || p1 == p2;
 }
 
+void StraightLine::scale(qreal sx, qreal sy) {
+    if (isNull()) return;
+    p1.rx() *= sx;
+    p1.ry() *= sy;
+    p2.rx() *= sx;
+    p2.ry() *= sy;
+}
+
 void StraightLine::translate(const QPoint &point) {
     p1 += point;
     p2 += point;
@@ -153,6 +177,13 @@ void Line::addPoint(const QPoint &point) {
 
 bool Line::isNull() {
     return m_path.elementCount() <= 2;
+}
+
+void Line::scale(qreal sx, qreal sy) {
+    if (isNull()) return;
+    QTransform transform;
+    transform.scale(sx, sy);
+    m_path = transform.map(m_path);
 }
 
 void Line::translate(const QPoint &point) {
@@ -178,6 +209,17 @@ void Arrow::addPoint(const QPoint &point) {
 
 bool Arrow::isNull() {
     return m_p2.isNull() || m_p1.isNull();
+}
+
+void Arrow::scale(qreal sx, qreal sy) {
+    if (isNull()) return;
+    m_p1.rx() *= sx;
+    m_p1.ry() *= sy;
+    m_p2.rx() *= sx;
+    m_p2.ry() *= sy;
+    QTransform transform;
+    transform.scale(sx, sy);
+    m_path = transform.map(m_path);
 }
 
 void Arrow::translate(const QPoint &point) {
@@ -236,6 +278,12 @@ void Text::addPoint(const QPoint &point) {
 
 bool Text::isNull() {
     return (! m_text.isNull() && m_text.isEmpty());
+}
+
+void Text::scale(qreal sx, qreal sy) {
+    if (isNull()) return;
+    m_point.rx() *= sx;
+    m_point.ry() *= sy;
 }
 
 void Text::translate(const QPoint &point) {

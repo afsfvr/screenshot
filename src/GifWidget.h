@@ -11,9 +11,6 @@
 #include <QAction>
 #include <QQueue>
 #include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
 
 #include "gif.h"
 #include "BlockQueue.h"
@@ -31,7 +28,7 @@ class GifWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, QWidget *parent = nullptr);
+    explicit GifWidget(const QSize &screenSize, const QRect &rect, QMenu *menu, qreal ratio, QWidget *parent = nullptr);
     ~GifWidget();
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -43,6 +40,7 @@ private:
     void init();
     QImage screenshot();
     void start();
+    QRect getScreenRect(const QRect &rect);
 
     QString m_tmp;
     QString m_path;
@@ -57,6 +55,7 @@ private:
     QMenu *m_menu;
     QMenu *system_menu;
     QAction *m_action;
+    const qreal m_ratio;
 
     QWidget *m_widget;
     QHBoxLayout *m_layout;

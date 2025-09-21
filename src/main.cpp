@@ -124,6 +124,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 #endif
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
+    QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
 #ifdef Q_OS_LINUX
     if (QApplication::platformName() != "xcb" || qgetenv("XDG_SESSION_TYPE") != "x11") {

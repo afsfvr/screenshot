@@ -14,9 +14,9 @@
 class TopWidget : public BaseWindow {
     Q_OBJECT
 public:
-    explicit TopWidget(QImage &image, const QRect &rect, QMenu *menu);
-    explicit TopWidget(QImage &&image, QVector<Shape*> &vector, const QRect &rect, QMenu *menu);
-    explicit TopWidget(QImage &image, QPainterPath &&path, QVector<Shape*> &vector, const QRect &rect, QMenu *menu);
+    explicit TopWidget(QImage &image, const QRect &rect, QMenu *menu, qreal ratio);
+    explicit TopWidget(QImage &&image, QVector<Shape*> &vector, const QRect &rect, QMenu *menu, qreal ratio);
+    explicit TopWidget(QImage &image, QPainterPath &&path, QVector<Shape*> &vector, const QRect &rect, QMenu *menu, qreal ratio);
     virtual ~TopWidget();
     void showTool();
 
@@ -77,6 +77,7 @@ private:
     QTextEdit *m_text = nullptr;
     QLabel *m_label = nullptr;
     QPushButton *m_button = nullptr;
+    QSize m_screen_size;
 #endif
 
 #ifdef Q_OS_LINUX
