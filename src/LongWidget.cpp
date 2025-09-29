@@ -187,8 +187,8 @@ void LongWidget::updateLabel() {
         QSize size;
         for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
             QRect rect = (*iter)->geometry();
-            size.setWidth(std::max(rect.right() + 1, size.width()));
-            size.setHeight(std::max(rect.bottom() + 1, size.height()));
+            size.setWidth(qMax(rect.right() + 1, size.width()));
+            size.setHeight(qMax(rect.bottom() + 1, size.height()));
         }
 
         QPoint point;

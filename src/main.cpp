@@ -19,7 +19,7 @@ static void signal_handler(int x) {
     QApplication::quit();
 }
 #elif defined(Q_OS_WINDOWS)
-static HHOOK hHook;
+static HHOOK hHook = nullptr;
 static HWND targetHwnd = nullptr;
 static LRESULT CALLBACK mouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (wParam == WM_MOUSEWHEEL && targetHwnd != nullptr) {
@@ -145,8 +145,10 @@ int main(int argc, char *argv[])
     QApplication::setQuitOnLastWindowClosed(false);
     MainWindow w;
 #ifdef Q_OS_WINDOWS
-    hHook = SetWindowsHookExW(WH_MOUSE_LL, mouseProc, NULL, 0);
-    targetHwnd = reinterpret_cast<HWND>(w.winId());
+    if (! IsDebuggerPresent()) {
+        hHook = SetWindowsHookExW(WH_MOUSE_LL, mouseProc, NULL, 0);
+        targetHwnd = reinterpret_cast<HWND>(w.winId());
+    }
 #endif
 #ifdef OCR
     qRegisterMetaType<QVector<Ocr::OcrResult>>("QVector<Ocr::OcrResult>");
@@ -158,8 +160,10 @@ int main(int argc, char *argv[])
     OcrInstance->wait();
 #endif
 #ifdef Q_OS_WINDOWS
-    targetHwnd = nullptr;
-    UnhookWindowsHookEx(hHook);
+    if (hHook != nullptr) {
+        targetHwnd = nullptr;
+        UnhookWindowsHookEx(hHook);
+    }
 #endif
     return ret;
 }

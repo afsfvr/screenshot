@@ -456,33 +456,34 @@ void MainWindow::paintEvent(QPaintEvent *event) {
     }
 
     painter.setClipping(false);
-
-    if (m_state == State::Null || (m_state & State::Screen) || m_resize != ResizeImage::NoResize) {
+    if (m_state == State::Null || (m_state & State::Screen) || (m_press && m_resize != ResizeImage::NoResize)) {
         const QPoint &cursor = m_mouse_pos;
-        QPoint point;
-        if (cursor.x() + 85 + 10 <= this->width()) {
-            point.setX(cursor.x() + 10);
-        } else {
-            point.setX(cursor.x() - 85 - 10);
+        if (cursor.x() >= 0 && cursor.y() >= 0) {
+            QPoint point;
+            if (cursor.x() + 85 + 10 <= this->width()) {
+                point.setX(cursor.x() + 10);
+            } else {
+                point.setX(cursor.x() - 85 - 10);
+            }
+            if (cursor.y() + 140 + 25 <= this->height()) {
+                point.setY(cursor.y() + 25);
+            } else {
+                point.setY(cursor.y() - 140 - 20);
+            }
+            painter.fillRect(point.x() - 3, point.y() - 3 ,90, 145, QColor(0, 0, 0, 150));
+            painter.drawRect(point.x() - 1, point.y() - 1, 84 + 2, 84 + 2);
+            painter.drawImage(QRect(point.x(), point.y(), 84, 84), m_image, QRect((cursor.x() - 10) * m_ratio, (cursor.y() - 10) * m_ratio, 21 * m_ratio, 21 * m_ratio));
+            painter.drawLine(point.x(), point.y() + 42, point.x() + 84, point.y() + 42);
+            painter.drawLine(point.x() + 42, point.y(), point.x() + 42, point.y() + 84);
+            QColor color = m_image.pixelColor(cursor * m_ratio);
+            QFont font = painter.font();
+            font.setPixelSize(13);
+            painter.setFont(font);
+            painter.drawText(point.x(), point.y() + 97, QString("RGB: %1").arg(color.name().toUpper()));
+            painter.drawText(point.x(), point.y() + 111, QString("按C复制颜色"));
+            painter.drawText(point.x(), point.y() + 125, QString("%1, %2").arg(cursor.x() * m_ratio).arg(cursor.y() * m_ratio));
+            painter.drawText(point.x(), point.y() + 138, QString("(%1 x %2)").arg(rect.width() * m_ratio).arg(rect.height() * m_ratio));
         }
-        if (cursor.y() + 140 + 25 <= this->height()) {
-            point.setY(cursor.y() + 25);
-        } else {
-            point.setY(cursor.y() - 140 - 20);
-        }
-        painter.fillRect(point.x() - 3, point.y() - 3 ,90, 145, QColor(0, 0, 0, 150));
-        painter.drawRect(point.x() - 1, point.y() - 1, 84 + 2, 84 + 2);
-        painter.drawImage(QRect(point.x(), point.y(), 84, 84), m_image, QRect((cursor.x() - 10) * m_ratio, (cursor.y() - 10) * m_ratio, 21 * m_ratio, 21 * m_ratio));
-        painter.drawLine(point.x(), point.y() + 42, point.x() + 84, point.y() + 42);
-        painter.drawLine(point.x() + 42, point.y(), point.x() + 42, point.y() + 84);
-        QColor color = m_image.pixelColor(cursor * m_ratio);
-        QFont font = painter.font();
-        font.setPixelSize(13);
-        painter.setFont(font);
-        painter.drawText(point.x(), point.y() + 97, QString("RGB: %1").arg(color.name().toUpper()));
-        painter.drawText(point.x(), point.y() + 111, QString("按C复制颜色"));
-        painter.drawText(point.x(), point.y() + 125, QString("%1, %2").arg(cursor.x() * m_ratio).arg(cursor.y() * m_ratio));
-        painter.drawText(point.x(), point.y() + 138, QString("(%1 x %2)").arg(rect.width() * m_ratio).arg(rect.height() * m_ratio));
     }
 
     drawTips(painter);
@@ -644,6 +645,7 @@ void MainWindow::saveImage() {
 
 void MainWindow::start() {
     m_ratio = 1;
+    m_mouse_pos = QPoint{-1, -1};
     disconnect(SIGNAL(choosePath()));
     m_tool->setEditShow(! m_gif);
     if (m_gif) {
@@ -1138,7 +1140,10 @@ void MainWindow::updateWindows() {
             if ((attributes.map_state != IsViewable) || (attributes.width == attributes.height && attributes.width <= 5)) {
                 continue;
             }
-            m_windows.push_back({attributes.x / m_ratio, attributes.y / m_ratio, attributes.width / m_ratio, attributes.height / m_ratio});
+            m_windows.push_back({static_cast<int>(attributes.x / m_ratio),
+                                 static_cast<int>(attributes.y / m_ratio),
+                                 static_cast<int>(attributes.width / m_ratio),
+                                 static_cast<int>(attributes.height / m_ratio)});
         }
 
         XFree(children);
