@@ -93,6 +93,7 @@ private:
     int m_ratio_timer = -1;
     const QSize m_origin;
     bool m_scale_ctrl = true;
+    float m_scale_ratio = 1;
 };
 
 #endif // TOPWIDGET_H

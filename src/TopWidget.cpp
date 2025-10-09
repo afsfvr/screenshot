@@ -374,13 +374,12 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
             setCursorShape(Qt::BitmapCursor);
             QPoint point = event->pos();
             point.ry() += m_offsetY;
-            float ratio = static_cast<int>(static_cast<float>(width()) / m_origin.width() * 100) * 0.01f;
 #ifdef OCR
             if (m_ocr_timer == -1) {
-                setShape(point / ratio);
+                setShape(point / m_scale_ratio);
             }
 #else
-            setShape(point / ratio);
+            setShape(point / m_scale_ratio);
 #endif
         } else {
             setCursorShape(Qt::SizeAllCursor);
@@ -430,7 +429,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
 #ifdef OCR
         if (m_widget->isHidden() || ! m_widget->geometry().contains(gpos)) {
             bool hide = true;
-            QPoint point = event->pos();
+            QPoint point = event->pos() / m_scale_ratio;
             if (m_max_offset > 0) {
                 point.ry() += m_offsetY;
             }
@@ -448,9 +447,9 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                         if (m_max_offset > 0) {
                             QPoint bottomLeft = rect.bottomLeft();
                             bottomLeft.ry() -= m_offsetY;
-                            m_widget->move(mapToGlobal(bottomLeft));
+                            m_widget->move(mapToGlobal(bottomLeft * m_scale_ratio));
                         } else {
-                            m_widget->move(mapToGlobal(rect.bottomLeft()));
+                            m_widget->move(mapToGlobal(rect.bottomLeft() * m_scale_ratio));
                         }
                     }
                     hide = false;
@@ -465,10 +464,9 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
     } else if (m_cursor == Qt::BitmapCursor) {
         const QRect &rect = this->rect();
         if (m_shape != nullptr && rect.isValid()) {
-            float ratio = static_cast<int>(static_cast<float>(width()) / m_origin.width() * 100) * 0.01f;
             QPoint point = event->pos();
             if (rect.contains(point)) {
-                m_shape->addPoint(QPoint{static_cast<int>(point.x() / ratio), static_cast<int>(point.y() / ratio + m_offsetY)});
+                m_shape->addPoint(QPoint{static_cast<int>(point.x() / m_scale_ratio), static_cast<int>(point.y() / m_scale_ratio + m_offsetY)});
             } else {
                 if (point.x() < rect.left()) {
                     point.setX(rect.left());
@@ -480,7 +478,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                 } else if (point.y() > rect.bottom()) {
                     point.setY(rect.bottom());
                 }
-                m_shape->addPoint(QPoint{static_cast<int>(point.x() / ratio), static_cast<int>(point.y() / ratio + m_offsetY)});
+                m_shape->addPoint(QPoint{static_cast<int>(point.x() / m_scale_ratio), static_cast<int>(point.y() / m_scale_ratio + m_offsetY)});
             }
         }
         update();
@@ -733,14 +731,17 @@ bool TopWidget::contains(const QPoint &point) {
 }
 
 void TopWidget::scaleWidget(int delta) {
-    float ratio = static_cast<int>(static_cast<float>(width()) / m_origin.width() * 100) * 0.01f;
+    float ratio = m_scale_ratio;
     if (delta < 0) {
         ratio -= 0.05;
+        if (ratio < 0.1f) ratio = 0.1f;
     } else if (delta > 0) {
         ratio += 0.05;
+        if (ratio > 5) ratio = 5;
     }
-    if (ratio < 0.1f || ratio > 5) return;
-    setFixedSize(m_origin * ratio);
+    if (ratio == m_scale_ratio) return;
+    m_scale_ratio = ratio;
+    setFixedSize(m_origin * m_scale_ratio);
     m_tool->hide();
     if (m_ratio_timer != -1) {
         killTimer(m_ratio_timer);
