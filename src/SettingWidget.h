@@ -40,6 +40,7 @@ public:
     inline bool fullScreen() const { return m_full_screen; }
     inline const HotKey& capture() const { return m_capture; }
     inline const HotKey& record() const { return m_record; }
+    inline bool scaleCtrl() const { return m_scale_ctrl; }
 
 protected:
     void showEvent(QShowEvent *event) override;
@@ -67,6 +68,7 @@ signals:
     void autoSaveChanged(const HotKey &key, quint8 mode, const QString &path);
     void captureChanged(const HotKey &key);
     void recordChanged(const HotKey &key);
+    void scaleKeyChanged(bool value);
 
 private:
     Ui::SettingWidget *ui;
@@ -76,6 +78,7 @@ private:
     bool m_full_screen;
     HotKey m_capture;
     HotKey m_record;
+    bool m_scale_ctrl;
 };
 
 #endif // SETTINGWIDGET_H

@@ -29,7 +29,7 @@ QDataStream& operator>>(QDataStream& stream, HotKey &key) {
     return stream;
 }
 
-SettingWidget::SettingWidget(QWidget *parent): QWidget(parent), ui(new Ui::SettingWidget) {
+SettingWidget::SettingWidget(QWidget *parent): QWidget(parent), ui(new Ui::SettingWidget), m_scale_ctrl{true} {
     ui->setupUi(this);
     setWindowTitle("设置");
 
@@ -76,7 +76,7 @@ void SettingWidget::readConfig() {
         QDataStream stream{&file};
         QString format;
         stream >> m_auto_save_key >> m_auto_save_path >> format >> m_full_screen;
-        stream >> m_capture >> m_record;
+        stream >> m_capture >> m_record >> m_scale_ctrl;
 #ifdef OCR
         QByteArray ocrArray;
         stream >> ocrArray;
@@ -108,6 +108,9 @@ void SettingWidget::readConfig() {
             emit recordChanged(m_record);
             updateKey3();
         }
+        ui->radioButton->setChecked(m_scale_ctrl);
+        ui->radioButton_2->setChecked(! m_scale_ctrl);
+        emit scaleKeyChanged(m_scale_ctrl);
         file.close();
     } else {
         qWarning() << "打开配置文件失败：" << file.errorString();
@@ -120,7 +123,7 @@ void SettingWidget::saveConfig() {
     if (file.open(QFile::WriteOnly | QFile::Truncate)) {
         QDataStream stream{&file};
         stream << m_auto_save_key << m_auto_save_path << m_save_format << m_full_screen;
-        stream << m_capture << m_record;
+        stream << m_capture << m_record << m_scale_ctrl;
 #ifdef OCR
         QByteArray ocrArray = OcrInstance->save();
         stream << ocrArray;
@@ -410,6 +413,11 @@ void SettingWidget::confirm() {
         save = true;
         m_auto_save_path = savePath;
     }
+    if (m_scale_ctrl != ui->radioButton->isChecked()) {
+        save = true;
+        m_scale_ctrl = ui->radioButton->isChecked();
+        emit scaleKeyChanged(m_scale_ctrl);
+    }
 
     if (save) {
         saveConfig();
@@ -417,22 +425,23 @@ void SettingWidget::confirm() {
 }
 
 void SettingWidget::keyHelp() {
-    QString helpText =
-        "<h3>截图和置顶窗口</h3>"
-        "<ul>"
-        "<li><b>ESC</b>: 关闭</li>"
-        "<li><b>Ctrl+C</b>: 复制图片到剪贴板</li>"
-        "<li><b>Ctrl+S</b>: 保存图片到电脑</li>"
-        "<li><b>Ctrl+Z</b>: 撤销对图片的编辑</li>"
-        "<li><b>Ctrl+Y</b>: 恢复对图片的编辑</li>"
-        "<li><b>C</b>: 复制鼠标位置的 RGB 到剪贴板</li>"
-        "<li><b>← ↑ → ↓</b>: 微调位置</li>"
-        "</ul>"
-        "<h3>置顶窗口</h3>"
-        "<ul>"
-        "<li><b>鼠标滚轮</b>: 长截图上下滑动</li>"
-        "<li><b>Ctrl + 鼠标滚轮</b>: 调整窗口大小</li>"
-        "</ul>";
+    QString helpText = QString("<h3>截图和置顶窗口</h3>"
+                               "<ul>"
+                               "<li><b>ESC</b>: 关闭</li>"
+                               "<li><b>Ctrl+C</b>: 复制图片到剪贴板</li>"
+                               "<li><b>Ctrl+S</b>: 保存图片到电脑</li>"
+                               "<li><b>Ctrl+Z</b>: 撤销对图片的编辑</li>"
+                               "<li><b>Ctrl+Y</b>: 恢复对图片的编辑</li>"
+                               "<li><b>C</b>: 复制鼠标位置的 RGB 到剪贴板</li>"
+                               "<li><b>← ↑ → ↓</b>: 微调位置</li>"
+                               "</ul>"
+                               "<h3>置顶窗口</h3>"
+                               "<ul>"
+                               "<li><b>%1</b>: 长截图上下滑动</li>"
+                               "<li><b>%2</b>: 调整窗口大小</li>"
+                               "</ul>")
+                           .arg(m_scale_ctrl ? "鼠标滚轮" : "Ctrl + 鼠标滚轮")
+                           .arg(m_scale_ctrl ? "Ctrl + 鼠标滚轮" : "鼠标滚轮");
     QMessageBox::about(this, "按键帮助", helpText);
 }
 

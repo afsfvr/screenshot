@@ -48,10 +48,10 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::connectTopWidget(TopWidget *t) {
+    connect(m_setting, &SettingWidget::scaleKeyChanged, t, &TopWidget::scaleKeyChanged);
+    t->scaleKeyChanged(m_setting->scaleCtrl());
 #if defined(Q_OS_LINUX)
     connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
-#else
-    Q_UNUSED(t);
 #endif
 }
 

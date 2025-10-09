@@ -61,6 +61,14 @@ TopWidget::TopWidget(QImage &image, QPainterPath &&path, QVector<Shape *> &vecto
 
 TopWidget::~TopWidget() {
     delete m_menu;
+    if (m_scroll_timer != -1) {
+        killTimer(m_scroll_timer);
+        m_scroll_timer = -1;
+    }
+    if (m_ratio_timer != -1) {
+        killTimer(m_ratio_timer);
+        m_ratio_timer = -1;
+    }
 #ifdef OCR
     if (m_ocr_timer != -1) {
         OcrInstance->cancel(this);
@@ -114,6 +122,10 @@ void TopWidget::showTool() {
     }
     m_tool->show();
     m_tool->move(point);
+}
+
+void TopWidget::scaleKeyChanged(bool value) {
+    m_scale_ctrl = value;
 }
 
 #ifdef OCR
@@ -211,6 +223,10 @@ void TopWidget::timerEvent(QTimerEvent *event) {
         killTimer(m_scroll_timer);
         m_scroll_timer = -1;
         update();
+    } else if (event->timerId() == m_ratio_timer) {
+        killTimer(m_ratio_timer);
+        m_ratio_timer = -1;
+        update();
 #ifdef OCR
     } else if (event->timerId() == m_ocr_timer) {
         m_angle = (m_angle + 30) % 360;
@@ -292,7 +308,7 @@ void TopWidget::paintEvent(QPaintEvent *event) {
     }
     if (m_ocr_timer != -1) {
         painter.setRenderHint(QPainter::Antialiasing);
-        painter.fillRect(this->rect(), QColor(255, 255, 255, 150));
+        painter.fillRect(QRect{QPoint{0, 0}, m_origin}, QColor(255, 255, 255, 150));
         for (int i = 0; i < 12; ++i) {
             int alpha = 255 - (i * 20);
             QColor color(100, 100, 255, qMax(0, alpha));
@@ -313,15 +329,28 @@ void TopWidget::paintEvent(QPaintEvent *event) {
 #endif
     if (m_scroll_timer != -1) {
         int maxH = m_image.height() / m_ratio;
-        int h = height();
+        int h = m_origin.height();
 
-        int sliderHeight = std::max<int>(static_cast<float>(h) / maxH * h, 20); // 最小高度为20
+        int sliderHeight = qMax<int>(static_cast<float>(h) / maxH * h, 20); // 最小高度为20
         float offsetRatio = static_cast<float>(m_offsetY) / m_max_offset;
         int sliderY = static_cast<int>((h - sliderHeight) * offsetRatio);
 
-        QRect sliderRect(width() - 10, sliderY, 10, sliderHeight);
+        QRect sliderRect(m_origin.width() - 10, sliderY, 10, sliderHeight);
 
         painter.fillRect(sliderRect, QColor(100, 100, 100));
+    }
+    if (m_ratio_timer != -1) {
+        painter.setPen(Qt::red);
+        float ratio = static_cast<float>(width()) / m_origin.width();
+        QString text = QString("%1%").arg(static_cast<int>(ratio * 100));
+        if (ratio > 1) ratio = 1.f;
+
+        const QFont font = painter.font();
+        QFont f = font;
+        f.setPointSize(f.pointSize() / ratio);
+        painter.setFont(f);
+        painter.drawText(10 / ratio, 20 / ratio, text);
+        painter.setFont(font);
     }
 
     drawTips(painter);
@@ -345,12 +374,13 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
             setCursorShape(Qt::BitmapCursor);
             QPoint point = event->pos();
             point.ry() += m_offsetY;
+            float ratio = static_cast<int>(static_cast<float>(width()) / m_origin.width() * 100) * 0.01f;
 #ifdef OCR
             if (m_ocr_timer == -1) {
-                setShape(point);
+                setShape(point / ratio);
             }
 #else
-            setShape(point);
+            setShape(point / ratio);
 #endif
         } else {
             setCursorShape(Qt::SizeAllCursor);
@@ -435,9 +465,10 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
     } else if (m_cursor == Qt::BitmapCursor) {
         const QRect &rect = this->rect();
         if (m_shape != nullptr && rect.isValid()) {
+            float ratio = static_cast<int>(static_cast<float>(width()) / m_origin.width() * 100) * 0.01f;
             QPoint point = event->pos();
             if (rect.contains(point)) {
-                m_shape->addPoint(QPoint{point.x(), point.y() + m_offsetY});
+                m_shape->addPoint(QPoint{static_cast<int>(point.x() / ratio), static_cast<int>(point.y() / ratio + m_offsetY)});
             } else {
                 if (point.x() < rect.left()) {
                     point.setX(rect.left());
@@ -449,7 +480,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                 } else if (point.y() > rect.bottom()) {
                     point.setY(rect.bottom());
                 }
-                m_shape->addPoint(QPoint{point.x(), point.y() + m_offsetY});
+                m_shape->addPoint(QPoint{static_cast<int>(point.x() / ratio), static_cast<int>(point.y() / ratio + m_offsetY)});
             }
         }
         update();
@@ -487,36 +518,21 @@ void TopWidget::moveEvent(QMoveEvent *event) {
 
 void TopWidget::wheelEvent(QWheelEvent *event) {
     if (event->modifiers() == Qt::ControlModifier) {
-        int w = width(), h = height(), delta = event->angleDelta().y();;
-        if (w < 10 || h < 10) return;
-        if (delta < 0) {
-            w -= w * 0.05;
-        } else if (delta > 0) {
-            w += w * 0.05;
+        if (m_scale_ctrl) {
+            scaleWidget(event->angleDelta().y());
+        } else if (m_max_offset) {
+            scrollWidget(event->angleDelta().y());
+        } else {
+            BaseWindow::wheelEvent(event);
         }
-        if (w < 10) w = 10;
-        float ratio = static_cast<float>(m_origin.width()) / m_origin.height();
-        h = static_cast<int>(w / ratio);
-        setFixedSize(w, h);
-        m_tool->hide();
-    } else if (m_max_offset) {
-        int delta = event->angleDelta().y();
-        if (delta < 0) {
-            m_offsetY = std::min(m_offsetY + 30, m_max_offset);
-            update();
-        } else if (delta > 0) {
-            m_offsetY = std::max(m_offsetY - 30, 0);
-            update();
-        }
-        if (m_scroll_timer != -1) {
-            killTimer(m_scroll_timer);
-        }
-        m_scroll_timer = startTimer(3000);
-#ifdef OCR
-        hideWidget();
-#endif
     } else {
-        BaseWindow::wheelEvent(event);
+        if (! m_scale_ctrl) {
+            scaleWidget(event->angleDelta().y());
+        } else if (m_max_offset) {
+            scrollWidget(event->angleDelta().y());
+        } else {
+            BaseWindow::wheelEvent(event);
+        }
     }
 }
 
@@ -714,6 +730,39 @@ bool TopWidget::contains(const QPoint &point) {
     } else {
         return m_path.contains(point);
     }
+}
+
+void TopWidget::scaleWidget(int delta) {
+    float ratio = static_cast<int>(static_cast<float>(width()) / m_origin.width() * 100) * 0.01f;
+    if (delta < 0) {
+        ratio -= 0.05;
+    } else if (delta > 0) {
+        ratio += 0.05;
+    }
+    if (ratio < 0.1f || ratio > 5) return;
+    setFixedSize(m_origin * ratio);
+    m_tool->hide();
+    if (m_ratio_timer != -1) {
+        killTimer(m_ratio_timer);
+    }
+    m_ratio_timer = startTimer(3000);
+    update();
+}
+
+void TopWidget::scrollWidget(int delta) {
+    if (delta < 0) {
+        m_offsetY = std::min(m_offsetY + 30, m_max_offset);
+    } else if (delta > 0) {
+        m_offsetY = std::max(m_offsetY - 30, 0);
+    }
+#ifdef OCR
+    hideWidget();
+#endif
+    if (m_scroll_timer != -1) {
+        killTimer(m_scroll_timer);
+    }
+    m_scroll_timer = startTimer(3000);
+    update();
 }
 
 #ifdef OCR

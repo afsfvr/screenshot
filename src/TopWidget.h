@@ -21,6 +21,7 @@ public:
     void showTool();
 
 public slots:
+    void scaleKeyChanged(bool value);
 #ifdef OCR
     void ocrStart();
     void ocrEnd(const QVector<Ocr::OcrResult> &result);
@@ -62,6 +63,8 @@ private slots:
 private:
     void init();
     bool contains(const QPoint &point);
+    void scaleWidget(int delta);
+    void scrollWidget(int delta);
 
 private:
     QMenu *tray_menu;
@@ -87,7 +90,9 @@ private:
     int m_offsetY = 0;
     const int m_max_offset = 0;
     int m_scroll_timer = -1;
+    int m_ratio_timer = -1;
     const QSize m_origin;
+    bool m_scale_ctrl = true;
 };
 
 #endif // TOPWIDGET_H
