@@ -442,7 +442,16 @@ void SettingWidget::keyHelp() {
                                "</ul>")
                            .arg(m_scale_ctrl ? "鼠标滚轮" : "Ctrl + 鼠标滚轮")
                            .arg(m_scale_ctrl ? "Ctrl + 鼠标滚轮" : "鼠标滚轮");
-    QMessageBox::about(this, "按键帮助", helpText);
+    QMessageBox *box = new QMessageBox{this};
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    box->setWindowTitle("按键帮助");
+    box->setWindowModality(Qt::WindowModal);
+    box->setText(helpText);
+    QIcon icon = box->windowIcon();
+    QSize size = icon.actualSize(QSize(64, 64));
+    box->setIconPixmap(icon.pixmap(size));
+    box->show();
+    // QMessageBox::about(this, "按键帮助", helpText);
 }
 
 void SettingWidget::checkData(HotKey &key) {
