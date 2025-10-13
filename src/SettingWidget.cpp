@@ -440,8 +440,7 @@ void SettingWidget::keyHelp() {
                                "<li><b>%1</b>: 长截图上下滑动</li>"
                                "<li><b>%2</b>: 调整窗口大小</li>"
                                "</ul>")
-                           .arg(m_scale_ctrl ? "鼠标滚轮" : "Ctrl + 鼠标滚轮")
-                           .arg(m_scale_ctrl ? "Ctrl + 鼠标滚轮" : "鼠标滚轮");
+                           .arg(m_scale_ctrl ? "鼠标滚轮" : "Ctrl + 鼠标滚轮", m_scale_ctrl ? "Ctrl + 鼠标滚轮" : "鼠标滚轮");
     QMessageBox *box = new QMessageBox{this};
     box->setAttribute(Qt::WA_DeleteOnClose);
     box->setWindowTitle("按键帮助");
@@ -510,7 +509,7 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
         if (! file.open(QFile::WriteOnly | QFile::Truncate)) {
             return file.errorString();
         }
-        QString imgPath = QDir::toNativeSeparators(getUserHomePath() + "/.config/screenshot/screenshot.ico");
+        QString imgPath = QDir::toNativeSeparators(getUserHomePath() + "/.config/screenshot/screenshot.png");
         QString content = QString("[Desktop Entry]\n"
                                   "Type=Application\n"
                                   "Name=截图工具\n"
@@ -525,6 +524,7 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
                                   "NoDisplay=false\n").arg(QCoreApplication::applicationFilePath(), imgPath);
         file.write(content.toUtf8());
         file.close();
+        file.setPermissions(file.permissions() | QFileDevice::ExeOwner);
         if (allUser) {
             QString command;
             command = QString("pkexec bash -c 'mv \"%1\" /etc/xdg/autostart/screenshot.desktop'").arg(file.fileName());

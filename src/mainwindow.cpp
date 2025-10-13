@@ -1059,7 +1059,7 @@ void MainWindow::initTray() {
     m_tray = new QSystemTrayIcon(this);
     m_tray->setContextMenu(m_menu);
     m_tray->setIcon(QIcon(":/images/screenshot.ico"));
-    m_tray->setToolTip("截图");
+    m_tray->setToolTip("截图工具");
     m_tray->show();
     connect(m_tray, &QSystemTrayIcon::messageClicked, this, &MainWindow::openSaveDir);
 }
