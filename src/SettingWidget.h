@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QDataStream>
 #include <QProcess>
+#include <QCheckBox>
 
 namespace Ui {
 class SettingWidget;
@@ -42,8 +43,15 @@ public:
     inline const HotKey& record() const { return m_record; }
     inline bool scaleCtrl() const { return m_scale_ctrl; }
 
+signals:
+    void autoSaveChanged(const HotKey &key, quint8 mode, const QString &path);
+    void captureChanged(const HotKey &key);
+    void recordChanged(const HotKey &key);
+    void scaleKeyChanged(bool value);
+
 protected:
     void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
 
 private slots:
     void openFile(const QString &link);
@@ -61,16 +69,12 @@ private:
 #if defined(Q_OS_WINDOWS)
     QString getWindowsError(quint32 error) const;
 #elif defined(Q_OS_LINUX)
+    QString setApplicationMenu(bool add);
+    bool inApplicationMenu();
     QString getUserHomePath() const;
+    QCheckBox *m_box = nullptr;
 #endif
 
-signals:
-    void autoSaveChanged(const HotKey &key, quint8 mode, const QString &path);
-    void captureChanged(const HotKey &key);
-    void recordChanged(const HotKey &key);
-    void scaleKeyChanged(bool value);
-
-private:
     Ui::SettingWidget *ui;
     HotKey m_auto_save_key;
     QString m_auto_save_path;
@@ -79,6 +83,8 @@ private:
     HotKey m_capture;
     HotKey m_record;
     bool m_scale_ctrl;
+
+    QPoint m_pos;
 };
 
 #endif // SETTINGWIDGET_H
