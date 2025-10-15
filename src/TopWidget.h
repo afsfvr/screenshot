@@ -55,6 +55,8 @@ private slots:
     void topChange(bool top);
     void moveTop();
     void updateOpacity(int value);
+    void copyImage();
+    void copyWidget();
 #ifdef OCR
     void copyText();
     void editText();
@@ -64,6 +66,7 @@ private:
     void init();
     bool contains(const QPoint &point);
     void scaleWidget(int delta);
+    void scaleWidget(float ratio);
     void scrollWidget(int delta);
 
 private:
@@ -94,6 +97,10 @@ private:
     const QSize m_origin;
     bool m_scale_ctrl = true;
     float m_scale_ratio = 1;
+
+    QMenu *m_right_menu = nullptr;
+    QAction *m_lock_pos = nullptr;
+    QAction *m_lock_scale = nullptr;
 };
 
 #endif // TOPWIDGET_H

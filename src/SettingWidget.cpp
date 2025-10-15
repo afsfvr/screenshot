@@ -193,7 +193,9 @@ void SettingWidget::showEvent(QShowEvent *event) {
         ui->self_start->setChecked(false);
         ui->all_user->setChecked(false);
     }
+#ifdef Q_OS_LINUX
     if (m_box) m_box->setChecked(inApplicationMenu());
+#endif
 #ifdef OCR
     if (! ui->ocr_setting->isVisible()) {
         QWidget *w = OcrInstance->getSettingWidget();
@@ -301,6 +303,7 @@ void SettingWidget::confirm() {
             }
         }
     }
+#ifdef Q_OS_LINUX
     if (m_box && m_box->isChecked() != inApplicationMenu()) {
         bool add = m_box->isChecked();
         QString error = setApplicationMenu(add);
@@ -309,6 +312,7 @@ void SettingWidget::confirm() {
             return;
         }
     }
+#endif
 
     HotKey key1;
     HotKey key2;

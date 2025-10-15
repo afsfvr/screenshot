@@ -20,6 +20,7 @@ class MainWindow : public BaseWindow
     Q_OBJECT
 
 public:
+    static MainWindow *instance();
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     void connectTopWidget(TopWidget *t);
@@ -127,6 +128,8 @@ private:
     QAction *m_action2 = nullptr;
     QAction *m_action3 = nullptr;
     SettingWidget *m_setting;
+
+    static MainWindow *self;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(MainWindow::States)

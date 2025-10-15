@@ -11,7 +11,6 @@
 
 #include "BlockQueue.h"
 
-class MainWindow;
 class LongWidget : public QWidget {
     Q_OBJECT
 public:
@@ -19,7 +18,7 @@ public:
         QImage image;
         bool down;
     };
-    explicit LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, MainWindow *main, qreal ratio);
+    explicit LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, qreal ratio);
     ~LongWidget();
 
     void showTool();
@@ -50,7 +49,6 @@ private:
 
     QMenu *m_tray_menu;
     QAction *m_action;
-    MainWindow *m_main;
 
     QReadWriteLock m_lock;
     BlockQueue<Data> m_queue;

@@ -7,10 +7,18 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QStandardPaths>
+#include <assert.h>
+
+MainWindow *MainWindow::self = nullptr;
+MainWindow *MainWindow::instance() {
+    return MainWindow::self;
+}
 
 MainWindow::MainWindow(QWidget *parent): BaseWindow(parent),
     m_state{State::Null}, m_resize{ResizeImage::NoResize}, m_gif{false}, m_setting{new SettingWidget} {
 
+    assert(MainWindow::self == nullptr);
+    MainWindow::self = this;
     initTray();
 #ifdef Q_OS_LINUX
     m_monitor = new KeyMouseEvent;
@@ -35,6 +43,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent),
 }
 
 MainWindow::~MainWindow() {
+    MainWindow::self = nullptr;
     safeDelete(m_setting);
 
 #ifdef Q_OS_LINUX
@@ -791,7 +800,7 @@ void MainWindow::longScreenshot() {
     if (m_state & State::Rect) {
         if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
         QImage image = m_image.copy(m_rect.left() * m_ratio, m_rect.top() * m_ratio, m_rect.width() * m_ratio, m_rect.height() * m_ratio);
-        auto *l = new LongWidget(image, m_rect, size(), m_menu, this, m_ratio);
+        auto *l = new LongWidget(image, m_rect, size(), m_menu, m_ratio);
         connect(this, &MainWindow::mouseWheeled, l, &LongWidget::mouseWheel);
         end();
     }

@@ -143,7 +143,7 @@ Shape *Tool::getShape(const QPoint &point) {
 }
 
 void Tool::showEvent(QShowEvent *event) {
-    if (m_shape != nullptr) {
+    if (m_shape != nullptr || ui->opacity->isVisible()) {
         setDraw(ShapeEnum::Null);
     }
     QWidget::showEvent(event);
@@ -418,6 +418,7 @@ void Tool::clickTransparency(){
         setDraw(ShapeEnum::Null);
         ui->btn_opacity->setFlat(true);
         ui->opacity->setVisible(true);
+        ui->opacity->setValue(qRound(windowOpacity() * 100));
         setFixedHeight(52);
     }
 }

@@ -87,8 +87,8 @@ static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, 
     }
 }
 
-LongWidget::LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, MainWindow *main, qreal ratio):
-    m_widget{nullptr}, m_size{size}, m_tray_menu{menu}, m_main{main}, m_ratio{ratio} {
+LongWidget::LongWidget(const QImage &image, const QRect &rect, const QSize &size, QMenu *menu, qreal ratio):
+    m_widget{nullptr}, m_size{size}, m_tray_menu{menu}, m_ratio{ratio} {
     m_image = image.convertToFormat(QImage::Format_BGR888);
 
     m_screen = getScreenRect(rect.adjusted(-1, -1, 1, 1));
@@ -153,7 +153,10 @@ void LongWidget::edit() {
         QThread::usleep(20);
     }
     m_lock.lockForWrite();
-    m_main->connectTopWidget(new TopWidget(m_image, geometry(), m_tray_menu, m_ratio));
+    if (MainWindow::instance()) {
+        MainWindow::instance()->connectTopWidget(new TopWidget(m_image, geometry(), m_tray_menu, m_ratio));
+    }
+
     m_lock.unlock();
     this->close();
 }

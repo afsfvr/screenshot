@@ -24,6 +24,7 @@ class BaseWindow : public QWidget
 public:
     explicit BaseWindow(QWidget *parent = nullptr);
     virtual ~BaseWindow();
+
 protected:
     virtual void keyPressEvent(QKeyEvent *event) override;
     virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
@@ -36,6 +37,10 @@ protected:
     virtual QRect getGeometry() const = 0;
     QPoint getScreenPoint(const QPoint &point);
     QRect getScreenRect(const QRect &rect);
+
+signals:
+    void choosePath();
+
 protected slots:
     virtual void undo();
     virtual void redo();
@@ -49,8 +54,7 @@ protected slots:
     void clearStack();
     void drawTips(QPainter &painter);
     void setCursorShape(Qt::CursorShape cursor=Qt::ArrowCursor);
-signals:
-    void choosePath();
+
 protected:
     QImage m_image;
     QVector<Shape*> m_vector;

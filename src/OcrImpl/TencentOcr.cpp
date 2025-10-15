@@ -271,7 +271,7 @@ QByteArray TencentOcr::sha256Hex(const QByteArray &array) {
 QByteArray TencentOcr::getRandomByteArray(quint32 count) const {
     QByteArray array;
     for (quint32 i = 0; i < count; ++i) {
-        array.append(static_cast<char>(QRandomGenerator::global()->generate() %  256));
+        array.append(static_cast<char>(QRandomGenerator::global()->generate() % 256));
     }
     return array;
 }

@@ -1,4 +1,5 @@
 ﻿#include "TopWidget.h"
+#include "mainwindow.h"
 
 #include <QTimer>
 #include <QtMath>
@@ -61,6 +62,7 @@ TopWidget::TopWidget(QImage &image, QPainterPath &&path, QVector<Shape *> &vecto
 
 TopWidget::~TopWidget() {
     delete m_menu;
+    m_menu = nullptr;
     if (m_scroll_timer != -1) {
         killTimer(m_scroll_timer);
         m_scroll_timer = -1;
@@ -239,6 +241,7 @@ void TopWidget::timerEvent(QTimerEvent *event) {
 
 void TopWidget::keyPressEvent(QKeyEvent *event) {
     BaseWindow::keyPressEvent(event);
+    if (m_lock_pos && m_lock_pos->isChecked()) return;
     if (event->modifiers() == Qt::NoModifier) {
         switch (event->key()) {
         case Qt::Key_Left:
@@ -388,6 +391,12 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
 #endif
             m_tool->hide();
         }
+    } else if (event->buttons() == Qt::RightButton) {
+        if (m_right_menu) {
+            m_right_menu->show();
+            m_right_menu->move(event->globalPos());
+            m_tool->hide();
+        }
     }
 }
 
@@ -482,7 +491,8 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
             }
         }
         update();
-    } else if (m_cursor == Qt::SizeAllCursor && m_press) {
+    } else if (m_cursor == Qt::SizeAllCursor && m_press &&
+               ! (m_lock_pos && m_lock_pos->isChecked())) {
 #if defined (Q_OS_LINUX)
         m_move = true;
 
@@ -610,6 +620,46 @@ void TopWidget::updateOpacity(int value){
     m_tool->setWindowOpacity(opacity);
 }
 
+void TopWidget::copyImage() {
+    QImage image = m_image.copy();
+    QPainter painter(&image);
+    if (! m_path.isEmpty()) {
+        painter.setClipPath(m_path);
+    }
+    painter.save();
+    painter.scale(m_ratio, m_ratio);
+    for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+        (*iter)->draw(painter);
+    }
+    if (m_shape != nullptr) {
+        m_shape->draw(painter);
+    }
+    painter.restore();
+    painter.end();
+    QClipboard *clipboard = QApplication::clipboard();
+    if (clipboard) {
+        clipboard->setImage(m_image);
+        addTip("复制成功");
+    }
+}
+
+void TopWidget::copyWidget() {
+    TopWidget *t = nullptr;
+    if (m_path.elementCount() < 2) {
+        QImage image = m_image.copy();
+        QVector<Shape*> v;
+        t = new TopWidget{image, QPainterPath{m_path}, v, {geometry().topLeft(), m_origin}, tray_menu, m_ratio};
+    } else if (m_max_offset) {
+        QImage image = m_image.copy();
+        t = new TopWidget{image, {geometry().topLeft(), m_origin}, tray_menu, m_ratio};
+    } else {
+        QVector<Shape*> v;
+        t = new TopWidget{m_image.copy(), v, {geometry().topLeft(), m_origin}, tray_menu, m_ratio};
+    }
+    if (t && MainWindow::instance()) {
+        MainWindow::instance()->connectTopWidget(t);
+    }
+}
 #ifdef OCR
 void TopWidget::copyText() {
     if (m_text) {
@@ -670,6 +720,34 @@ void TopWidget::init() {
     m_menu->addAction("显示", this, &TopWidget::moveTop);
     m_menu->addAction("关闭", this, &TopWidget::close);
     tray_menu->addMenu(m_menu);
+
+    m_right_menu = new QMenu(this);
+    m_right_menu->addAction("复制", this, &TopWidget::copyImage);
+    m_right_menu->addAction("复制窗口", this, &TopWidget::copyWidget);
+    m_right_menu->addAction("复制并关闭(Ctrl+C)", this, SLOT(save()));
+    m_right_menu->addAction("保存到文件(Ctrl+S)", this, SIGNAL(choosePath()));
+    m_right_menu->addSeparator();
+    QMenu *menu1 = new QMenu{m_right_menu};
+    menu1->setTitle("缩放");
+    for (int i = 1; i <= 20;) {
+        menu1->addAction(QString("%1%").arg(i * 25), this, [this, i] (){ scaleWidget(i * 0.25f); });
+        if (i < 8) ++i;
+        else i += 2;
+    }
+    m_right_menu->addMenu(menu1);
+    QMenu *menu2 = new QMenu{m_right_menu};
+    menu2->setTitle("透明度");
+    for (int i = 1; i <= 10; ++i) {
+        menu2->addAction(QString("%1%").arg(i * 10), this, [this, i] (){ updateOpacity(i * 10); });
+    }
+    m_right_menu->addMenu(menu2);
+    m_lock_pos = m_right_menu->addAction("锁定位置");
+    m_lock_pos->setCheckable(true);
+    m_lock_scale = m_right_menu->addAction("锁定大小");
+    m_lock_scale->setCheckable(true);
+    // m_right_menu->addAction("阴影");
+    m_right_menu->addSeparator();
+    m_right_menu->addAction("关闭", this, &TopWidget::close);
 
     QList<QScreen*> list = QApplication::screens();
     for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
@@ -739,7 +817,11 @@ void TopWidget::scaleWidget(int delta) {
         ratio += 0.05;
         if (ratio > 5) ratio = 5;
     }
-    if (ratio == m_scale_ratio) return;
+    scaleWidget(ratio);
+}
+
+void TopWidget::scaleWidget(float ratio) {
+    if (ratio == m_scale_ratio || (m_lock_scale && m_lock_scale->isChecked())) return;
     m_scale_ratio = ratio;
     setFixedSize(m_origin * m_scale_ratio);
     m_tool->hide();
