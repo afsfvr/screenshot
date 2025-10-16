@@ -87,6 +87,7 @@ TopWidget::~TopWidget() {
 }
 
 void TopWidget::showTool() {
+    if (m_disable_tool && m_disable_tool->isChecked()) return;
     QPoint point;
 
     QRect rect = geometry();
@@ -345,7 +346,7 @@ void TopWidget::paintEvent(QPaintEvent *event) {
     if (m_ratio_timer != -1) {
         painter.setPen(Qt::red);
         float ratio = static_cast<float>(width()) / m_origin.width();
-        QString text = QString("%1%").arg(static_cast<int>(ratio * 100));
+        QString text = QString("%1%").arg(qRound(ratio * 100));
         if (ratio > 1) ratio = 1.f;
 
         const QFont font = painter.font();
@@ -394,7 +395,14 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
     } else if (event->buttons() == Qt::RightButton) {
         if (m_right_menu) {
             m_right_menu->show();
-            m_right_menu->move(event->globalPos());
+            QPoint gpos = event->globalPos();
+            int right = gpos.x() + m_right_menu->width();
+            int bottom = gpos.y() + m_right_menu->height();
+            if (bottom > m_screen_size.height() || right > m_screen_size.width()) {
+                gpos.rx() -= m_right_menu->width();
+                gpos.ry() -= m_right_menu->height();
+            }
+            m_right_menu->move(gpos);
             m_tool->hide();
         }
     }
@@ -741,6 +749,8 @@ void TopWidget::init() {
         menu2->addAction(QString("%1%").arg(i * 10), this, [this, i] (){ updateOpacity(i * 10); });
     }
     m_right_menu->addMenu(menu2);
+    m_disable_tool = m_right_menu->addAction("禁用工具栏");
+    m_disable_tool->setCheckable(true);
     m_lock_pos = m_right_menu->addAction("锁定位置");
     m_lock_pos->setCheckable(true);
     m_lock_scale = m_right_menu->addAction("锁定大小");
