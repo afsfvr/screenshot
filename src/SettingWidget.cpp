@@ -555,7 +555,7 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
             int ret = system(command.toStdString().c_str());
             file.remove();
             if (ret != 0) {
-                return QString("Failed to create file, code: %1").arg(ret);
+                return strerror(WEXITSTATUS(ret));
             }
         }
         return {};

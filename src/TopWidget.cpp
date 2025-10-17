@@ -653,7 +653,7 @@ void TopWidget::copyImage() {
 
 void TopWidget::copyWidget() {
     TopWidget *t = nullptr;
-    if (m_path.elementCount() < 2) {
+    if (m_path.elementCount() >= 2) {
         QImage image = m_image.copy();
         QVector<Shape*> v;
         t = new TopWidget{image, QPainterPath{m_path}, v, {geometry().topLeft(), m_origin}, tray_menu, m_ratio};
