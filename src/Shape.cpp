@@ -74,6 +74,71 @@ void Rectangle::translate(const QPoint &point) {
     p2 += point;
 }
 
+bool Rectangle::canMove(const QPoint &point) {
+    if (isNull()) return false;
+
+    int width = m_pen.width() / 2 + 4;
+    int left   = std::min(p1.x(), p2.x());
+    int right  = std::max(p1.x(), p2.x());
+    int top    = std::min(p1.y(), p2.y());
+    int bottom = std::max(p1.y(), p2.y());
+
+    QRect inner(left + width, top + width, right - left - 2 * width, bottom - top - 2 * width);
+    QRect outer(left - width, top - width, right - left + 2 * width, bottom - top + 2 * width);
+    if (! outer.contains(point)) return false;
+
+    m_select_edge = Edge::None;
+    m_target = Target::None;
+    if (! inner.contains(point)) {
+        if (std::abs(point.x() - left) <= width) {
+            m_select_edge = Edge::Left;
+            m_target = p1.x() < p2.x() ? Target::P1 : Target::P2;
+        } else if (std::abs(point.x() - right) <= width) {
+            m_select_edge = Edge::Right;
+            m_target = p1.x() < p2.x() ? Target::P2 : Target::P1;
+        } else if (std::abs(point.y() - top) <= width) {
+            m_select_edge = Edge::Top;
+            m_target = p1.y() < p2.y() ? Target::P1 : Target::P2;
+        } else if (std::abs(point.y() - bottom) <= width) {
+            m_select_edge = Edge::Bottom;
+            m_target = p1.y() < p2.y() ? Target::P2 : Target::P1;
+        }
+        return m_select_edge != Edge::None;
+    }
+    return false;
+}
+
+void Rectangle::movePoint(const QPoint &point) {
+    if (isNull()) return;
+
+    QPoint *p = nullptr;
+    if (m_target == Target::P1) {
+        p = &p1;
+    } else if (m_target == Target::P2) {
+        p = &p2;
+    } else {
+        return;
+    }
+    switch (m_select_edge) {
+    case Edge::Left:
+    case Edge::Right:
+        p->setX(point.x());
+        break;
+        break;
+    case Edge::Top:
+    case Edge::Bottom:
+        p->setY(point.y());
+        break;
+    default:
+        break;
+    }
+}
+
+void Rectangle::moveEnd() {
+    m_select_edge = Edge::None;
+    m_target = Target::None;
+}
+
 void Rectangle::paint(QPainter &painter) {
     int x = p1.x();
     int y = p1.y();
@@ -116,6 +181,77 @@ void Ellipse::scale(qreal sx, qreal sy) {
 void Ellipse::translate(const QPoint &point) {
     p1 += point;
     p2 += point;
+}
+
+bool Ellipse::canMove(const QPoint &point) {
+    if (isNull()) return false;
+
+    int width = m_pen.width() / 2 + 4;
+    int left   = std::min(p1.x(), p2.x());
+    int right  = std::max(p1.x(), p2.x());
+    int top    = std::min(p1.y(), p2.y());
+    int bottom = std::max(p1.y(), p2.y());
+    double a = (right - left) / 2.0;
+    double b = (bottom - top) / 2.0;
+
+    double dx = point.x() - (left + right) / 2;
+    double dy = point.y() - (top + bottom) / 2;
+
+    double value = (dx * dx) / (a * a) + (dy * dy) / (b * b);
+
+    double tol = static_cast<double>(width) / std::max(a, b);
+
+    m_select_edge = Edge::None;
+    m_target = Target::None;
+    if (std::abs(value - 1.0) <= tol * 2) {
+        if (std::abs(point.x() - left) <= width) {
+            m_select_edge = Edge::Left;
+            m_target = p1.x() < p2.x() ? Target::P1 : Target::P2;
+        } else if (std::abs(point.x() - right) <= width) {
+            m_select_edge = Edge::Right;
+            m_target = p1.x() < p2.x() ? Target::P2 : Target::P1;
+        } else if (std::abs(point.y() - top) <= width) {
+            m_select_edge = Edge::Top;
+            m_target = p1.y() < p2.y() ? Target::P1 : Target::P2;
+        } else if (std::abs(point.y() - bottom) <= width) {
+            m_select_edge = Edge::Bottom;
+            m_target = p1.y() < p2.y() ? Target::P2 : Target::P1;
+        }
+
+        return m_select_edge != Edge::None;
+    }
+
+    return false;
+}
+
+void Ellipse::movePoint(const QPoint &point) {
+    if (isNull()) return;
+
+    QPoint *p = nullptr;
+    if (m_target == Target::P1) {
+        p = &p1;
+    } else if (m_target == Target::P2) {
+        p = &p2;
+    } else {
+        return;
+    }
+    switch (m_select_edge) {
+    case Edge::Left:
+    case Edge::Right:
+        p->setX(point.x());
+        break;
+    case Edge::Top:
+    case Edge::Bottom:
+        p->setY(point.y());
+        break;
+    default:
+        break;
+    }
+}
+
+void Ellipse::moveEnd() {
+    m_select_edge = Edge::None;
+    m_target = Target::None;
 }
 
 void Ellipse::paint(QPainter &painter) {
@@ -163,6 +299,53 @@ void StraightLine::translate(const QPoint &point) {
     p2 += point;
 }
 
+bool StraightLine::canMove(const QPoint &point) {
+    if (isNull()) return false;
+
+    int width = m_pen.width() / 2 + 4;
+    double dx = p2.x() - p1.x();
+    double dy = p2.y() - p1.y();
+    double length = std::sqrt(dx*dx + dy*dy);
+    if(length == 0) return false;
+
+    double nx = -dy / length;
+    double ny = dx / length;
+
+    double halfWidth = width / 2.0;
+    QPainterPath path;
+    path.moveTo(p1.x() + nx * halfWidth, p1.y() + ny * halfWidth);
+    path.lineTo(p2.x() + nx * halfWidth, p2.y() + ny * halfWidth);
+    path.lineTo(p2.x() - nx * halfWidth, p2.y() - ny * halfWidth);
+    path.lineTo(p1.x() - nx * halfWidth, p1.y() - ny * halfWidth);
+    path.closeSubpath();
+    if (! path.contains(point)) return false;
+
+    double dist1 = std::hypot(point.x() - p1.x(), point.y() - p1.y());
+    double dist2 = std::hypot(point.x() - p2.x(), point.y() - p2.y());
+
+    m_target = dist1 < dist2 ? Target::P1 : Target::P2;
+    return true;
+}
+
+void StraightLine::movePoint(const QPoint &point) {
+    if (isNull()) return;
+
+    switch (m_target) {
+    case Target::P1:
+        p1 = point;
+        break;
+    case Target::P2:
+        p2 = point;
+        break;
+    default:
+        break;
+    }
+}
+
+void StraightLine::moveEnd() {
+    m_target = Target::None;
+}
+
 void StraightLine::paint(QPainter &painter) {
     painter.drawLine(p1, p2);
 }
@@ -188,6 +371,34 @@ void Line::scale(qreal sx, qreal sy) {
 
 void Line::translate(const QPoint &point) {
     m_path.translate(point);
+}
+
+bool Line::canMove(const QPoint &point) {
+    if (isNull()) return false;
+
+    QPainterPathStroker stroker;
+    stroker.setWidth(m_pen.width() + 4);
+
+    if (stroker.createStroke(m_path).contains(point)) {
+        m_move = true;
+        m_move_pos = point;
+        return true;
+    }
+
+    m_move = false;
+    return false;
+}
+
+void Line::movePoint(const QPoint &point) {
+    if (! m_move || isNull()) return;
+
+    QPoint delta = point - m_move_pos;
+    translate(delta);
+    m_move_pos = point;
+}
+
+void Line::moveEnd() {
+    m_move = false;
 }
 
 void Line::paint(QPainter &painter) {
@@ -226,6 +437,37 @@ void Arrow::translate(const QPoint &point) {
     m_p2 += point;
     m_p1 += point;
     m_path.clear();
+}
+
+bool Arrow::canMove(const QPoint &point) {
+    if (isNull() || ! m_path.contains(point)) return false;
+
+    double dist1 = std::hypot(point.x() - m_p1.x(), point.y() - m_p1.y());
+    double dist2 = std::hypot(point.x() - m_p2.x(), point.y() - m_p2.y());
+
+    m_target = dist1 < dist2 ? Target::P1 : Target::P2;
+    return true;
+}
+
+void Arrow::movePoint(const QPoint &point) {
+    if (isNull()) return;
+
+    switch (m_target) {
+    case Target::P1:
+        m_p1 = point;
+        m_path.clear();
+        break;
+    case Target::P2:
+        m_p2 = point;
+        m_path.clear();
+        break;
+    default:
+        break;
+    }
+}
+
+void Arrow::moveEnd() {
+    m_target = Target::None;
 }
 
 void Arrow::paint(QPainter &painter) {
@@ -288,6 +530,37 @@ void Text::scale(qreal sx, qreal sy) {
 
 void Text::translate(const QPoint &point) {
     m_point += point;
+}
+
+bool Text::canMove(const QPoint &point) {
+    if (m_text.isEmpty()) return false;
+
+    QFontMetrics metrics{m_font};
+    QRect textRect = metrics.boundingRect(m_text);
+    textRect.moveTopLeft(m_point - QPoint(0, metrics.ascent()));
+
+    QRect hitRect = textRect.adjusted(-3, -3, 3, 3);
+
+    if (hitRect.contains(point)) {
+        m_move = true;
+        m_move_pos = point;
+        return true;
+    }
+
+    m_move = false;
+    return false;
+}
+
+void Text::movePoint(const QPoint &point) {
+    if (!m_move || m_text.isEmpty()) return;
+
+    QPoint delta = point - m_move_pos;
+    translate(delta);
+    m_move_pos = point;
+}
+
+void Text::moveEnd() {
+    m_move = false;
 }
 
 void Text::setText(const QString &text) {

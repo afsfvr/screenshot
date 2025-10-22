@@ -374,16 +374,17 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
 #else
         m_point = event->globalPos() - geometry().topLeft();
 #endif
+        QPoint point = event->pos();
+        point.ry() += m_offsetY;
+        QPoint movePoint = point / m_scale_ratio;
         if (m_tool->isDraw()) {
             setCursorShape(Qt::BitmapCursor);
-            QPoint point = event->pos();
-            point.ry() += m_offsetY;
 #ifdef OCR
             if (m_ocr_timer == -1) {
-                setShape(point / m_scale_ratio);
+                setShape(movePoint);
             }
 #else
-            setShape(point / m_scale_ratio);
+            setShape(movePoint);
 #endif
         } else {
             setCursorShape(Qt::SizeAllCursor);
@@ -391,6 +392,16 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
             m_widget->hide();
 #endif
             m_tool->hide();
+            if (m_move_shape) {
+                m_move_shape->moveEnd();
+                m_move_shape = nullptr;
+            }
+            for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+                if((*iter)->canMove(movePoint)) {
+                    m_move_shape = *iter;
+                    break;
+                }
+            }
         }
     } else if (event->buttons() == Qt::RightButton) {
         if (m_right_menu) {
@@ -426,6 +437,10 @@ void TopWidget::mouseReleaseEvent(QMouseEvent *event) {
         m_move = false;
 #endif
         m_press = false;
+        if (m_move_shape) {
+            m_move_shape->moveEnd();
+            m_move_shape = nullptr;
+        }
         showTool();
     }
 }
@@ -501,28 +516,33 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
         update();
     } else if (m_cursor == Qt::SizeAllCursor && m_press &&
                ! (m_lock_pos && m_lock_pos->isChecked())) {
+        if (m_move_shape) {
+            m_move_shape->movePoint(event->pos() / m_scale_ratio);
+            update();
+        } else {
 #if defined (Q_OS_LINUX)
-        m_move = true;
+            m_move = true;
 
-        XEvent xevent;
-        memset(&xevent, 0, sizeof(XEvent));
-        Display *display = QX11Info::display();
-        xevent.xclient.type = ClientMessage;
-        xevent.xclient.message_type = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
-        xevent.xclient.display = display;
-        xevent.xclient.window = this->winId();
-        xevent.xclient.format = 32;
-        xevent.xclient.data.l[0] = event->globalX();
-        xevent.xclient.data.l[1] = event->globalY();
-        xevent.xclient.data.l[2] = 8;
-        xevent.xclient.data.l[3] = Button1;
-        xevent.xclient.data.l[4] = 1;
-        XUngrabPointer(display, CurrentTime);
-        XSendEvent(display, QX11Info::appRootWindow(QX11Info::appScreen()), False, SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
-        XFlush(display);
+            XEvent xevent;
+            memset(&xevent, 0, sizeof(XEvent));
+            Display *display = QX11Info::display();
+            xevent.xclient.type = ClientMessage;
+            xevent.xclient.message_type = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
+            xevent.xclient.display = display;
+            xevent.xclient.window = this->winId();
+            xevent.xclient.format = 32;
+            xevent.xclient.data.l[0] = event->globalX();
+            xevent.xclient.data.l[1] = event->globalY();
+            xevent.xclient.data.l[2] = 8;
+            xevent.xclient.data.l[3] = Button1;
+            xevent.xclient.data.l[4] = 1;
+            XUngrabPointer(display, CurrentTime);
+            XSendEvent(display, QX11Info::appRootWindow(QX11Info::appScreen()), False, SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+            XFlush(display);
 #elif defined (Q_OS_WINDOWS)
-        move(gpos - m_point);
+            move(gpos - m_point);
 #endif
+        }
     }
 }
 

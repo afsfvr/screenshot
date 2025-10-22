@@ -98,6 +98,16 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
                     setShape(m_mouse_pos);
                 } else {
                     m_tool->hide();
+                    if (m_move_shape) {
+                        m_move_shape->moveEnd();
+                        m_move_shape = nullptr;
+                    }
+                    for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+                        if ((*iter)->canMove(m_mouse_pos)) {
+                            m_move_shape = *iter;
+                            break;
+                        }
+                    }
                 }
             }
         } else {
@@ -163,6 +173,10 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
             m_resize = ResizeImage::NoResize;
             update();
             showTool();
+        }
+        if (m_move_shape) {
+            m_move_shape->moveEnd();
+            m_move_shape = nullptr;
         }
     } else if (event->button() == Qt::RightButton) {
         if (m_state == State::FreeScreen && m_path.elementCount() > 1) {
@@ -241,25 +255,29 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
             }
             update();
         } else if (m_cursor == Qt::SizeAllCursor) {
-            QPoint point = event->pos() - m_point;
-            m_point = event->pos();
-            const QRect &rect = getGeometry();
-            if (point.x() + rect.left() < 0 || point.x() + rect.right() > width()) {
-                point.setX(0);
-            }
-            if (point.y() + rect.top() < 0 || point.y() + rect.bottom() > height()) {
-                point.setY(0);
-            }
-            if (m_state & State::Free) {
-                m_path.translate(point);
+            if (m_move_shape) {
+                m_move_shape->movePoint(m_mouse_pos);
             } else {
-                m_rect.translate(point);
-            }
-            for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
-                (*iter)->translate(point);
-            }
-            for (auto iter = m_stack.begin(); iter != m_stack.end(); ++iter) {
-                (*iter)->translate(point);
+                QPoint point = event->pos() - m_point;
+                m_point = event->pos();
+                const QRect &rect = getGeometry();
+                if (point.x() + rect.left() < 0 || point.x() + rect.right() > width()) {
+                    point.setX(0);
+                }
+                if (point.y() + rect.top() < 0 || point.y() + rect.bottom() > height()) {
+                    point.setY(0);
+                }
+                if (m_state & State::Free) {
+                    m_path.translate(point);
+                } else {
+                    m_rect.translate(point);
+                }
+                for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+                    (*iter)->translate(point);
+                }
+                for (auto iter = m_stack.begin(); iter != m_stack.end(); ++iter) {
+                    (*iter)->translate(point);
+                }
             }
             update();
         } else if (m_cursor == Qt::BitmapCursor) {

@@ -64,6 +64,7 @@ protected:
     QPoint m_point;
     QRect m_rect;
     Shape *m_shape;
+    Shape *m_move_shape = nullptr;
     Tool *m_tool;
     QLineEdit *m_edit;
     bool m_ignore;
