@@ -374,17 +374,16 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
 #else
         m_point = event->globalPos() - geometry().topLeft();
 #endif
-        QPoint point = event->pos();
+        QPoint point = event->pos() / m_scale_ratio;
         point.ry() += m_offsetY;
-        QPoint movePoint = point / m_scale_ratio;
         if (m_tool->isDraw()) {
             setCursorShape(Qt::BitmapCursor);
 #ifdef OCR
             if (m_ocr_timer == -1) {
-                setShape(movePoint);
+                setShape(point);
             }
 #else
-            setShape(movePoint);
+            setShape(point);
 #endif
         } else {
             setCursorShape(Qt::SizeAllCursor);
@@ -397,7 +396,7 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
                 m_move_shape = nullptr;
             }
             for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
-                if((*iter)->canMove(movePoint)) {
+                if((*iter)->canMove(point)) {
                     m_move_shape = *iter;
                     break;
                 }
@@ -517,7 +516,8 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
     } else if (m_cursor == Qt::SizeAllCursor && m_press &&
                ! (m_lock_pos && m_lock_pos->isChecked())) {
         if (m_move_shape) {
-            m_move_shape->movePoint(event->pos() / m_scale_ratio);
+            QPoint point = event->pos() / m_scale_ratio;
+            m_move_shape->movePoint({point.x(), point.y() + m_offsetY});
             update();
         } else {
 #if defined (Q_OS_LINUX)
