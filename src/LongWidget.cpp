@@ -12,22 +12,10 @@
 #include "mainwindow.h"
 
 // 向下匹配（bigImage底部 和 新图顶部）
-static int downMerge(const cv::Mat &grayBig, const cv::Mat &grayNew, int &titleHeight) {
-    titleHeight = 0;
-    for (int i = 1; i < grayNew.rows; ++i) {
-        cv::Mat top1 = grayBig(cv::Rect(0, 0, grayBig.cols, i)), top2 = grayNew(cv::Rect(0, 0, grayNew.cols, i));
-        cv::Mat diff, mask;
-        cv::absdiff(top1, top2, diff);
-        cv::threshold(diff, mask, 1, 255, cv::THRESH_BINARY);
-        if (cv::countNonZero(mask) == 0) {
-            titleHeight = i;
-        } else {
-            break;
-        }
-    }
-    const int matchHeight = qMin(grayNew.rows <= 300 ? grayNew.rows / 2 : 200, grayNew.rows - titleHeight);
+static int downMerge(const cv::Mat &grayBig, const cv::Mat &grayNew) {
+    const int matchHeight = grayNew.rows <= 300 ? grayNew.rows / 2 : 200;
     cv::Mat bottomResult;
-    cv::Mat matchNew = grayNew(cv::Rect(0, titleHeight, grayNew.cols, matchHeight));
+    cv::Mat matchNew = grayNew(cv::Rect(0, 0, grayNew.cols, matchHeight));
 
     double downMinVal, downMaxVal = 0;
     cv::Point downMinLoc, downMaxLoc;
@@ -68,7 +56,6 @@ static int upMerge(const cv::Mat &grayBig, const cv::Mat &grayNew) {
 
 static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, BlockQueue<LongWidget::Data> *queue) {
     LongWidget::Data data;
-    int titleHeight = 0;
     cv::Mat grayBig;
     lock->lockForRead();
     cv::cvtColor(cv::Mat(bigImage->height(), bigImage->width(), CV_8UC3, bigImage->bits(), bigImage->bytesPerLine()), grayBig, cv::COLOR_BGR2GRAY);
@@ -82,20 +69,20 @@ static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, 
 
         QImage resultImg;
         if (data.down) {
-            int downOverlap = downMerge(grayBig, grayNew, titleHeight);
-            if (downOverlap < grayNew.rows - titleHeight) {
-                resultImg = QImage(QSize(grayBig.cols, grayBig.rows + grayNew.rows - downOverlap - titleHeight), QImage::Format_BGR888);
+            int downOverlap = downMerge(grayBig, grayNew);
+            if (downOverlap < grayNew.rows) {
+                resultImg = QImage(QSize(grayBig.cols, grayBig.rows + grayNew.rows - downOverlap), QImage::Format_BGR888);
                 QPainter painter(&resultImg);
                 lock->lockForRead();
                 painter.drawImage(QRect{0, 0, grayBig.cols, grayBig.rows - downOverlap}, *bigImage, QRect{0, 0, grayBig.cols, grayBig.rows - downOverlap});
                 lock->unlock();
-                painter.drawImage(QRect{0, grayBig.rows - downOverlap, grayNew.cols, grayNew.rows - titleHeight}, image, QRect{0, titleHeight, grayNew.cols, grayNew.rows - titleHeight});
+                painter.drawImage(QRect{0, grayBig.rows - downOverlap, grayNew.cols, grayNew.rows}, image, QRect{0, 0, grayNew.cols, grayNew.rows});
                 painter.end();
 
                 cv::Mat tmp;
                 cv::vconcat(
                     grayBig(cv::Rect(0, 0, grayBig.cols, grayBig.rows - downOverlap)),
-                    grayNew(cv::Rect(0, titleHeight, grayNew.cols, grayNew.rows - titleHeight)),
+                    grayNew(cv::Rect(0, 0, grayNew.cols, grayNew.rows)),
                     tmp);
                 grayBig = tmp;
             }
