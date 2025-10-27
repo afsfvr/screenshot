@@ -11,70 +11,112 @@
 #include "TopWidget.h"
 #include "mainwindow.h"
 
+// 向下匹配（bigImage底部 和 新图顶部）
+static int downMerge(const cv::Mat &grayBig, const cv::Mat &grayNew, int &titleHeight) {
+    titleHeight = 0;
+    for (int i = 1; i < grayNew.rows; ++i) {
+        cv::Mat top1 = grayBig(cv::Rect(0, 0, grayBig.cols, i)), top2 = grayNew(cv::Rect(0, 0, grayNew.cols, i));
+        cv::Mat diff, mask;
+        cv::absdiff(top1, top2, diff);
+        cv::threshold(diff, mask, 1, 255, cv::THRESH_BINARY);
+        if (cv::countNonZero(mask) == 0) {
+            titleHeight = i;
+        } else {
+            break;
+        }
+    }
+    const int matchHeight = qMin(grayNew.rows <= 300 ? grayNew.rows / 2 : 200, grayNew.rows - titleHeight);
+    cv::Mat bottomResult;
+    cv::Mat matchNew = grayNew(cv::Rect(0, titleHeight, grayNew.cols, matchHeight));
+
+    double downMinVal, downMaxVal = 0;
+    cv::Point downMinLoc, downMaxLoc;
+    if (int difference = (grayBig.rows - grayNew.rows); difference > 0) {
+        cv::matchTemplate(grayBig(cv::Rect(0, difference, grayBig.cols, grayNew.rows)), matchNew, bottomResult, cv::TM_CCOEFF_NORMED);
+        cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
+        downMaxLoc.y += difference;
+    }
+    if (downMaxVal < 0.5) {
+        cv::matchTemplate(grayBig, matchNew, bottomResult, cv::TM_CCOEFF_NORMED);
+        cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
+    }
+
+    if (downMaxVal > 0.5) return grayBig.rows - downMaxLoc.y;
+    return grayNew.rows;
+}
+
+// 向上匹配（bigImage顶部 和 新图底部）
+static int upMerge(const cv::Mat &grayBig, const cv::Mat &grayNew) {
+    const int matchHeight = grayNew.rows <= 300 ? grayNew.rows / 2 : 200;
+    cv::Mat topResult;
+    cv::Mat matchNew = grayNew(cv::Rect(0, grayNew.rows - matchHeight, grayNew.cols, matchHeight));
+
+    double upMinVal, upMaxVal = 0;
+    cv::Point upMinLoc, upMaxLoc;
+    if (grayBig.rows > grayNew.rows) {
+        cv::matchTemplate(grayBig(cv::Rect(0, 0, grayBig.cols, grayNew.rows)), matchNew, topResult, cv::TM_CCOEFF_NORMED);
+        cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
+    }
+    if (upMaxVal < 0.5) {
+        cv::matchTemplate(grayBig, matchNew, topResult, cv::TM_CCOEFF_NORMED);
+        cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
+    }
+
+    if (upMaxVal > 0.5) return upMaxLoc.y + matchHeight;
+    return grayNew.rows;
+}
+
 static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, BlockQueue<LongWidget::Data> *queue) {
     LongWidget::Data data;
+    int titleHeight = 0;
+    cv::Mat grayBig;
+    lock->lockForRead();
+    cv::cvtColor(cv::Mat(bigImage->height(), bigImage->width(), CV_8UC3, bigImage->bits(), bigImage->bytesPerLine()), grayBig, cv::COLOR_BGR2GRAY);
+    lock->unlock();
     while (queue->dequeue(&data)) {
         QImage &image = data.image;
-        lock->lockForRead();
-        QImage img = bigImage->copy();
-        lock->unlock();
 
-        const int matchHeight = image.height() <= 300 ? image.height() / 2 : 200;
-
-        cv::Mat matBig(img.height(), img.width(), CV_8UC3, img.bits(), img.bytesPerLine());
         cv::Mat matNew(image.height(), image.width(), CV_8UC3, image.bits(), image.bytesPerLine());
+        cv::Mat grayNew;
+        cv::cvtColor(matNew, grayNew, cv::COLOR_BGR2GRAY);
 
         QImage resultImg;
         if (data.down) {
-            // 向下匹配（bigImage底部 和 新图顶部）
-            cv::Mat bottomResult;
-            cv::Mat matchNew = matNew(cv::Rect(0, 0, matNew.cols, matchHeight));
-
-            double downMinVal, downMaxVal = 0;
-            cv::Point downMinLoc, downMaxLoc;
-            if (int difference = (matBig.rows - matNew.rows); difference > 0) {
-                cv::matchTemplate(matBig(cv::Rect(0, difference, matBig.cols, matNew.rows)), matchNew, bottomResult, cv::TM_CCOEFF_NORMED);
-                cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
-                downMaxLoc.y += difference;
-            }
-            if (downMaxVal < 0.5) {
-                cv::matchTemplate(matBig, matchNew, bottomResult, cv::TM_CCOEFF_NORMED);
-                cv::minMaxLoc(bottomResult, &downMinVal, &downMaxVal, &downMinLoc, &downMaxLoc);
-            }
-
-            int downOverlap = matBig.rows - downMaxLoc.y;
-            int downNewHeight = matNew.rows - downOverlap;
-            if (downNewHeight > 0 && downMaxVal > 0.5) {
-                resultImg = QImage(QSize(matBig.cols, matBig.rows + downNewHeight), QImage::Format_BGR888);
+            int downOverlap = downMerge(grayBig, grayNew, titleHeight);
+            if (downOverlap < grayNew.rows - titleHeight) {
+                resultImg = QImage(QSize(grayBig.cols, grayBig.rows + grayNew.rows - downOverlap - titleHeight), QImage::Format_BGR888);
                 QPainter painter(&resultImg);
-                painter.drawImage(QRect{0, 0, matBig.cols, matBig.rows - downOverlap}, img, QRect{0, 0, matBig.cols, matBig.rows - downOverlap});
-                painter.drawImage(QRect{0, matBig.rows - downOverlap, matNew.cols, matNew.rows}, image);
+                lock->lockForRead();
+                painter.drawImage(QRect{0, 0, grayBig.cols, grayBig.rows - downOverlap}, *bigImage, QRect{0, 0, grayBig.cols, grayBig.rows - downOverlap});
+                lock->unlock();
+                painter.drawImage(QRect{0, grayBig.rows - downOverlap, grayNew.cols, grayNew.rows - titleHeight}, image, QRect{0, titleHeight, grayNew.cols, grayNew.rows - titleHeight});
                 painter.end();
+
+                cv::Mat tmp;
+                cv::vconcat(
+                    grayBig(cv::Rect(0, 0, grayBig.cols, grayBig.rows - downOverlap)),
+                    grayNew(cv::Rect(0, titleHeight, grayNew.cols, grayNew.rows - titleHeight)),
+                    tmp);
+                grayBig = tmp;
             }
         } else {
-            // 向上匹配（bigImage顶部 和 新图底部）
-            cv::Mat topResult;
-            cv::Mat matchNew = matNew(cv::Rect(0, matNew.rows - matchHeight, matNew.cols, matchHeight));
-
-            double upMinVal, upMaxVal = 0;
-            cv::Point upMinLoc, upMaxLoc;
-            if (matBig.rows > matNew.rows) {
-                cv::matchTemplate(matBig(cv::Rect(0, 0, matBig.cols, matNew.rows)), matchNew, topResult, cv::TM_CCOEFF_NORMED);
-                cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
-            }
-            if (upMaxVal < 0.5) {
-                cv::matchTemplate(matBig, matchNew, topResult, cv::TM_CCOEFF_NORMED);
-                cv::minMaxLoc(topResult, &upMinVal, &upMaxVal, &upMinLoc, &upMaxLoc);
-            }
-
-            int upOverlap = upMaxLoc.y + matchHeight;
-            int upNewHeight = matNew.rows - upOverlap;
-            if (upNewHeight > 0 && upMaxVal > 0.5) {
-                resultImg = QImage(QSize(matBig.cols, matBig.rows + upNewHeight), QImage::Format_BGR888);
+            int upOverlap = upMerge(grayBig, grayNew);
+            if (upOverlap < grayNew.rows) {
+                resultImg = QImage(QSize(grayBig.cols, grayBig.rows + grayNew.rows - upOverlap), QImage::Format_BGR888);
                 QPainter painter(&resultImg);
                 painter.drawImage(image.rect(), image);
-                painter.drawImage(QRect{0, matNew.rows, matBig.cols, matBig.rows - upOverlap}, img, QRect{0, upOverlap, matBig.cols, matBig.rows - upOverlap});
+                lock->lockForRead();
+                painter.drawImage(QRect{0, grayNew.rows, grayBig.cols, grayBig.rows - upOverlap},
+                                  *bigImage,
+                                  QRect{0, upOverlap, grayBig.cols, grayBig.rows - upOverlap});
+                lock->unlock();
                 painter.end();
+
+                cv::Mat tmp;
+                cv::vconcat(grayNew,
+                            grayBig(cv::Rect(0, upOverlap, grayBig.cols, grayBig.rows - upOverlap)),
+                            tmp);
+                grayBig = tmp;
             }
         }
 

@@ -396,10 +396,12 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
                 m_move_shape->moveEnd();
                 m_move_shape = nullptr;
             }
-            for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
-                if((*iter)->canMove(movePoint)) {
-                    m_move_shape = *iter;
-                    break;
+            if (m_disable_edit == nullptr || ! m_disable_edit->isChecked()) {
+                for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+                    if((*iter)->canMove(movePoint)) {
+                        m_move_shape = *iter;
+                        break;
+                    }
                 }
             }
         }
@@ -769,6 +771,8 @@ void TopWidget::init() {
         menu2->addAction(QString("%1%").arg(i * 10), this, [this, i] (){ updateOpacity(i * 10); });
     }
     m_right_menu->addMenu(menu2);
+    m_disable_edit = m_right_menu->addAction("禁止移动绘制图形");
+    m_disable_edit->setCheckable(true);
     m_disable_tool = m_right_menu->addAction("禁用工具栏");
     m_disable_tool->setCheckable(true);
     m_lock_pos = m_right_menu->addAction("锁定位置");

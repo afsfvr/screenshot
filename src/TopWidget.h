@@ -99,6 +99,7 @@ private:
     float m_scale_ratio = 1;
 
     QMenu *m_right_menu = nullptr;
+    QAction *m_disable_edit = nullptr;
     QAction *m_disable_tool = nullptr;
     QAction *m_lock_pos = nullptr;
     QAction *m_lock_scale = nullptr;
