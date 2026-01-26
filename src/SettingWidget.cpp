@@ -55,17 +55,6 @@ SettingWidget::SettingWidget(QWidget *parent): QWidget(parent), ui(new Ui::Setti
     ui->format->setCurrentIndex(index);
     m_save_format = ui->format->currentText();
     ui->ocr_setting->setVisible(false);
-
-#ifdef Q_OS_LINUX
-    QString outPath = QDir::toNativeSeparators(getUserHomePath() + "/.config/screenshot/screenshot.png");
-    if (! QFile::exists(outPath)) {
-        QImage image{":/images/screenshot.ico"};
-        image.save(outPath, "png");
-    }
-    m_box = new QCheckBox{this};
-    m_box->setText("添加到应用菜单");
-    ui->verticalLayout->insertWidget(6, m_box);
-#endif
 }
 
 SettingWidget::~SettingWidget() {
@@ -193,9 +182,6 @@ void SettingWidget::showEvent(QShowEvent *event) {
         ui->self_start->setChecked(false);
         ui->all_user->setChecked(false);
     }
-#ifdef Q_OS_LINUX
-    if (m_box) m_box->setChecked(inApplicationMenu());
-#endif
 #ifdef OCR
     if (! ui->ocr_setting->isVisible()) {
         QWidget *w = OcrInstance->getSettingWidget();
@@ -303,16 +289,6 @@ void SettingWidget::confirm() {
             }
         }
     }
-#ifdef Q_OS_LINUX
-    if (m_box && m_box->isChecked() != inApplicationMenu()) {
-        bool add = m_box->isChecked();
-        QString error = setApplicationMenu(add);
-        if (! error.isEmpty()) {
-            QMessageBox::warning(this, add ? "添加到应用菜单失败" : "从应用菜单移除失败", error);
-            return;
-        }
-    }
-#endif
 
     HotKey key1;
     HotKey key2;
@@ -539,11 +515,10 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
                                   "Name=截图工具\n"
                                   "Comment=一个简单的截图工具\n"
                                   "Exec=%1\n"
-                                  "Icon=%2\n"
                                   "Terminal=false\n"
                                   "X-GNOME-Autostart-enabled=true\n"
                                   "X-GNOME-Autostart-Delay=3\n"
-                                  "Categories=Utility;Graphics;\n"
+                                  "Categories=Utility;\n"
                                   "StartupNotify=false\n"
                                   "NoDisplay=false\n").arg(QCoreApplication::applicationFilePath(), imgPath);
         file.write(content.toUtf8());
@@ -723,56 +698,6 @@ QString SettingWidget::getWindowsError(quint32 error) const {
     return ret.trimmed();
 }
 #elif defined(Q_OS_LINUX)
-QString SettingWidget::setApplicationMenu(bool add) {
-    QFile file;
-    QString path = QDir::toNativeSeparators(getUserHomePath() + "/.local/share/applications");
-    QDir{}.mkpath(path);
-    file.setFileName(QDir::toNativeSeparators(path + "/screenshot.desktop"));
-    if (add) {
-        if (! file.open(QFile::WriteOnly | QFile::Truncate)) {
-            return file.errorString();
-        }
-        QString imgPath = QDir::toNativeSeparators(getUserHomePath() + "/.config/screenshot/screenshot.png");
-        QString content = QString("[Desktop Entry]\n"
-                                  "Type=Application\n"
-                                  "Name=截图工具\n"
-                                  "Comment=一个简单的截图工具\n"
-                                  "Exec=%1\n"
-                                  "Icon=%2\n"
-                                  "Terminal=false\n"
-                                  "Categories=Utility;Graphics;\n"
-                                  "StartupNotify=false\n"
-                                  "NoDisplay=false\n").arg(QCoreApplication::applicationFilePath(), imgPath);
-        file.write(content.toUtf8());
-        file.close();
-        file.setPermissions(file.permissions() | QFileDevice::ExeOwner);
-        return {};
-    } else {
-        if (file.exists()) {
-            if (! file.remove()) {
-                return file.errorString();
-            }
-        }
-        return {};
-    }
-}
-
-bool SettingWidget::inApplicationMenu() {
-    QFile file;
-    file.setFileName(QDir::toNativeSeparators(getUserHomePath() + "/.local/share/applications/screenshot.desktop"));
-    if (! file.exists() || ! file.open(QFile::ReadOnly | QFile::Text)) return false;
-    const QStringList lines = QString::fromUtf8(file.readAll()).split('\n', Qt::SkipEmptyParts);
-    file.close();
-    const QString appPath = QCoreApplication::applicationFilePath();
-    for (QString line: lines) {
-        line = line.trimmed();
-        if (line.startsWith("Exec=") && line.contains(appPath)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 QString SettingWidget::getUserHomePath() const {
     static QString homePath;
     if (homePath.isEmpty()) {

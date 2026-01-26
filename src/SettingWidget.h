@@ -69,10 +69,7 @@ private:
 #if defined(Q_OS_WINDOWS)
     QString getWindowsError(quint32 error) const;
 #elif defined(Q_OS_LINUX)
-    QString setApplicationMenu(bool add);
-    bool inApplicationMenu();
     QString getUserHomePath() const;
-    QCheckBox *m_box = nullptr;
 #endif
 
     Ui::SettingWidget *ui;

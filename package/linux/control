@@ -1,0 +1,8 @@
+Package: screenshot
+Version: 1.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libqt5core5t64, libqt5gui5t64, libqt5widgets5t64, libqt5network5t64, libqt5x11extras5
+Maintainer: afsfvr <2461519090@qq.com>
+Description: 一个截图工具

@@ -10,6 +10,7 @@ unix: {
     LIBS += -L$$PWD/opencv/lib/linux -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
     SOURCES += src/KeyMouseEvent.cpp
     HEADERS += src/KeyMouseEvent.h
+    QMAKE_LFLAGS += -Wl,-rpath,/usr/lib/screenshot
 }
 win32: {
     LIBS += -lDwmapi  -luser32

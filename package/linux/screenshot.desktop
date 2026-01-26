@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=截图工具
+Comment=一个简单的截图工具
+Exec=/usr/bin/screenshot
+Icon=screenshot
+Terminal=false
+Categories=Utility
+StartupNotify=false
+NoDisplay=false

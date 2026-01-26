@@ -672,7 +672,7 @@ void MainWindow::saveImage() {
 
 void MainWindow::start() {
     m_ratio = 1;
-    m_mouse_pos = QPoint{-1, -1};
+    m_mouse_pos = QCursor::pos();
     disconnect(SIGNAL(choosePath()));
     m_tool->setEditShow(! m_gif);
     if (m_gif) {
