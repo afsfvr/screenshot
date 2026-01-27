@@ -1,12 +1,23 @@
 #! /bin/sh
 
-echo "screenshot autostart files removed for all users."
+if [ "$1" != "remove" ] && [ "$1" != "purge" ]; then
+    exit 0
+fi
+
+log_error() {
+    printf "\033[31m%s\033[0m\n" "$*"
+}
+log_info() {
+    printf "\033[32m%s\033[0m\n" "$*"
+}
+
+log_info "screenshot autostart files removed for all users."
 if [ -f /etc/xdg/autostart/screenshot.desktop ]; then
     rm -f /etc/xdg/autostart/screenshot.desktop
 fi
 
 if [ "$1" = "purge" ]; then
-    echo "screenshot configuration files removed for all users."
+    log_info "screenshot configuration files removed for all users."
 fi
 for user_home in /home/*; do
     if [ "$1" = "purge" ] && [ -d "$user_home/.config/screenshot" ] && [ -f "$user_home/.config/screenshot/screenshot.data" ]; then

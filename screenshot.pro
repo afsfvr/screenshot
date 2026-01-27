@@ -11,6 +11,10 @@ unix: {
     SOURCES += src/KeyMouseEvent.cpp
     HEADERS += src/KeyMouseEvent.h
     QMAKE_LFLAGS += -Wl,-rpath,/usr/lib/screenshot
+    package.target = package
+    package.commands = $$PWD/package/linux/package.sh && mv $$PWD/package/linux/screenshot.deb screenshot.deb
+    package.depends = $$TARGET
+    QMAKE_EXTRA_TARGETS += package
 }
 win32: {
     LIBS += -lDwmapi  -luser32

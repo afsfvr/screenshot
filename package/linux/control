@@ -1,8 +1,11 @@
 Package: screenshot
 Version: 1.0
-Section: utils
+Section: graphics
 Priority: optional
 Architecture: amd64
 Depends: libqt5core5t64, libqt5gui5t64, libqt5widgets5t64, libqt5network5t64, libqt5x11extras5
+Homepage: https://github.com/afsfvr/screenshot
 Maintainer: afsfvr <2461519090@qq.com>
 Description: 一个截图工具
+ 使用Qt开发的截图工具，支持多屏幕、区域和窗口截图。
+ 提供简单编辑和 GIF 录制功能。

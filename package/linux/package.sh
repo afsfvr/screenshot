@@ -40,11 +40,18 @@ ln -sf libopencv_highgui.so.4.8.0 libopencv_highgui.so
 ln -sf libopencv_highgui.so.4.8.0 libopencv_highgui.so.408
 ln -sf libopencv_imgcodecs.so.4.8.0 libopencv_imgcodecs.so
 ln -sf libopencv_imgcodecs.so.4.8.0 libopencv_imgcodecs.so.408
-cd -
+cd - >/dev/null
 
 cp -f screenshot.desktop screenshot/usr/share/applications/
 
 cp -f screenshot.png screenshot/usr/share/icons/hicolor/32x32/apps/
+
+SIZE=$(du -sk screenshot --exclude=screenshot/DEBIAN | cut -f1)
+if grep -q '^Installed-Size:' control; then
+    sed -i "/^Installed-Size:/c Installed-Size: $SIZE" screenshot/DEBIAN/control
+else
+    sed -i "/^Maintainer:/a Installed-Size: $SIZE" screenshot/DEBIAN/control
+fi
 
 dpkg-deb --build screenshot
 
