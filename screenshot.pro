@@ -6,11 +6,13 @@ DEFINES += TENCENT_OCR
 
 unix: {
     QT += x11extras
+    CONFIG += link_pkgconfig
+    PKGCONFIG += opencv4
     LIBS += -lX11 -lXext -lXtst
-    LIBS += -L$$PWD/opencv/lib/linux -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
+    # LIBS += -L$$PWD/opencv/lib/linux -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
+    # QMAKE_LFLAGS += -Wl,-rpath,/usr/lib/screenshot
     SOURCES += src/KeyMouseEvent.cpp
     HEADERS += src/KeyMouseEvent.h
-    QMAKE_LFLAGS += -Wl,-rpath,/usr/lib/screenshot
     package.target = package
     package.commands = $$PWD/package/linux/package.sh && mv $$PWD/package/linux/screenshot.deb screenshot.deb
     package.depends = $$TARGET
@@ -19,13 +21,13 @@ unix: {
 win32: {
     LIBS += -lDwmapi  -luser32
     LIBS += -L$$PWD/opencv/lib/windows/mingw -lopencv_imgproc480 -lopencv_imgcodecs480 -lopencv_core480 -lz
+    INCLUDEPATH += $$PWD/opencv/include/opencv4
 }
 win32-msvc*: {
     QMAKE_CFLAGS *= /utf-8
     QMAKE_CXXFLAGS *= /utf-8
 }
 
-INCLUDEPATH += $$PWD/opencv/include/opencv4
 
 contains(DEFINES, RAPID_OCR) {
     models.path=$$OUT_PWD

@@ -1,0 +1,62 @@
+﻿name: Build Linux
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-22.04
+          - ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt5-qmake qt5-qmake-bin qtbase5-dev qtbase5-dev-tools
+          sudo apt-get install -y libqt5core5a libqt5gui5 libqt5widgets5 libqt5network5 libqt5x11extras5-dev
+          sudo apt-get install -y build-essential libopencv-dev libxtst-dev libxrandr-dev libx11-dev
+
+      - name: Build
+        run: |
+          /usr/bin/x86_64-linux-gnu-qmake
+          make -j$(nproc)
+
+      - name: Print Depend
+        run: |
+          echo "=== apt installed libqt5 packages ==="
+          apt list --installed | grep libqt5 || true
+
+          echo "=== depends ==="
+          mkdir -p debian
+          touch debian/control
+          DEPENDS="$(dpkg-shlibdeps -O screenshot 2>/dev/null | awk -F 'Depends=' '{print $2}')"
+          echo "DEPENDS=$DEPENDS" >>$GITHUB_ENV
+          echo "Depends: $DEPENDS"
+
+      - name: Package deb
+        run: |
+          if grep -q '^Depends:' package/linux/control; then
+            sed -i "/^Depends:/c Depends: ${{ env.DEPENDS }}" package/linux/control
+          else
+            sed -i "/^Maintainer:/a Depends: ${{ env.DEPENDS }}" package/linux/control
+          fi
+
+          make package -j
+          mv screenshot.deb screenshot-${{ matrix.os }}.deb
+
+
+      - name: Upload deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-${{ github.job }}-${{ matrix.os }}
+          path: screenshot-${{ matrix.os }}.deb
+
