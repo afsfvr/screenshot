@@ -6,16 +6,21 @@
 
 #include "SettingWidget.h"
 #include "BaseWindow.h"
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX)
+#include <QX11Info>
+#include <QAbstractNativeEventFilter>
+#include <xcb/xcb.h>
 #include "KeyMouseEvent.h"
-#endif
-#ifdef Q_OS_WINDOWS
+#elif defined(Q_OS_WINDOWS)
 #include <windows.h>
 #include <dwmapi.h>
 #endif
 
 class TopWidget;
 class MainWindow : public BaseWindow
+#ifdef Q_OS_LINUX
+    , public QAbstractNativeEventFilter
+#endif // Q_OS_LINUX
 {
     Q_OBJECT
 
@@ -54,6 +59,14 @@ public:
     Q_FLAG(ResizeImages)
     Q_ENUM(ResizeImage)
 
+#ifdef Q_OS_LINUX
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
+#else
+    bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override;
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#endif // Q_OS_LINUX
+
 protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
@@ -66,8 +79,8 @@ protected:
     bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
 #else
     bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
-#endif
-#endif
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#endif // Q_OS_WINDOWS
     void saveImage();
     void start();
     void gifStart();
@@ -85,10 +98,10 @@ private slots:
     void keyPress(int code, Qt::KeyboardModifiers modifiers);
     void mouseWheel(QSharedPointer<QWheelEvent> event);
     void grabMouseEvent();
-#endif
+#endif // Q_OS_LINUX
 #ifdef OCR
     void ocrStart();
-#endif
+#endif // OCR
     void longScreenshot();
     void updateHotkey();
     void updateAutoSave(const HotKey &key, quint8 mode, const QString &path);
@@ -106,15 +119,22 @@ private:
     QImage fullScreenshot();
 #ifdef Q_OS_LINUX
     QString getWindowTitle(Display *display, Window window);
-#endif
+    bool UnregisterHotKey(const HotKey &key);
+    bool RegisterHotKey(HotKey &key);
+    static int handleError(Display *display, XErrorEvent *error);
+#endif // Q_OS_LINUX
 #ifdef Q_OS_WINDOWS
     QRect getRectByHwnd(HWND hwnd);
-#endif
+#endif // Q_OS_WINDOWS
 
 #ifdef Q_OS_LINUX
     KeyMouseEvent *m_monitor;
     bool m_grab_mouse = false;
-#endif
+    HotKey m_key1;
+    HotKey m_key2;
+    HotKey m_key3;
+    QString m_grab_error;
+#endif // Q_OS_LINUX
     QVector<QRect> m_windows;
     int m_index;
     QSystemTrayIcon *m_tray = nullptr;

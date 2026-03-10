@@ -12,7 +12,7 @@ class SettingWidget;
 }
 
 struct HotKey {
-    Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+    quint32 modifiers = 0;
     quint32 key = 'A';
     inline bool operator==(const HotKey &key) { return this->modifiers == key.modifiers && this->key == key.key; }
     inline bool operator!=(const HotKey &key) { return this->modifiers != key.modifiers || this->key != key.key; }

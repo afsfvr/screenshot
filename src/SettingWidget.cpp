@@ -17,15 +17,12 @@
 #endif
 
 QDataStream& operator<<(QDataStream& stream, const HotKey &key) {
-    stream << static_cast<quint32>(key.modifiers) << key.key;
+    stream << key.modifiers << key.key;
     return stream;
 }
 
 QDataStream& operator>>(QDataStream& stream, HotKey &key) {
-    quint32 tmp;
-    stream >> tmp;
-    key.modifiers = static_cast<Qt::KeyboardModifiers>(tmp);
-    stream >> key.key;
+    stream >> key.modifiers >> key.key;
     return stream;
 }
 
@@ -356,6 +353,12 @@ void SettingWidget::confirm() {
         if (QMessageBox::question(this, "是否删除快捷键", msg) != QMessageBox::Yes) {
             return;
         }
+    }
+    if ((key1 == key2 && key1.modifiers != Qt::NoModifier) ||
+        (key1 == key3 && key1.modifiers != Qt::NoModifier) ||
+        (key2 == key3 && key3.modifiers != Qt::NoModifier)) {
+        QMessageBox::warning(this, "错误", "按键重复");
+        return;
     }
 
     this->hide();

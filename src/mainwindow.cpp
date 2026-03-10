@@ -24,9 +24,11 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent),
     m_monitor = new KeyMouseEvent;
     m_monitor->start();
     m_monitor->resume();
-    connect(m_monitor, &KeyMouseEvent::keyPress, this, &MainWindow::keyPress);
+    // connect(m_monitor, &KeyMouseEvent::keyPress, this, &MainWindow::keyPress);
     connect(m_monitor, &KeyMouseEvent::mouseWheel, this, &MainWindow::mouseWheel);
     connect(this, &MainWindow::started, this, &MainWindow::grabMouseEvent);
+    qApp->installNativeEventFilter(this);
+    XSetErrorHandler(handleError);
 #endif
 #ifdef OCR
     connect(m_tool, &Tool::ocr, this, &MainWindow::ocrStart);
@@ -46,10 +48,14 @@ MainWindow::~MainWindow() {
     MainWindow::self = nullptr;
     safeDelete(m_setting);
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX)
+    UnregisterHotKey(m_key1);
+    UnregisterHotKey(m_key2);
+    UnregisterHotKey(m_key3);
+    qApp->removeNativeEventFilter(this);
     delete m_monitor;
-#endif
-#ifdef Q_OS_WINDOWS
+    m_monitor = nullptr;
+#elif defined(Q_OS_WINDOWS)
     UnregisterHotKey((HWND)this->winId(), 1);
     UnregisterHotKey((HWND)this->winId(), 2);
     UnregisterHotKey((HWND)this->winId(), 3);
@@ -59,10 +65,37 @@ MainWindow::~MainWindow() {
 void MainWindow::connectTopWidget(TopWidget *t) {
     connect(m_setting, &SettingWidget::scaleKeyChanged, t, &TopWidget::scaleKeyChanged);
     t->scaleKeyChanged(m_setting->scaleCtrl());
-#if defined(Q_OS_LINUX)
+#ifdef Q_OS_LINUX
     connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
 #endif
 }
+
+#ifdef Q_OS_LINUX
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+bool MainWindow::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) {
+#else
+bool MainWindow::nativeEventFilter(const QByteArray &eventType, void *message, long *result) {
+#endif
+    Q_UNUSED(eventType);
+    Q_UNUSED(result);
+    if (! this->isVisible()) {
+        auto *genericEvent = static_cast<xcb_generic_event_t *>(message);
+        if (genericEvent->response_type == XCB_KEY_PRESS) {
+            xcb_key_press_event_t event = *static_cast<xcb_key_press_event_t *>(message);
+            quint32 modifiers = event.state & (ShiftMask | ControlMask | Mod1Mask);
+            if (modifiers == 0) return false;
+            if (modifiers == m_key1.modifiers && event.detail == m_key1.key) {
+                saveImage();
+            } else if (modifiers == m_key2.modifiers && event.detail == m_key2.key) {
+                start();
+            } else if (modifiers == m_key3.modifiers && event.detail == m_key3.key) {
+                gifStart();
+            }
+        }
+    }
+    return false;
+}
+#endif // Q_OS_LINUX
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
     m_mouse_pos = event->pos();
@@ -585,7 +618,7 @@ void MainWindow::saveImage() {
         GetWindowTextA(hwnd, title, 256);
         windowTitle = QString::fromLocal8Bit(title);
 #elif defined(Q_OS_LINUX)
-        Display *display = XOpenDisplay(nullptr);
+        Display *display = QX11Info::display();
         Window rootWindow = DefaultRootWindow(display);
 
         Atom actual_type;
@@ -628,8 +661,6 @@ void MainWindow::saveImage() {
                 XFree(children);
             }
         }
-
-        XCloseDisplay(display);
 #endif
         QList<QScreen*> list = QApplication::screens();
         for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
@@ -838,9 +869,11 @@ void MainWindow::updateHotkey() {
 void MainWindow::updateAutoSave(const HotKey &key, quint8 mode, const QString &path) {
     Q_UNUSED(mode);
     Q_UNUSED(path);
-#ifdef Q_OS_WINDOWS
+#if defined(Q_OS_WINDOWS)
     UnregisterHotKey((HWND)this->winId(), 1);
     quint32 fsModifiers = 0;
+#elif defined(Q_OS_LINUX)
+    UnregisterHotKey(m_key1);
 #endif
     if (key.modifiers != Qt::NoModifier) {
         QString s{"自动保存("};
@@ -871,19 +904,29 @@ void MainWindow::updateAutoSave(const HotKey &key, quint8 mode, const QString &p
             m_setting->cleanAutoSaveKey();
             m_action1->setText("自动保存(未设置)");
         }
-#else
-        s.append(static_cast<char>(key.key)).append(")");
-        m_action1->setText(s);
+#elif defined(Q_OS_LINUX)
+        m_key1 = key;
+        if (RegisterHotKey(m_key1)) {
+            s.append(static_cast<char>(key.key)).append(")");
+            m_action1->setText(s);
+        } else {
+            QMessageBox::warning(this, "注册热键失败", QString("自动保存热键注册失败: \n%1").arg(m_grab_error));
+            m_setting->cleanAutoSaveKey();
+            m_action1->setText("自动保存(未设置)");
+        }
 #endif
     } else {
         m_action1->setText("自动保存(未设置)");
+        m_key1 = {};
     }
 }
 
 void MainWindow::updateCapture(const HotKey &key) {
-#ifdef Q_OS_WINDOWS
+#if defined(Q_OS_WINDOWS)
     UnregisterHotKey((HWND)this->winId(), 2);
     quint32 fsModifiers = 0;
+#elif defined(Q_OS_LINUX)
+    UnregisterHotKey(m_key2);
 #endif
     if (key.modifiers != Qt::NoModifier) {
         QString s{"截图("};
@@ -914,19 +957,29 @@ void MainWindow::updateCapture(const HotKey &key) {
             m_setting->cleanCaptureKey();
             m_action2->setText("截图(未设置)");
         }
-#else
-        s.append(static_cast<char>(key.key)).append(")");
-        m_action2->setText(s);
+#elif defined(Q_OS_LINUX)
+        m_key2 = key;
+        if (RegisterHotKey(m_key2)) {
+            s.append(static_cast<char>(key.key)).append(")");
+            m_action2->setText(s);
+        } else {
+            QMessageBox::warning(this, "注册热键失败", QString("截图注册热键失败: \n%1").arg(m_grab_error));
+            m_setting->cleanCaptureKey();
+            m_action2->setText("截图(未设置)");
+        }
 #endif
     } else {
         m_action2->setText("截图(未设置)");
+        m_key2 = {};
     }
 }
 
 void MainWindow::updateRecord(const HotKey &key) {
-#ifdef Q_OS_WINDOWS
+#if defined(Q_OS_WINDOWS)
     UnregisterHotKey((HWND)this->winId(), 3);
     quint32 fsModifiers = 0;
+#elif defined(Q_OS_LINUX)
+    UnregisterHotKey(m_key3);
 #endif
     if (key.modifiers != Qt::NoModifier) {
         QString s{"录制GIF("};
@@ -957,12 +1010,20 @@ void MainWindow::updateRecord(const HotKey &key) {
             m_setting->cleanRecordKey();
             m_action3->setText("录制GIF(未设置)");
         }
-#else
-        s.append(static_cast<char>(key.key)).append(")");
-        m_action3->setText(s);
+#elif defined(Q_OS_LINUX)
+        m_key3 = key;
+        if (RegisterHotKey(m_key3)) {
+            s.append(static_cast<char>(key.key)).append(")");
+            m_action3->setText(s);
+        } else {
+            QMessageBox::warning(this, "注册热键失败", QString("GIF注册热键失败: \n%1").arg(m_grab_error));
+            m_setting->cleanRecordKey();
+            m_action3->setText("录制GIF(未设置)");
+        }
 #endif
     } else {
         m_action3->setText("录制GIF(未设置)");
+        m_key3 = {};
     }
 }
 
@@ -1153,7 +1214,7 @@ void MainWindow::updateWindows() {
         }
     }
 #else
-    Display *display = XOpenDisplay(nullptr);
+    Display *display = QX11Info::display();
     Window rootWindow = DefaultRootWindow(display);
     Window parent;
     Window* children;
@@ -1175,7 +1236,6 @@ void MainWindow::updateWindows() {
 
         XFree(children);
     }
-    XCloseDisplay(display);
 #endif
 
     const QPoint &point = QCursor::pos();
@@ -1239,6 +1299,80 @@ QString MainWindow::getWindowTitle(Display *display, Window window) {
     }
     return {};
 }
+
+bool MainWindow::UnregisterHotKey(const HotKey &key) {
+    m_grab_error.clear();
+    if (key.modifiers == 0) return false;
+    Display *display = QX11Info::display();
+    if(!display) return false;
+
+    Window root = DefaultRootWindow(display);
+    quint32 modifiers[] = { 0, Mod2Mask, LockMask, Mod2Mask | LockMask };
+    for(quint32 mod: modifiers) {
+        XUngrabKey(display, key.key, key.modifiers | mod, root);
+    }
+    XSync(display, False);
+
+    if (! m_grab_error.isEmpty()) return false;
+    return true;
+}
+
+bool MainWindow::RegisterHotKey(HotKey &key) {
+    m_grab_error.clear();
+    if (key.modifiers == Qt::NoModifier) return false;
+    quint32 mods = 0;
+    if (key.modifiers & Qt::ShiftModifier)
+        mods |= ShiftMask;
+    if (key.modifiers & Qt::ControlModifier)
+        mods |= ControlMask;
+    if (key.modifiers & Qt::AltModifier)
+        mods |= Mod1Mask;
+    key.modifiers = 0;
+
+    Display *display = QX11Info::display();
+    if(!display) return false;
+
+    QString str = QKeySequence(key.key).toString(QKeySequence::NativeText);
+    KeySym sym = XStringToKeysym(str.toStdString().c_str());
+    key.key = XKeysymToKeycode(display, sym);
+
+    Window root = DefaultRootWindow(display);
+    quint32 modifiers[] = { 0, Mod2Mask, LockMask, Mod2Mask | LockMask };
+    for(quint32 mod: modifiers) {
+        XGrabKey(display, key.key, mods | mod, root, True, GrabModeAsync, GrabModeAsync);
+    }
+    XSync(display, False);
+
+    if(! m_grab_error.isEmpty()) {
+        QString back = m_grab_error;
+        this->UnregisterHotKey(key);
+        m_grab_error = back;
+        return false;
+    }
+    key.modifiers = mods;
+    return true;
+}
+
+int MainWindow::handleError(Display *display, XErrorEvent *error) {
+    auto w = MainWindow::instance();
+    if (! w) return 0;
+    switch (error->error_code) {
+    case BadAccess:
+    case BadValue:
+    case BadWindow:
+        if (error->request_code == 33 || //grab key
+            error->request_code == 34) {// ungrab key
+            char str[256];
+            XGetErrorText(display, error->error_code, str, 256);
+            w->m_grab_error = QString::fromLatin1(str);
+            return 1;
+        }
+        return 0;
+    default:
+        return 0;
+    }
+}
+
 #endif
 
 #ifdef Q_OS_WINDOWS
