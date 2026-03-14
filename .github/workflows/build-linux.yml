@@ -1,13 +1,19 @@
-﻿name: Build Linux
+name: Build Linux
 
 on:
   push:
     tags:
-      - "v*"
+      - "v*.*"
   workflow_dispatch:
+    inputs:
+      name:
+        description: 'Version name (default is ref name)'
+
+env:
+  VERSION: ${{ github.event.inputs.name || github.ref_name }}
 
 jobs:
-  linux:
+  build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -16,7 +22,7 @@ jobs:
           - ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install build deps
         run: |
@@ -44,6 +50,12 @@ jobs:
 
       - name: Package deb
         run: |
+          TAG_VERSION=$(echo "${{ env.VERSION }}" | sed 's/^[vV]//')
+          if grep -q '^Version:' package/linux/control; then
+            sed -i "/^Version:/c Version: $TAG_VERSION" package/linux/control
+          else
+            sed -i "/^Package:/a Version: $TAG_VERSION" package/linux/control
+          fi
           if grep -q '^Depends:' package/linux/control; then
             sed -i "/^Depends:/c Depends: ${{ env.DEPENDS }}" package/linux/control
           else
@@ -53,9 +65,8 @@ jobs:
           make package -j
           mv screenshot.deb screenshot-${{ matrix.os }}.deb
 
-
       - name: Upload deb
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: screenshot-${{ github.job }}-${{ matrix.os }}
           path: screenshot-${{ matrix.os }}.deb
