@@ -72,6 +72,7 @@ private:
 private:
     QMenu *tray_menu;
     QMenu *m_menu;
+    QSize m_screen_size;
 
 #ifdef OCR
     void hideWidget(bool clearTip = true);
@@ -83,7 +84,6 @@ private:
     QTextEdit *m_text = nullptr;
     QLabel *m_label = nullptr;
     QPushButton *m_button = nullptr;
-    QSize m_screen_size;
 #endif
 
 #ifdef Q_OS_LINUX
