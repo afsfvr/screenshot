@@ -102,7 +102,9 @@ private slots:
 #ifdef OCR
     void ocrStart();
 #endif // OCR
+#ifdef LONG_SCREENSHOT
     void longScreenshot();
+#endif //LONG_SCREENSHOT
     void updateHotkey();
     void updateAutoSave(const HotKey &key, quint8 mode, const QString &path);
     void updateCapture(const HotKey &key);

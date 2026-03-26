@@ -56,13 +56,16 @@ signals:
     void clickTop();
     void topChanged(bool top);
     void opacityChanged(int value);
+#ifdef LONG_SCREENSHOT
     void longScreenshot();
+#endif // LONG_SCREENSHOT
 #ifdef OCR
     void ocr();
-#endif
+#endif // OCR
 
 private:
     void lostFocus();
+    static constexpr int getMaxWidth();
 
     Ui::Tool *ui;
     QPen m_pen;
@@ -73,7 +76,7 @@ private:
     MySliderStyle *m_style;
 #ifdef OCR
     QPushButton *m_ocr = nullptr;
-#endif
+#endif // OCR
 };
 
 #endif // TOOL_H

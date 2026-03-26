@@ -1,7 +1,9 @@
 ﻿#include "mainwindow.h"
 #include "TopWidget.h"
 #include "GifWidget.h"
+#ifdef LONG_SCREENSHOT
 #include "LongWidget.h"
+#endif // LONG_SCREENSHOT
 
 #include <QShortcut>
 #include <QMessageBox>
@@ -29,15 +31,17 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent),
     connect(this, &MainWindow::started, this, &MainWindow::grabMouseEvent);
     qApp->installNativeEventFilter(this);
     XSetErrorHandler(handleError);
-#endif
+#endif // Q_OS_LINUX
 #ifdef OCR
     connect(m_tool, &Tool::ocr, this, &MainWindow::ocrStart);
-#endif
+#endif // OCR
     setMouseTracking(true);
 
     m_tool->setInMainWindow(true);
     connect(m_tool, &Tool::clickTop, this, &MainWindow::top);
+#ifdef LONG_SCREENSHOT
     connect(m_tool, &Tool::longScreenshot, this, &MainWindow::longScreenshot);
+#endif // LONG_SCREENSHOT
     connect(m_setting, &SettingWidget::autoSaveChanged, this, &MainWindow::updateAutoSave);
     connect(m_setting, &SettingWidget::captureChanged, this, &MainWindow::updateCapture);
     connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
@@ -59,7 +63,7 @@ MainWindow::~MainWindow() {
     UnregisterHotKey((HWND)this->winId(), 1);
     UnregisterHotKey((HWND)this->winId(), 2);
     UnregisterHotKey((HWND)this->winId(), 3);
-#endif
+#endif // Q_OS_WINDOWS
 }
 
 void MainWindow::connectTopWidget(TopWidget *t) {
@@ -67,7 +71,7 @@ void MainWindow::connectTopWidget(TopWidget *t) {
     t->scaleKeyChanged(m_setting->scaleCtrl());
 #ifdef Q_OS_LINUX
     connect(m_monitor, &KeyMouseEvent::mouseRelease, t, &TopWidget::mouseRelease);
-#endif
+#endif // Q_OS_LINUX
 }
 
 #ifdef Q_OS_LINUX
@@ -104,7 +108,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         this->releaseMouse();
         m_grab_mouse = false;
     }
-#endif
+#endif // Q_OS_LINUX
     if (event->buttons() == event->button()) {
         m_press = true;
         m_point = m_mouse_pos;
@@ -579,7 +583,7 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *r
     }
     return QWidget::nativeEvent(eventType, message, result);
 }
-#endif
+#endif // Q_OS_WINDOWS
 
 void MainWindow::saveImage() {
     const QString path = m_setting->autoSavePath();
@@ -661,7 +665,7 @@ void MainWindow::saveImage() {
                 XFree(children);
             }
         }
-#endif
+#endif // Q_OS_LINUX
         QList<QScreen*> list = QApplication::screens();
         for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
             QRect r = (*iter)->geometry();
@@ -834,7 +838,7 @@ void MainWindow::grabMouseEvent() {
     this->grabMouse();
     m_grab_mouse = true;
 }
-#endif
+#endif // Q_OS_LINUX
 
 #ifdef OCR
 void MainWindow::ocrStart() {
@@ -843,8 +847,9 @@ void MainWindow::ocrStart() {
         t->ocrStart();
     }
 }
-#endif
+#endif // OCR
 
+#ifdef LONG_SCREENSHOT
 void MainWindow::longScreenshot() {
     if (m_state & State::Rect) {
         if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
@@ -854,6 +859,7 @@ void MainWindow::longScreenshot() {
         end();
     }
 }
+#endif // LONG_SCREENSHOT
 
 void MainWindow::updateHotkey() {
     if (m_setting->isMinimized()) {
@@ -880,19 +886,19 @@ void MainWindow::updateAutoSave(const HotKey &key, quint8 mode, const QString &p
         if (key.modifiers & Qt::ControlModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_CONTROL;
-#endif
+#endif // Q_OS_WINDOWS
             s.append("Ctrl+");
         }
         if (key.modifiers & Qt::AltModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_ALT;
-#endif
+#endif // Q_OS_WINDOWS
             s.append("Alt+");
         }
         if (key.modifiers & Qt::ShiftModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_SHIFT;
-#endif
+#endif // Q_OS_WINDOWS
             s.append("Shift+");
         }
 #if defined(Q_OS_WINDOWS)
@@ -933,19 +939,19 @@ void MainWindow::updateCapture(const HotKey &key) {
         if (key.modifiers & Qt::ControlModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_CONTROL;
-#endif
+#endif // Q_OS_WINDOWS
             s.append("Ctrl+");
         }
         if (key.modifiers & Qt::AltModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_ALT;
-#endif
+#endif // Q_OS_WINDOWS
             s.append("Alt+");
         }
         if (key.modifiers & Qt::ShiftModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_SHIFT;
-#endif
+#endif // Q_OS_WINDOWS
             s.append("Shift+");
         }
 #if defined(Q_OS_WINDOWS)
@@ -986,19 +992,19 @@ void MainWindow::updateRecord(const HotKey &key) {
         if (key.modifiers & Qt::ControlModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_CONTROL;
-#endif
+#endif // Q_OS_WINDOWS
             s.append("Ctrl+");
         }
         if (key.modifiers & Qt::AltModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_ALT;
-#endif
+#endif // Q_OS_WINDOWS
             s.append("Alt+");
         }
         if (key.modifiers & Qt::ShiftModifier) {
 #ifdef Q_OS_WINDOWS
             fsModifiers |= MOD_SHIFT;
-#endif
+#endif // Q_OS_WINDOWS
             s.append("Shift+");
         }
 #if defined(Q_OS_WINDOWS)
@@ -1373,7 +1379,7 @@ int MainWindow::handleError(Display *display, XErrorEvent *error) {
     }
 }
 
-#endif
+#endif // Q_OS_LINUX
 
 #ifdef Q_OS_WINDOWS
 QRect MainWindow::getRectByHwnd(HWND hwnd) {
@@ -1413,4 +1419,4 @@ QRect MainWindow::getRectByHwnd(HWND hwnd) {
     return qrect;
 }
 
-#endif
+#endif // Q_OS_WINDOWS

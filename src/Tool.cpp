@@ -9,11 +9,6 @@
 #include <QKeyEvent>
 #include <QPushButton>
 
-#ifdef OCR
-static constexpr int maxWidth = 364;
-#else
-static constexpr int maxWidth = 338;
-#endif
 QString Tool::savePath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
 
 Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr), m_ignore{false}, m_is_main{false} {
@@ -26,7 +21,9 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     connect(ui->btn_ok,     SIGNAL(clicked()),         this, SIGNAL(save()));
     connect(ui->btn_top,    SIGNAL(clicked()),         this, SIGNAL(clickTop()));
     connect(ui->btn_opacity,SIGNAL(clicked()),         this, SLOT(clickTransparency()));
+#ifdef LONG_SCREENSHOT
     connect(ui->btn_long,   SIGNAL(clicked()),         this, SIGNAL(longScreenshot()));
+#endif // LONG_SCREENSHOT
     connect(ui->btn_undo,   SIGNAL(clicked()),         this, SIGNAL(undo()));
     connect(ui->btn_redo,   SIGNAL(clicked()),         this, SIGNAL(redo()));
     connect(ui->opacity,    SIGNAL(valueChanged(int)), this, SIGNAL(opacityChanged(int)));
@@ -111,7 +108,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     ui->pen_color->installEventFilter(this);
 
     ui->btn_long->setVisible(false);
-    setFixedSize(maxWidth, 26);
+    setFixedSize(getMaxWidth(), 26);
 #ifdef OCR
     m_ocr = new QPushButton(this);
     m_ocr->setFixedSize(24, 24);
@@ -119,7 +116,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     m_ocr->setIcon(QIcon(":/images/ocr.png"));
     ui->btns_layout->insertWidget(6, m_ocr);
     connect(m_ocr, SIGNAL(clicked()), this, SIGNAL(ocr()));
-#endif
+#endif // OCR
 }
 
 Tool::~Tool() {
@@ -193,9 +190,9 @@ void Tool::keyPressEvent(QKeyEvent *event) {
 void Tool::setEditShow(bool show) {
 #ifdef OCR
     m_ocr->setVisible(show);
-#endif
+#endif // OCR
     if (show) {
-        this->setFixedWidth(maxWidth);
+        this->setFixedWidth(getMaxWidth());
         ui->btn_rectangle->setVisible(true);
         ui->btn_ellipse->setVisible(true);
         ui->btn_straightline->setVisible(true);
@@ -204,7 +201,9 @@ void Tool::setEditShow(bool show) {
         ui->btn_text->setVisible(true);
         ui->btn_top->setVisible(true);
         ui->btn_opacity->setVisible(! m_is_main);
+#ifdef LONG_SCREENSHOT
         ui->btn_long->setVisible(m_is_main);
+#endif // LONG_SCREENSHOT
         ui->btn_undo->setVisible(true);
         ui->btn_redo->setVisible(true);
         ui->btn_save->setVisible(true);
@@ -232,8 +231,10 @@ void Tool::setInMainWindow(bool val) {
     if (val != m_is_main) {
         m_is_main = val;
         ui->btn_opacity->setVisible(! val);
+#ifdef LONG_SCREENSHOT
         ui->btn_long->setVisible(val);
-        this->setFixedWidth(maxWidth);
+#endif // LONG_SCREENSHOT
+        this->setFixedWidth(getMaxWidth());
     }
 }
 
@@ -435,4 +436,14 @@ void Tool::lostFocus() {
     }
     this->setDraw(ShapeEnum::Null);
     this->hide();
+}
+constexpr int Tool::getMaxWidth() {
+    int width = 312;
+#ifdef OCR
+    width += 26;
+#endif // OCR
+#ifdef LONG_SCREENSHOT
+    width += 26;
+#endif // LONG_SCREENSHOT
+    return width;
 }

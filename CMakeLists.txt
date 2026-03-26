@@ -4,6 +4,8 @@ project(screenshot LANGUAGES CXX VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+message(STATUS "CMake build type: ${CMAKE_BUILD_TYPE}")
+
 option(TENCENT_OCR "use tencent ocr" ON)
 option(RAPID_OCR "use rapid ocr" OFF)
 
@@ -23,7 +25,6 @@ set(CMAKE_AUTORCC ON)
 add_executable(${PROJECT_NAME}
     src/BaseWindow.cpp
     src/GifWidget.cpp
-    src/LongWidget.cpp
     src/MySliderStyle.cpp
     src/SettingWidget.cpp
     src/Shape.cpp
@@ -36,7 +37,6 @@ add_executable(${PROJECT_NAME}
     src/BaseWindow.h
     src/BlockQueue.h
     src/GifWidget.h
-    src/LongWidget.h
     src/MySliderStyle.h
     src/SettingWidget.h
     src/Shape.h
@@ -50,50 +50,70 @@ add_executable(${PROJECT_NAME}
     res.qrc
 )
 
-if(RAPID_OCR)
+if(TENCENT_OCR)
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Network)
+    target_sources(${PROJECT_NAME} PRIVATE src/OcrImpl/TencentOcr.cpp)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE TENCENT_OCR OCR)
+    set(OCR ON CACHE BOOL "Enable OCR support")
+    set(OCR_STATUS "TENCENT")
+elseif(RAPID_OCR)
     set(MODELS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/rapidocr/models")
     set(MODELS_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
     file(COPY ${MODELS_SOURCE_DIR} DESTINATION ${MODELS_OUTPUT_DIR})
-
     target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/rapidocr/include)
     target_link_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/rapidocr/lib)
     target_sources(${PROJECT_NAME} PRIVATE src/OcrImpl/RapidOcr.cpp)
     target_compile_definitions(${PROJECT_NAME} PRIVATE RAPID_OCR OCR)
     set(OCR ON CACHE BOOL "Enable OCR support")
+    set(OCR_STATUS "RAPID")
+else()
+    set(OCR OFF CACHE BOOL "Enable OCR support")
+    set(OCR_STATUS "NONE")
 endif()
-
-if(TENCENT_OCR)
-    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Network)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Network)
-    target_sources(${PROJECT_NAME} PRIVATE src/OcrImpl/TencentOcr.cpp)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE TENCENT_OCR OCR)
-    set(OCR ON CACHE BOOL "Enable OCR support")
-endif()
+message(STATUS "OCR backend: ${OCR_STATUS}")
 
 if(OCR)
     target_sources(${PROJECT_NAME} PRIVATE src/Ocr.cpp)
 endif()
 
 if(UNIX)
-    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS X11Extras)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(OPENCV4 REQUIRED opencv4)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${OPENCV4_INCLUDE_DIRS})
-    target_sources(${PROJECT_NAME} PRIVATE src/KeyMouseEvent.cpp)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Qt::X11Extras X11 Xext Xtst ${OPENCV4_LIBRARIES})
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS X11Extras)
+    target_sources(${PROJECT_NAME} PRIVATE src/KeyMouseEvent.cpp src/KeyMouseEvent.h)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt::X11Extras X11 Xext Xtst)
+
+    find_package(OpenCV QUIET COMPONENTS core imgproc imgcodecs)
+    if(NOT OpenCV_FOUND)
+        message(WARNING "OpenCV not found. Long screenshot feature will be disabled.")
+    else()
+        target_sources(${PROJECT_NAME} PRIVATE src/LongWidget.cpp src/LongWidget.h)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE LONG_SCREENSHOT)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
+    endif()
 elseif(WIN32)
-    target_include_directories(${PROJECT_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/opencv/include/opencv4
-    )
-    target_link_directories(${PROJECT_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/opencv/lib/windows/mingw
-    )
+    find_package(OpenCV QUIET COMPONENTS core imgproc imgcodecs)
+    target_sources(${PROJECT_NAME} PRIVATE src/LongWidget.cpp src/LongWidget.h)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE LONG_SCREENSHOT)
+    if(OpenCV_FOUND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
+    else()
+        target_include_directories(${PROJECT_NAME} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/opencv/include/opencv4
+        )
+        target_link_directories(${PROJECT_NAME} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/opencv/lib/windows/mingw
+        )
+        target_link_libraries(${PROJECT_NAME} PRIVATE 
+            opencv_imgproc480
+            opencv_imgcodecs480
+            opencv_core480
+            z
+        )
+    endif()
     target_sources(${PROJECT_NAME} PRIVATE resource.rc)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        Dwmapi user32
-        opencv_imgproc480 opencv_imgcodecs480 opencv_core480 z
-    )
+    target_link_libraries(${PROJECT_NAME} PRIVATE Dwmapi user32)
 endif()
+message(STATUS "OpenCV Found: ${OpenCV_FOUND}, Version: ${OpenCV_VERSION}")
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall)
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Core Qt::Gui Qt::Widgets)
