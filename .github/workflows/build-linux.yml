@@ -13,7 +13,7 @@ env:
   VERSION: ${{ github.event.inputs.name || github.ref_name }}
 
 jobs:
-  build:
+  linux:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -43,7 +43,7 @@ jobs:
 
       - name: Build and Package
         run: |
-          cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
+          cmake -Bbuild -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
           cmake --build build -j$(nproc)
           cmake --build build --target package
           mv build/screenshot.deb screenshot-${{ matrix.os }}.deb
