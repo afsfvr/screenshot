@@ -633,6 +633,7 @@ void TopWidget::topChange(bool top) {
     this->hide();
     setWindowFlag(Qt::WindowStaysOnTopHint, top);
     m_tool->setWindowFlag(Qt::WindowStaysOnTopHint, top);
+    setCursorShape();
 
     QTimer::singleShot(100, this, &TopWidget::moveTop);
 }
