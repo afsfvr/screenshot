@@ -79,7 +79,7 @@ void MainWindow::connectTopWidget(TopWidget *t) {
 bool MainWindow::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) {
 #else
 bool MainWindow::nativeEventFilter(const QByteArray &eventType, void *message, long *result) {
-#endif
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     Q_UNUSED(eventType);
     Q_UNUSED(result);
     if (! this->isVisible()) {
@@ -563,7 +563,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr *result) {
 #else
 bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result) {
-#endif
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     if (! this->isVisible() && eventType == "windows_generic_MSG") {
         MSG *msg = reinterpret_cast<MSG*>(message);
         if (msg->message == WM_HOTKEY) {
@@ -622,7 +622,18 @@ void MainWindow::saveImage() {
         GetWindowTextA(hwnd, title, 256);
         windowTitle = QString::fromLocal8Bit(title);
 #elif defined(Q_OS_LINUX)
-        Display *display = QX11Info::display();
+        Display *display = nullptr;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        if (auto *x11Application = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
+            display = x11Application->display();
+        }
+#else
+        display = QX11Info::display();
+#endif // #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        if (! display) {
+            QMessageBox::warning(this, "保存失败", "未获取到display");
+            return;
+        }
         Window rootWindow = DefaultRootWindow(display);
 
         Atom actual_type;
@@ -1183,7 +1194,7 @@ void MainWindow::openSaveDir() {
             }
         }
     }
-#else
+#elif defined(Q_OS_WINDOWS)
     QProcess process;
     process.setProgram("cmd.exe");
     process.setArguments({"/C", QString("explorer %1 >NUL 2>&1").arg(path)});
@@ -1219,8 +1230,19 @@ void MainWindow::updateWindows() {
             m_windows.push_back(QRect(rect.left() / m_ratio, rect.top() / m_ratio, rect.width() / m_ratio, rect.height() / m_ratio));
         }
     }
+#elif defined(Q_OS_LINUX)
+    Display *display = nullptr;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (auto *x11Application = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
+        display = x11Application->display();
+    }
 #else
-    Display *display = QX11Info::display();
+    display = QX11Info::display();
+#endif // #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    if (! display) {
+        qWarning() << "未获取到display";
+        return;
+    }
     Window rootWindow = DefaultRootWindow(display);
     Window parent;
     Window* children;
@@ -1309,8 +1331,18 @@ QString MainWindow::getWindowTitle(Display *display, Window window) {
 bool MainWindow::UnregisterHotKey(const HotKey &key) {
     m_grab_error.clear();
     if (key.modifiers == 0) return false;
-    Display *display = QX11Info::display();
-    if(!display) return false;
+    Display *display = nullptr;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (auto *x11Application = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
+        display = x11Application->display();
+    }
+#else
+    display = QX11Info::display();
+#endif // #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    if (! display) {
+        qWarning() << "未获取到display";
+        return false;
+    }
 
     Window root = DefaultRootWindow(display);
     quint32 modifiers[] = { 0, Mod2Mask, LockMask, Mod2Mask | LockMask };
@@ -1335,8 +1367,18 @@ bool MainWindow::RegisterHotKey(HotKey &key) {
         mods |= Mod1Mask;
     key.modifiers = 0;
 
-    Display *display = QX11Info::display();
-    if(!display) return false;
+    Display *display = nullptr;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (auto *x11Application = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
+        display = x11Application->display();
+    }
+#else
+    display = QX11Info::display();
+#endif // #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    if (! display) {
+        qWarning() << "未获取到display";
+        return false;
+    }
 
     QString str = QKeySequence(key.key).toString(QKeySequence::NativeText);
     KeySym sym = XStringToKeysym(str.toStdString().c_str());

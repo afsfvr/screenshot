@@ -213,7 +213,7 @@ void SettingWidget::openFile(const QString &link) {
             }
         }
     }
-#else
+#elif defined(Q_OS_WINDOWS)
     QProcess process;
     process.setProgram("cmd.exe");
     if (QFile::exists(link)) {

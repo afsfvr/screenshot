@@ -8,7 +8,9 @@
 
 #ifdef Q_OS_LINUX
 #include <X11/Xlib.h>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QX11Info>
+#endif
 #undef KeyPress
 #endif
 
@@ -185,7 +187,7 @@ void TopWidget::mouseRelease(QSharedPointer<QMouseEvent> event) {
         QPoint gpos = event->globalPosition().toPoint();
 #else
         QPoint gpos = event->globalPos();
-#endif
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         QPoint screenPos = gpos;
         QList<QScreen*> list = QApplication::screens();
         if (list.size() > 1) {
@@ -330,7 +332,7 @@ void TopWidget::paintEvent(QPaintEvent *event) {
     if (m_max_offset > 0) {
         painter.restore();
     }
-#endif
+#endif // OCR
     if (m_scroll_timer != -1) {
         int maxH = m_image.height() / m_ratio;
         int h = m_origin.height();
@@ -373,7 +375,7 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
         m_point = event->globalPosition().toPoint() - geometry().topLeft();
 #else
         m_point = event->globalPos() - geometry().topLeft();
-#endif
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         QPoint point = event->pos() / m_scale_ratio;
         point.ry() += m_offsetY;
         if (m_tool->isDraw()) {
@@ -384,12 +386,12 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
             }
 #else
             setShape(point);
-#endif
+#endif // OCR
         } else {
             setCursorShape(Qt::SizeAllCursor);
 #ifdef OCR
             m_widget->hide();
-#endif
+#endif // OCR
             m_tool->hide();
             if (m_move_shape) {
                 m_move_shape->moveEnd();
@@ -407,7 +409,11 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
     } else if (event->buttons() == Qt::RightButton) {
         if (m_right_menu) {
             m_right_menu->show();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            QPoint gpos = event->globalPosition().toPoint();
+#else
             QPoint gpos = event->globalPos();
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             int right = gpos.x() + m_right_menu->width();
             int bottom = gpos.y() + m_right_menu->height();
             if (bottom > m_screen_size.height() || right > m_screen_size.width()) {
@@ -452,7 +458,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
     QPoint gpos = event->globalPosition().toPoint();
 #else
     QPoint gpos = event->globalPos();
-#endif
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     if (event->buttons() == Qt::NoButton) {
         if (m_tool->isDraw()) {
             setCursorShape(Qt::BitmapCursor);
@@ -527,19 +533,37 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
 
             XEvent xevent;
             memset(&xevent, 0, sizeof(XEvent));
-            Display *display = QX11Info::display();
+            Display *display = nullptr;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            xcb_window_t root_window = 0;
+            if (auto *x11Application = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
+                display = x11Application->display();
+                xcb_connection_t *connection = x11Application->connection();
+                xcb_screen_t* screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
+                root_window = screen->root;
+            }
+#else
+            display = QX11Info::display();
+            xcb_window_t root_window = QX11Info::appRootWindow(QX11Info::appScreen());
+#endif // #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            if (! display) return;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            QPoint gpos = event->globalPosition().toPoint();
+#else
+            QPoint gpos = event->globalPos();
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             xevent.xclient.type = ClientMessage;
             xevent.xclient.message_type = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
             xevent.xclient.display = display;
             xevent.xclient.window = this->winId();
             xevent.xclient.format = 32;
-            xevent.xclient.data.l[0] = event->globalX();
-            xevent.xclient.data.l[1] = event->globalY();
+            xevent.xclient.data.l[0] = gpos.x();
+            xevent.xclient.data.l[1] = gpos.y();
             xevent.xclient.data.l[2] = 8;
             xevent.xclient.data.l[3] = Button1;
             xevent.xclient.data.l[4] = 1;
             XUngrabPointer(display, CurrentTime);
-            XSendEvent(display, QX11Info::appRootWindow(QX11Info::appScreen()), False, SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+            XSendEvent(display, root_window, False, SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
             XFlush(display);
 #elif defined (Q_OS_WINDOWS)
             move(gpos - m_point);

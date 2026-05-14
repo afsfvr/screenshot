@@ -5,10 +5,12 @@ CONFIG += c++17
 DEFINES += TENCENT_OCR
 
 unix: {
-    QT += x11extras
+    lessThan(QT_MAJOR_VERSION, 6) {
+        QT += x11extras
+    }
     CONFIG += link_pkgconfig
     PKGCONFIG += opencv4
-    LIBS += -lX11 -lXext -lXtst
+    LIBS += -lX11 -lXext -lXtst -lxcb
     # LIBS += -L$$PWD/opencv/lib/linux -lopencv_imgproc -lopencv_imgcodecs -lopencv_core
     # QMAKE_LFLAGS += -Wl,-rpath,/usr/lib/screenshot
     SOURCES += src/KeyMouseEvent.cpp

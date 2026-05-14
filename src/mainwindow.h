@@ -7,7 +7,9 @@
 #include "SettingWidget.h"
 #include "BaseWindow.h"
 #if defined(Q_OS_LINUX)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QX11Info>
+#endif // QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QAbstractNativeEventFilter>
 #include <xcb/xcb.h>
 #include "KeyMouseEvent.h"
