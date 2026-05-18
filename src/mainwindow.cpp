@@ -142,6 +142,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
                     for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
                         if ((*iter)->canMove(m_mouse_pos)) {
                             m_move_shape = *iter;
+                            m_move_shape->moveStart(m_mouse_pos);
                             break;
                         }
                     }
@@ -340,6 +341,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
             update();
         }
     } else if (event->buttons() == Qt::NoButton) {
+        QPoint point = event->pos();
         if (m_state == State::Null) {
             setCursorShape(Qt::CrossCursor);
             for (int i = 0; i < m_windows.size(); ++i) {
@@ -353,12 +355,19 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
             update();
         } else if (m_state == State::RectEdit) {
             m_resize = ResizeImage::NoResize;
-            QPoint point = event->pos();
             if (m_rect.contains(point)) {
                 if (m_tool->isDraw()) {
                     setCursorShape(Qt::BitmapCursor);
                 } else {
-                    setCursorShape(Qt::SizeAllCursor);
+                    bool isSet = false;
+                    for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+                        if ((*iter)->canMove(point)) {
+                            setCursorShape(Qt::CrossCursor);
+                            isSet = true;
+                            break;
+                        }
+                    }
+                    if (! isSet) setCursorShape(Qt::SizeAllCursor);
                 }
             } else {
                 if (m_rect.left() - point.x() >= 0 && m_rect.left() - point.x() <= 3) {
@@ -394,7 +403,15 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event) {
                 if (m_tool->isDraw()) {
                     setCursorShape(Qt::BitmapCursor);
                 } else {
-                    setCursorShape(Qt::SizeAllCursor);
+                    bool isSet = false;
+                    for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+                        if ((*iter)->canMove(point)) {
+                            setCursorShape(Qt::CrossCursor);
+                            isSet = true;
+                            break;
+                        }
+                    }
+                    if (! isSet) setCursorShape(Qt::SizeAllCursor);
                 }
             } else {
                 setCursorShape(Qt::CrossCursor);

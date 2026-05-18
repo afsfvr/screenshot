@@ -15,13 +15,16 @@ public:
     Shape(const QPen &pen, float opacity = 1.0f, bool fill = false);
     virtual ~Shape() = default;
     virtual Shape *getInstance(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false) = 0;
+    virtual Shape *clone() const = 0;
     virtual void addPoint(const QPoint &point) = 0;
-    virtual bool isNull() = 0;
+    virtual bool isNull() const = 0;
     virtual void scale(qreal sx, qreal sy) = 0;
     virtual void translate(const QPoint &point) = 0;
-    virtual bool canMove(const QPoint&) { return false; }
+    virtual bool canMove(const QPoint&) const { return false; }
+    virtual void moveStart(const QPoint&) {}
     virtual void movePoint(const QPoint&) {}
     virtual void moveEnd() {}
+    void setVisible(bool visible);
     void translate(int x, int y);
     void draw(QPainter &painter);
     void setOpacity(float opacity);
@@ -35,6 +38,7 @@ protected:
     QPen m_pen;
     bool m_fill;
     float m_opacity;
+    bool m_visible;
 };
 
 class Rectangle: public Shape {
@@ -43,11 +47,13 @@ class Rectangle: public Shape {
     SHAPE(Rectangle)
 public:
     Rectangle(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
+    virtual Shape *clone() const override;
     virtual void addPoint(const QPoint &point) override;
-    virtual bool isNull() override;
+    virtual bool isNull() const override;
     virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
-    virtual bool canMove(const QPoint &point) override;
+    virtual bool canMove(const QPoint &point) const override;
+    virtual void moveStart(const QPoint &point) override;
     virtual void movePoint(const QPoint &point) override;
     virtual void moveEnd() override;
 
@@ -66,11 +72,13 @@ class Ellipse: public Shape {
     SHAPE(Ellipse)
 public:
     Ellipse(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
+    virtual Shape *clone() const override;
     virtual void addPoint(const QPoint &point) override;
-    virtual bool isNull() override;
+    virtual bool isNull() const override;
     virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
-    virtual bool canMove(const QPoint &point) override;
+    virtual bool canMove(const QPoint &point) const override;
+    virtual void moveStart(const QPoint &point) override;
     virtual void movePoint(const QPoint &point) override;
     virtual void moveEnd() override;
 
@@ -88,11 +96,13 @@ class StraightLine: public Shape {
     SHAPE(StraightLine)
 public:
     StraightLine(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
+    virtual Shape *clone() const override;
     virtual void addPoint(const QPoint &point) override;
-    virtual bool isNull() override;
+    virtual bool isNull() const override;
     virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
-    virtual bool canMove(const QPoint &point) override;
+    virtual bool canMove(const QPoint &point) const override;
+    virtual void moveStart(const QPoint &point) override;
     virtual void movePoint(const QPoint &point) override;
     virtual void moveEnd() override;
 
@@ -108,11 +118,13 @@ class Line: public Shape {
     SHAPE(Line)
 public:
     Line(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
+    virtual Shape *clone() const override;
     virtual void addPoint(const QPoint &point) override;
-    virtual bool isNull() override;
+    virtual bool isNull() const override;
     virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
-    virtual bool canMove(const QPoint &point) override;
+    virtual bool canMove(const QPoint &point) const override;
+    virtual void moveStart(const QPoint &point) override;
     virtual void movePoint(const QPoint &point) override;
     virtual void moveEnd() override;
 
@@ -130,11 +142,13 @@ class Arrow: public Shape {
     SHAPE(Arrow)
 public:
     Arrow(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
+    virtual Shape *clone() const override;
     virtual void addPoint(const QPoint &point) override;
-    virtual bool isNull() override;
+    virtual bool isNull() const override;
     virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
-    virtual bool canMove(const QPoint &point) override;
+    virtual bool canMove(const QPoint &point) const override;
+    virtual void moveStart(const QPoint &point) override;
     virtual void movePoint(const QPoint &point) override;
     virtual void moveEnd() override;
 
@@ -153,11 +167,13 @@ class Text: public Shape {
 public:
     Text(const QPoint &point, const QPen &pen, float opacity = 1.0f, bool fill = false);
     Text(const QPoint &point, const QPen &pen, const QFont &font, float opacity = 1.0f, bool fill = false);
+    virtual Shape *clone() const override;
     virtual void addPoint(const QPoint &point) override;
-    virtual bool isNull() override;
+    virtual bool isNull() const override;
     virtual void scale(qreal sx, qreal sy) override;
     virtual void translate(const QPoint &point) override;
-    virtual bool canMove(const QPoint &point) override;
+    virtual bool canMove(const QPoint &point) const override;
+    virtual void moveStart(const QPoint &point) override;
     virtual void movePoint(const QPoint &point) override;
     virtual void moveEnd() override;
     void setText(const QString &text);

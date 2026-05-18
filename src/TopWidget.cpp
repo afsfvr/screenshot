@@ -401,6 +401,7 @@ void TopWidget::mousePressEvent(QMouseEvent *event) {
                 for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
                     if((*iter)->canMove(point)) {
                         m_move_shape = *iter;
+                        m_move_shape->moveStart(point);
                         break;
                     }
                 }
@@ -463,7 +464,15 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
         if (m_tool->isDraw()) {
             setCursorShape(Qt::BitmapCursor);
         } else {
-            setCursorShape(Qt::SizeAllCursor);
+            bool isSet = false;
+            for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
+                if ((*iter)->canMove(m_mouse_pos)) {
+                    setCursorShape(Qt::CrossCursor);
+                    isSet = true;
+                    break;
+                }
+            }
+            if (! isSet) setCursorShape(Qt::SizeAllCursor);
         }
 #ifdef OCR
         if (m_widget->isHidden() || ! m_widget->geometry().contains(gpos)) {

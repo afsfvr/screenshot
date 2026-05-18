@@ -5,8 +5,12 @@
 
 #include <cmath>
 
-Shape::Shape(const QPen &pen, float opacity, bool fill): m_pen(pen), m_fill{fill} {
+Shape::Shape(const QPen &pen, float opacity, bool fill): m_pen(pen), m_fill{fill}, m_visible{true} {
     setOpacity(opacity);
+}
+
+void Shape::setVisible(bool visible) {
+    m_visible = visible;
 }
 
 void Shape::translate(int x, int y) {
@@ -14,7 +18,7 @@ void Shape::translate(int x, int y) {
 }
 
 void Shape::draw(QPainter &painter) {
-    if (! isNull()) {
+    if (! isNull() && m_visible) {
         painter.save();
         painter.setOpacity(m_opacity);
         painter.setRenderHint(QPainter::Antialiasing);
@@ -53,11 +57,15 @@ const QPen &Shape::pen() const {
 Rectangle::Rectangle(const QPoint &point, const QPen &pen, float opacity, bool fill): Shape{pen, opacity, fill}, p1{point}, p2{-1, -1} {
 }
 
+Shape *Rectangle::clone() const {
+    return new Rectangle{*this};
+}
+
 void Rectangle::addPoint(const QPoint &point) {
     p2 = point;
 }
 
-bool Rectangle::isNull() {
+bool Rectangle::isNull() const {
     return (p2.x() == -1 && p2.y() == -1) || p1 == p2;
 }
 
@@ -74,7 +82,7 @@ void Rectangle::translate(const QPoint &point) {
     p2 += point;
 }
 
-bool Rectangle::canMove(const QPoint &point) {
+bool Rectangle::canMove(const QPoint &point) const {
     if (isNull()) return false;
 
     int width = m_pen.width() / 2 + 4;
@@ -85,27 +93,36 @@ bool Rectangle::canMove(const QPoint &point) {
 
     QRect inner(left + width, top + width, right - left - 2 * width, bottom - top - 2 * width);
     QRect outer(left - width, top - width, right - left + 2 * width, bottom - top + 2 * width);
-    if (! outer.contains(point)) return false;
 
+    if (! outer.contains(point)) return false;
+    if (! inner.contains(point)) return true;
+    return false;
+}
+
+void Rectangle::moveStart(const QPoint &point) {
     m_select_edge = Edge::None;
     m_target = Target::None;
-    if (! inner.contains(point)) {
-        if (std::abs(point.x() - left) <= width) {
-            m_select_edge = Edge::Left;
-            m_target = p1.x() < p2.x() ? Target::P1 : Target::P2;
-        } else if (std::abs(point.x() - right) <= width) {
-            m_select_edge = Edge::Right;
-            m_target = p1.x() < p2.x() ? Target::P2 : Target::P1;
-        } else if (std::abs(point.y() - top) <= width) {
-            m_select_edge = Edge::Top;
-            m_target = p1.y() < p2.y() ? Target::P1 : Target::P2;
-        } else if (std::abs(point.y() - bottom) <= width) {
-            m_select_edge = Edge::Bottom;
-            m_target = p1.y() < p2.y() ? Target::P2 : Target::P1;
-        }
-        return m_select_edge != Edge::None;
+    if (!canMove(point)) return;
+
+    int width = m_pen.width() / 2 + 4;
+    int left   = std::min(p1.x(), p2.x());
+    int right  = std::max(p1.x(), p2.x());
+    int top    = std::min(p1.y(), p2.y());
+    int bottom = std::max(p1.y(), p2.y());
+
+    if (std::abs(point.x() - left) <= width) {
+        m_select_edge = Edge::Left;
+        m_target = p1.x() < p2.x() ? Target::P1 : Target::P2;
+    } else if (std::abs(point.x() - right) <= width) {
+        m_select_edge = Edge::Right;
+        m_target = p1.x() < p2.x() ? Target::P2 : Target::P1;
+    } else if (std::abs(point.y() - top) <= width) {
+        m_select_edge = Edge::Top;
+        m_target = p1.y() < p2.y() ? Target::P1 : Target::P2;
+    } else if (std::abs(point.y() - bottom) <= width) {
+        m_select_edge = Edge::Bottom;
+        m_target = p1.y() < p2.y() ? Target::P2 : Target::P1;
     }
-    return false;
 }
 
 void Rectangle::movePoint(const QPoint &point) {
@@ -162,11 +179,15 @@ void Rectangle::paint(QPainter &painter) {
 Ellipse::Ellipse(const QPoint &point, const QPen &pen, float opacity, bool fill): Shape{pen, opacity, fill}, p1{point}, p2{-1, -1} {
 }
 
+Shape *Ellipse::clone() const {
+    return new Ellipse{*this};
+}
+
 void Ellipse::addPoint(const QPoint &point) {
     p2 = point;
 }
 
-bool Ellipse::isNull() {
+bool Ellipse::isNull() const {
     return (p2.x() == -1 && p2.y() == -1) || p1 == p2;
 }
 
@@ -183,7 +204,7 @@ void Ellipse::translate(const QPoint &point) {
     p2 += point;
 }
 
-bool Ellipse::canMove(const QPoint &point) {
+bool Ellipse::canMove(const QPoint &point) const {
     if (isNull()) return false;
 
     int width = m_pen.width() / 2 + 4;
@@ -201,27 +222,36 @@ bool Ellipse::canMove(const QPoint &point) {
 
     double tol = static_cast<double>(width) / std::max(a, b);
 
+    return std::abs(value - 1.0) <= tol * 2;
+}
+
+void Ellipse::moveStart(const QPoint &point) {
     m_select_edge = Edge::None;
     m_target = Target::None;
-    if (std::abs(value - 1.0) <= tol * 2) {
-        if (std::abs(point.x() - left) <= width) {
-            m_select_edge = Edge::Left;
-            m_target = p1.x() < p2.x() ? Target::P1 : Target::P2;
-        } else if (std::abs(point.x() - right) <= width) {
-            m_select_edge = Edge::Right;
-            m_target = p1.x() < p2.x() ? Target::P2 : Target::P1;
-        } else if (std::abs(point.y() - top) <= width) {
+    if (! canMove(point)) return;
+
+    int width = m_pen.width() / 2 + 4;
+    int left   = std::min(p1.x(), p2.x());
+    int right  = std::max(p1.x(), p2.x());
+    int top    = std::min(p1.y(), p2.y());
+    int bottom = std::max(p1.y(), p2.y());
+
+    if (std::abs(point.x() - left) <= width) {
+        m_select_edge = Edge::Left;
+        m_target = p1.x() < p2.x() ? Target::P1 : Target::P2;
+    } else if (std::abs(point.x() - right) <= width) {
+        m_select_edge = Edge::Right;
+        m_target = p1.x() < p2.x() ? Target::P2 : Target::P1;
+    } else {
+        int center = (top + bottom) / 2;
+        if (point.y() < center) {
             m_select_edge = Edge::Top;
             m_target = p1.y() < p2.y() ? Target::P1 : Target::P2;
-        } else if (std::abs(point.y() - bottom) <= width) {
+        } else {
             m_select_edge = Edge::Bottom;
             m_target = p1.y() < p2.y() ? Target::P2 : Target::P1;
         }
-
-        return m_select_edge != Edge::None;
     }
-
-    return false;
 }
 
 void Ellipse::movePoint(const QPoint &point) {
@@ -278,11 +308,15 @@ void Ellipse::paint(QPainter &painter) {
 StraightLine::StraightLine(const QPoint &point, const QPen &pen, float opacity, bool fill): Shape{pen, opacity, fill}, p1{point}, p2{-1, -1} {
 }
 
+Shape *StraightLine::clone() const {
+    return new StraightLine{*this};
+}
+
 void StraightLine::addPoint(const QPoint &point) {
     p2 = point;
 }
 
-bool StraightLine::isNull() {
+bool StraightLine::isNull() const {
     return (p2.x() == -1 && p2.y() == -1) || p1 == p2;
 }
 
@@ -299,7 +333,7 @@ void StraightLine::translate(const QPoint &point) {
     p2 += point;
 }
 
-bool StraightLine::canMove(const QPoint &point) {
+bool StraightLine::canMove(const QPoint &point) const {
     if (isNull()) return false;
 
     int width = m_pen.width() / 2 + 4;
@@ -318,13 +352,18 @@ bool StraightLine::canMove(const QPoint &point) {
     path.lineTo(p2.x() - nx * halfWidth, p2.y() - ny * halfWidth);
     path.lineTo(p1.x() - nx * halfWidth, p1.y() - ny * halfWidth);
     path.closeSubpath();
-    if (! path.contains(point)) return false;
+
+    return path.contains(point);
+}
+
+void StraightLine::moveStart(const QPoint &point) {
+    m_target = Target::None;
+    if (! canMove(point)) return;
 
     double dist1 = std::hypot(point.x() - p1.x(), point.y() - p1.y());
     double dist2 = std::hypot(point.x() - p2.x(), point.y() - p2.y());
 
     m_target = dist1 < dist2 ? Target::P1 : Target::P2;
-    return true;
 }
 
 void StraightLine::movePoint(const QPoint &point) {
@@ -354,11 +393,15 @@ Line::Line(const QPoint &point, const QPen &pen, float opacity, bool fill): Shap
     m_path.moveTo(point);
 }
 
+Shape *Line::clone() const {
+    return new Line{*this};
+}
+
 void Line::addPoint(const QPoint &point) {
     m_path.lineTo(point);
 }
 
-bool Line::isNull() {
+bool Line::isNull() const {
     return m_path.elementCount() <= 2;
 }
 
@@ -373,20 +416,18 @@ void Line::translate(const QPoint &point) {
     m_path.translate(point);
 }
 
-bool Line::canMove(const QPoint &point) {
+bool Line::canMove(const QPoint &point) const {
     if (isNull()) return false;
 
     QPainterPathStroker stroker;
     stroker.setWidth(m_pen.width() + 4);
 
-    if (stroker.createStroke(m_path).contains(point)) {
-        m_move = true;
-        m_move_pos = point;
-        return true;
-    }
+    return stroker.createStroke(m_path).contains(point);
+}
 
-    m_move = false;
-    return false;
+void Line::moveStart(const QPoint &point) {
+    m_move = canMove(point);
+    if (m_move) m_move_pos = point;
 }
 
 void Line::movePoint(const QPoint &point) {
@@ -413,12 +454,16 @@ Arrow::Arrow(const QPoint &point, const QPen &pen, float opacity, bool fill): Sh
     m_pen2.setWidth(2);
 }
 
+Shape *Arrow::clone() const {
+    return new Arrow{*this};
+}
+
 void Arrow::addPoint(const QPoint &point) {
     m_p2 = point;
     m_path.clear();
 }
 
-bool Arrow::isNull() {
+bool Arrow::isNull() const {
     return m_p2.isNull() || m_p1.isNull();
 }
 
@@ -439,14 +484,20 @@ void Arrow::translate(const QPoint &point) {
     m_path.clear();
 }
 
-bool Arrow::canMove(const QPoint &point) {
+bool Arrow::canMove(const QPoint &point) const {
     if (isNull() || ! m_path.contains(point)) return false;
+
+    return true;
+}
+
+void Arrow::moveStart(const QPoint &point) {
+    m_target = Target::None;
+    if (! canMove(point)) return;
 
     double dist1 = std::hypot(point.x() - m_p1.x(), point.y() - m_p1.y());
     double dist2 = std::hypot(point.x() - m_p2.x(), point.y() - m_p2.y());
 
     m_target = dist1 < dist2 ? Target::P1 : Target::P2;
-    return true;
 }
 
 void Arrow::movePoint(const QPoint &point) {
@@ -480,9 +531,9 @@ void Arrow::paint(QPainter &painter) {
 
         // 计算箭头的两个边
         QPointF arrow1 = m_p2 + QPointF(- std::sin(angle + M_PI / 3) * arrowSize,
-                                       - std::cos(angle + M_PI / 3) * arrowSize);
+                                        - std::cos(angle + M_PI / 3) * arrowSize);
         QPointF arrow2 = m_p2 + QPointF(std::sin(angle - M_PI / 3) * arrowSize,
-                                       std::cos(angle - M_PI / 3) * arrowSize);
+                                        std::cos(angle - M_PI / 3) * arrowSize);
 
         QPoint arrow11((3 * arrow1.x() + arrow2.x()) / 4, (3 * arrow1.y() + arrow2.y()) / 4);
         QPoint arrow22((arrow1.x() + 3 * arrow2.x()) / 4, (arrow1.y() + 3 * arrow2.y()) / 4);
@@ -514,11 +565,15 @@ Text::Text(const QPoint &point, const QPen &pen, const QFont &font, float opacit
     m_font.setPixelSize(pen.width());
 }
 
+Shape *Text::clone() const {
+    return new Text{*this};
+}
+
 void Text::addPoint(const QPoint &point) {
     Q_UNUSED(point);
 }
 
-bool Text::isNull() {
+bool Text::isNull() const {
     return (! m_text.isNull() && m_text.isEmpty());
 }
 
@@ -532,7 +587,7 @@ void Text::translate(const QPoint &point) {
     m_point += point;
 }
 
-bool Text::canMove(const QPoint &point) {
+bool Text::canMove(const QPoint &point) const {
     if (m_text.isEmpty()) return false;
 
     QFontMetrics metrics{m_font};
@@ -541,14 +596,12 @@ bool Text::canMove(const QPoint &point) {
 
     QRect hitRect = textRect.adjusted(-3, -3, 3, 3);
 
-    if (hitRect.contains(point)) {
-        m_move = true;
-        m_move_pos = point;
-        return true;
-    }
+    return hitRect.contains(point);
+}
 
-    m_move = false;
-    return false;
+void Text::moveStart(const QPoint &point) {
+    m_move = canMove(point);
+    if (m_move) m_move_pos = point;
 }
 
 void Text::movePoint(const QPoint &point) {
