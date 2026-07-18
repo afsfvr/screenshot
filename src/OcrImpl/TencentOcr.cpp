@@ -92,12 +92,18 @@ QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
 
 bool TencentOcr::init() {
     if (! m_manager.supportedSchemes().contains("https")) {
+#ifndef QT_NO_SSL
         if (QSslSocket::supportsSsl()) {
-            qWarning() << "HTTPS不可用，Qt是使用" << QSslSocket::sslLibraryBuildVersionString()
-                       << "构建的，但运行时使用" << QSslSocket::sslLibraryVersionString();
+            qWarning() << "HTTPS不可用，SSL运行环境异常。Qt构建时使用SSL版本:"
+                << QSslSocket::sslLibraryBuildVersionString()
+                << "，当前运行时SSL版本:"
+                << QSslSocket::sslLibraryVersionString();
         } else {
             qWarning() << "HTTPS不可用，因为缺少SSL支持";
         }
+#else
+        qWarning() << "HTTPS不可用，当前Qt版本编译时未启用SSL支持";
+#endif // QT_NO_SSL
         return false;
     }
     if (! m_id.isEmpty() && ! m_key.isEmpty()) return true;
