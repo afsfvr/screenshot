@@ -94,6 +94,7 @@ void Ocr::run() {
 #elif defined(TENCENT_OCR)
     m_ocr = new TencentOcr;
 #endif
+    QThread::sleep(1);
     init();
     exec();
 }

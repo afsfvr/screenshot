@@ -2,6 +2,7 @@
 #include "../qaesencryption.h"
 
 #include <QApplication>
+#include <QSslSocket>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QCryptographicHash>
@@ -91,7 +92,12 @@ QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
 
 bool TencentOcr::init() {
     if (! m_manager.supportedSchemes().contains("https")) {
-        qWarning() << "HTTPS is not supported. Possible reasons: missing OpenSSL DLLs, incompatible OpenSSL version, or Qt built without TLS backend.";
+        if (QSslSocket::supportsSsl()) {
+            qWarning() << "HTTPS不可用，Qt是使用" << QSslSocket::sslLibraryBuildVersionString()
+                       << "构建的，但运行时使用" << QSslSocket::sslLibraryVersionString();
+        } else {
+            qWarning() << "HTTPS不可用，因为缺少SSL支持";
+        }
         return false;
     }
     if (! m_id.isEmpty() && ! m_key.isEmpty()) return true;
