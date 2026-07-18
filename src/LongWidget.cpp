@@ -355,8 +355,8 @@ QImage LongWidget::screenshot() {
         qreal ratio = (*iter)->devicePixelRatio();
         tmp.setWidth(tmp.width() * ratio);
         tmp.setHeight(tmp.height() * ratio);
-        size.setWidth(std::max<int>(tmp.right() + 1, size.width()));
-        size.setHeight(std::max<int>(tmp.bottom() + 1, size.height()));
+        size.setWidth(qMax<int>(tmp.right() + 1, size.width()));
+        size.setHeight(qMax<int>(tmp.bottom() + 1, size.height()));
         if (tmp.contains(rect)) {
             return (*iter)->grabWindow(0)
                 .copy((rect.left() - tmp.left()) * m_ratio,

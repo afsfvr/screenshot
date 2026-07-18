@@ -14,8 +14,8 @@ class SettingWidget;
 struct HotKey {
     quint32 modifiers = 0;
     quint32 key = 'A';
-    inline bool operator==(const HotKey &key) { return this->modifiers == key.modifiers && this->key == key.key; }
-    inline bool operator!=(const HotKey &key) { return this->modifiers != key.modifiers || this->key != key.key; }
+    inline bool operator==(const HotKey &hotkey) { return this->modifiers == hotkey.modifiers && this->key == hotkey.key; }
+    inline bool operator!=(const HotKey &hotkey) { return this->modifiers != hotkey.modifiers || this->key != hotkey.key; }
     friend QDataStream& operator<<(QDataStream& stream, const HotKey &key);
     friend QDataStream& operator>>(QDataStream& stream, HotKey &key);
 };

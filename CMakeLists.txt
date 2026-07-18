@@ -4,18 +4,31 @@ project(screenshot LANGUAGES CXX VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-message(STATUS "CMake build type: ${CMAKE_BUILD_TYPE}")
+string(ASCII 27 ESC)
+set(RED "${ESC}[0;31m")
+set(GREEN "${ESC}[0;32m")
+set(YELLOW "${ESC}[1;33m")
+set(BLUE "${ESC}[0;34m")
+set(NOCOLOR "${ESC}[0m")
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+endif()
+message(STATUS "Compiler ID = ${GREEN}${CMAKE_CXX_COMPILER_ID}${NOCOLOR}")
+message(STATUS "CMake generator: ${GREEN}${CMAKE_GENERATOR}${NOCOLOR}")
+message(STATUS "CMake build type: ${GREEN}${CMAKE_BUILD_TYPE}${NOCOLOR}")
 
 option(TENCENT_OCR "use tencent ocr" ON)
 option(RAPID_OCR "use rapid ocr" OFF)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-message(STATUS "QT_VERSION = ${QT_VERSION}")
+message(STATUS "QT_VERSION = ${GREEN}${QT_VERSION}${NOCOLOR}")
+message(STATUS "Qt library path: ${GREEN}${Qt${QT_VERSION_MAJOR}_DIR}${NOCOLOR}")
 # get_cmake_property(_variableNames VARIABLES)
 # foreach(_variableName ${_variableNames})
 #     if(_variableName MATCHES "^(QT|Qt)")
@@ -78,6 +91,16 @@ if(OCR)
     target_sources(${PROJECT_NAME} PRIVATE src/Ocr.cpp)
 endif()
 
+# opencv
+find_package(OpenCV QUIET COMPONENTS core imgproc imgcodecs)
+if(NOT OpenCV_FOUND)
+    message(WARNING "OpenCV not found. Long screenshot feature will be disabled.")
+else()
+    target_sources(${PROJECT_NAME} PRIVATE src/LongWidget.cpp src/LongWidget.h)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE LONG_SCREENSHOT)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
+endif()
+
 if(UNIX)
     target_sources(${PROJECT_NAME} PRIVATE src/KeyMouseEvent.cpp src/KeyMouseEvent.h)
 if(QT_VERSION_MAJOR LESS 6)
@@ -85,41 +108,31 @@ if(QT_VERSION_MAJOR LESS 6)
     target_link_libraries(${PROJECT_NAME} PRIVATE Qt::X11Extras)
 endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE X11 Xext Xtst xcb)
-
-    find_package(OpenCV QUIET COMPONENTS core imgproc imgcodecs)
-    if(NOT OpenCV_FOUND)
-        message(WARNING "OpenCV not found. Long screenshot feature will be disabled.")
-    else()
-        target_sources(${PROJECT_NAME} PRIVATE src/LongWidget.cpp src/LongWidget.h)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE LONG_SCREENSHOT)
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
-    endif()
 elseif(WIN32)
     find_package(OpenCV QUIET COMPONENTS core imgproc imgcodecs)
-    target_sources(${PROJECT_NAME} PRIVATE src/LongWidget.cpp src/LongWidget.h)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE LONG_SCREENSHOT)
-    if(OpenCV_FOUND)
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
-    else()
-        target_include_directories(${PROJECT_NAME} PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/opencv/include/opencv4
-        )
-        target_link_directories(${PROJECT_NAME} PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/opencv/lib/windows/mingw
-        )
-        target_link_libraries(${PROJECT_NAME} PRIVATE 
-            opencv_imgproc480
-            opencv_imgcodecs480
-            opencv_core480
-            z
-        )
-    endif()
     target_sources(${PROJECT_NAME} PRIVATE resource.rc)
     target_link_libraries(${PROJECT_NAME} PRIVATE Dwmapi user32)
 endif()
 message(STATUS "OpenCV Found: ${OpenCV_FOUND}, Version: ${OpenCV_VERSION}")
 
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall)
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/utf-8 /W4>
+    $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra -Wpedantic>
+    $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra -Wpedantic>
+
+    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Debug>>:-g -ggdb -O0>
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CONFIG:Debug>>:-g -O0>
+    $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Debug>>:/Zi /Od>
+
+    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Release>>:-O2>
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CONFIG:Release>>:-O2>
+    $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/O2>
+
+    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
+        -fmacro-prefix-map=${PROJECT_SOURCE_DIR}/=
+        -ffile-prefix-map=${PROJECT_SOURCE_DIR}/=
+    >
+)
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Core Qt::Gui Qt::Widgets)
 
 if(MSVC)

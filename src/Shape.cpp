@@ -86,10 +86,10 @@ bool Rectangle::canMove(const QPoint &point) const {
     if (isNull()) return false;
 
     int width = m_pen.width() / 2 + 4;
-    int left   = std::min(p1.x(), p2.x());
-    int right  = std::max(p1.x(), p2.x());
-    int top    = std::min(p1.y(), p2.y());
-    int bottom = std::max(p1.y(), p2.y());
+    int left   = qMin(p1.x(), p2.x());
+    int right  = qMax(p1.x(), p2.x());
+    int top    = qMin(p1.y(), p2.y());
+    int bottom = qMax(p1.y(), p2.y());
 
     QRect inner(left + width, top + width, right - left - 2 * width, bottom - top - 2 * width);
     QRect outer(left - width, top - width, right - left + 2 * width, bottom - top + 2 * width);
@@ -105,10 +105,10 @@ void Rectangle::moveStart(const QPoint &point) {
     if (!canMove(point)) return;
 
     int width = m_pen.width() / 2 + 4;
-    int left   = std::min(p1.x(), p2.x());
-    int right  = std::max(p1.x(), p2.x());
-    int top    = std::min(p1.y(), p2.y());
-    int bottom = std::max(p1.y(), p2.y());
+    int left   = qMin(p1.x(), p2.x());
+    int right  = qMax(p1.x(), p2.x());
+    int top    = qMin(p1.y(), p2.y());
+    int bottom = qMax(p1.y(), p2.y());
 
     if (std::abs(point.x() - left) <= width) {
         m_select_edge = Edge::Left;
@@ -208,10 +208,10 @@ bool Ellipse::canMove(const QPoint &point) const {
     if (isNull()) return false;
 
     int width = m_pen.width() / 2 + 4;
-    int left   = std::min(p1.x(), p2.x());
-    int right  = std::max(p1.x(), p2.x());
-    int top    = std::min(p1.y(), p2.y());
-    int bottom = std::max(p1.y(), p2.y());
+    int left   = qMin(p1.x(), p2.x());
+    int right  = qMax(p1.x(), p2.x());
+    int top    = qMin(p1.y(), p2.y());
+    int bottom = qMax(p1.y(), p2.y());
     double a = (right - left) / 2.0;
     double b = (bottom - top) / 2.0;
 
@@ -220,7 +220,7 @@ bool Ellipse::canMove(const QPoint &point) const {
 
     double value = (dx * dx) / (a * a) + (dy * dy) / (b * b);
 
-    double tol = static_cast<double>(width) / std::max(a, b);
+    double tol = static_cast<double>(width) / qMax(a, b);
 
     return std::abs(value - 1.0) <= tol * 2;
 }
@@ -231,10 +231,10 @@ void Ellipse::moveStart(const QPoint &point) {
     if (! canMove(point)) return;
 
     int width = m_pen.width() / 2 + 4;
-    int left   = std::min(p1.x(), p2.x());
-    int right  = std::max(p1.x(), p2.x());
-    int top    = std::min(p1.y(), p2.y());
-    int bottom = std::max(p1.y(), p2.y());
+    int left   = qMin(p1.x(), p2.x());
+    int right  = qMax(p1.x(), p2.x());
+    int top    = qMin(p1.y(), p2.y());
+    int bottom = qMax(p1.y(), p2.y());
 
     if (std::abs(point.x() - left) <= width) {
         m_select_edge = Edge::Left;
@@ -527,7 +527,7 @@ void Arrow::paint(QPainter &painter) {
         // 计算箭头的方向
         QLine line(m_p1, m_p2);
         double angle = std::atan2(-line.dy(), line.dx()); // 计算角度
-        double arrowSize = 0.1 * m_pen.width() * std::min(distance < 40 ? distance / 4 : std::max(distance / 8, 10.0), 30.); // 箭头大小
+        double arrowSize = 0.1 * m_pen.width() * qMin(distance < 40 ? distance / 4 : qMax(distance / 8, 10.0), 30.); // 箭头大小
 
         // 计算箭头的两个边
         QPointF arrow1 = m_p2 + QPointF(- std::sin(angle + M_PI / 3) * arrowSize,

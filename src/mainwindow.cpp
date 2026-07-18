@@ -951,7 +951,9 @@ void MainWindow::updateAutoSave(const HotKey &key, quint8 mode, const QString &p
 #endif
     } else {
         m_action1->setText("自动保存(未设置)");
+#ifdef Q_OS_LINUX
         m_key1 = {};
+#endif // Q_OS_LINUX
     }
 }
 
@@ -1004,7 +1006,9 @@ void MainWindow::updateCapture(const HotKey &key) {
 #endif
     } else {
         m_action2->setText("截图(未设置)");
+#ifdef Q_OS_LINUX
         m_key2 = {};
+#endif // Q_OS_LINUX
     }
 }
 
@@ -1057,7 +1061,9 @@ void MainWindow::updateRecord(const HotKey &key) {
 #endif
     } else {
         m_action3->setText("录制GIF(未设置)");
+#ifdef Q_OS_LINUX
         m_key3 = {};
+#endif // Q_OS_LINUX
     }
 }
 
@@ -1084,9 +1090,9 @@ void MainWindow::save(const QString &path) {
             painter.translate(- rect.topLeft() * m_ratio);
             QTransform transform;
             transform.scale(m_ratio, m_ratio);
-            QPainterPath path = transform.map(m_path);
-            painter.fillPath(path, m_image);
-            painter.setClipPath(path);
+            QPainterPath painterPath = transform.map(m_path);
+            painter.fillPath(painterPath, m_image);
+            painter.setClipPath(painterPath);
         } else if (m_state & State::Rect) {
             if (m_rect.width() <= 0 || m_rect.height() <= 0) return;
             image = m_image.copy(m_rect.left() * m_ratio, m_rect.top() * m_ratio, m_rect.width() * m_ratio, m_rect.height() * m_ratio);
@@ -1242,9 +1248,9 @@ void MainWindow::updateWindows() {
     }
 
     while ((hwnd = GetNextWindow(hwnd, GW_HWNDNEXT)) != nullptr) {
-        QRect rect = getRectByHwnd(hwnd);
-        if (rect.isValid()) {
-            m_windows.push_back(QRect(rect.left() / m_ratio, rect.top() / m_ratio, rect.width() / m_ratio, rect.height() / m_ratio));
+        QRect tmp = getRectByHwnd(hwnd);
+        if (tmp.isValid()) {
+            m_windows.push_back(QRect(tmp.left() / m_ratio, tmp.top() / m_ratio, tmp.width() / m_ratio, tmp.height() / m_ratio));
         }
     }
 #elif defined(Q_OS_LINUX)
@@ -1304,8 +1310,8 @@ QImage MainWindow::fullScreenshot() {
         } else if (m_ratio != ratio) {
             m_ratio = 0;
         }
-        size.setWidth(std::max<int>((rect.right() + 1 - rect.left()) * ratio + rect.left(), size.width()));
-        size.setHeight(std::max<int>((rect.bottom() + 1 - rect.top()) * ratio + rect.top(), size.height()));
+        size.setWidth(qMax<int>((rect.right() + 1 - rect.left()) * ratio + rect.left(), size.width()));
+        size.setHeight(qMax<int>((rect.bottom() + 1 - rect.top()) * ratio + rect.top(), size.height()));
     }
     if (m_ratio <= 0) m_ratio = 1;
 
@@ -1319,7 +1325,6 @@ QImage MainWindow::fullScreenshot() {
         } else {
             QRect rect = screen->geometry();
             QPixmap pixmap = screen->grabWindow(0);
-            qreal ratio = (*iter)->devicePixelRatio();
             painter.drawPixmap(rect.left(), rect.top(), rect.width() * ratio, rect.height() * ratio, pixmap);
         }
     }

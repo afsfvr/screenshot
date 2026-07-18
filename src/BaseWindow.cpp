@@ -17,7 +17,7 @@ BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shap
     m_edit->installEventFilter(this);
     connect(m_edit, &QLineEdit::textEdited, this, [=](const QString &text) {
         int width = m_edit->fontMetrics().horizontalAdvance(text) + 20;
-        m_edit->setMinimumWidth(std::min(width, m_edit->maximumWidth()));
+        m_edit->setMinimumWidth(qMin(width, m_edit->maximumWidth()));
     });
 
     m_cursor = Qt::ArrowCursor;

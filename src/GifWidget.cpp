@@ -161,12 +161,12 @@ void GifWidget::buttonClicked() {
         m_path = QFileDialog::getSaveFileName(this, "选择路径", Tool::savePath, "*.gif");
         if (m_path.isEmpty()) {
             m_queue.close();
-            GifFrameData data;
-            while (m_queue.dequeue(&data)) {
-                if (data.image[0] == 'f') {
-                    QFile::remove(reinterpret_cast<const char*>(data.image + 1));
+            GifFrameData gif;
+            while (m_queue.dequeue(&gif)) {
+                if (gif.image[0] == 'f') {
+                    QFile::remove(reinterpret_cast<const char*>(gif.image + 1));
                 }
-                delete[] data.image;
+                delete[] gif.image;
             }
         } else {
             QFileInfo fileinfo{m_path};
@@ -287,8 +287,8 @@ QImage GifWidget::screenshot() {
         qreal ratio = (*iter)->devicePixelRatio();
         tmp.setWidth(tmp.width() * ratio);
         tmp.setHeight(tmp.height() * ratio);
-        size.setWidth(std::max<int>(tmp.right() + 1, size.width()));
-        size.setHeight(std::max<int>(tmp.bottom() + 1, size.height()));
+        size.setWidth(qMax<int>(tmp.right() + 1, size.width()));
+        size.setHeight(qMax<int>(tmp.bottom() + 1, size.height()));
         if (tmp.contains(rect)) {
             return (*iter)->grabWindow(0)
             .copy((rect.left() - tmp.left()) * m_ratio,

@@ -490,7 +490,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                         m_text->setText(iter->text);
                         m_text->setStatusTip(ptr);
                         m_label->setText(iter->score >= 0 ? QString("%1%").arg(iter->score, 0, 'f', 0) : "");
-                        m_widget->setFixedWidth(std::max(95, rect.width()));
+                        m_widget->setFixedWidth(qMax(95, rect.width()));
                         m_widget->show();
                         if (m_max_offset > 0) {
                             QPoint bottomLeft = rect.bottomLeft();
@@ -821,8 +821,8 @@ void TopWidget::init() {
     for (auto iter = list.cbegin(); iter != list.cend(); ++iter) {
         QRect rect = (*iter)->geometry();
         qreal ratio = (*iter)->devicePixelRatio();
-        m_screen_size.setWidth(std::max<int>((rect.right() + 1 - rect.left()) * ratio + rect.left(), m_screen_size.width()));
-        m_screen_size.setHeight(std::max<int>((rect.bottom() + 1 - rect.top()) * ratio + rect.top(), m_screen_size.height()));
+        m_screen_size.setWidth(qMax<int>((rect.right() + 1 - rect.left()) * ratio + rect.left(), m_screen_size.width()));
+        m_screen_size.setHeight(qMax<int>((rect.bottom() + 1 - rect.top()) * ratio + rect.top(), m_screen_size.height()));
     }
 
     show();
@@ -879,11 +879,11 @@ bool TopWidget::contains(const QPoint &point) {
 void TopWidget::scaleWidget(int delta) {
     float ratio = m_scale_ratio;
     if (delta < 0) {
-        ratio -= 0.05;
+        ratio -= 0.05f;
         if (ratio < 0.1f) ratio = 0.1f;
     } else if (delta > 0) {
-        ratio += 0.05;
-        if (ratio > 5) ratio = 5;
+        ratio += 0.05f;
+        if (ratio > 5) ratio = 5.f;
     }
     scaleWidget(ratio);
 }
@@ -902,9 +902,9 @@ void TopWidget::scaleWidget(float ratio) {
 
 void TopWidget::scrollWidget(int delta) {
     if (delta < 0) {
-        m_offsetY = std::min(m_offsetY + 30, m_max_offset);
+        m_offsetY = qMin(m_offsetY + 30, m_max_offset);
     } else if (delta > 0) {
-        m_offsetY = std::max(m_offsetY - 30, 0);
+        m_offsetY = qMax(m_offsetY - 30, 0);
     }
 #ifdef OCR
     hideWidget();

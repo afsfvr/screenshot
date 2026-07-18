@@ -32,8 +32,8 @@ QVector<Ocr::OcrResult> RapidOcr::ocr(const QImage &img) {
     QVector<Ocr::OcrResult> v;
     QImage image = img.convertToFormat(QImage::Format_BGR888);
 
-    int shortSide = std::min(image.width(), image.height());
-    int longSide = std::max(image.width(), image.height());
+    int shortSide = qMin(image.width(), image.height());
+    int longSide = qMax(image.width(), image.height());
     int padding = shortSide < 300 ? 10 : (shortSide < 1000 ? 30 : 50);
     int maxSideLen = longSide > 1500 ? 1280 : 960;
     float boxScoreThresh = (image.width() * image.height() > 1000000) ? 0.5f : 0.6f;
