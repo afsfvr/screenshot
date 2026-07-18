@@ -20,6 +20,7 @@ message(STATUS "CMake build type: ${GREEN}${CMAKE_BUILD_TYPE}${NOCOLOR}")
 
 option(TENCENT_OCR "use tencent ocr" ON)
 option(RAPID_OCR "use rapid ocr" OFF)
+option(STATIC_LINK "Link all dependencies statically" OFF)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets)
@@ -63,6 +64,11 @@ add_executable(${PROJECT_NAME}
     src/Tool.ui
     res.qrc
 )
+
+if (STATIC_LINK)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
+endif(STATIC_LINK)
 
 if(TENCENT_OCR)
     find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network)

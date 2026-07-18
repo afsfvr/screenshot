@@ -90,6 +90,10 @@ QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
 }
 
 bool TencentOcr::init() {
+    if (! m_manager.supportedSchemes().contains("https")) {
+        qWarning() << "HTTPS is not supported. Possible reasons: missing OpenSSL DLLs, incompatible OpenSSL version, or Qt built without TLS backend.";
+        return false;
+    }
     if (! m_id.isEmpty() && ! m_key.isEmpty()) return true;
 
     QStringList list = QApplication::arguments();
