@@ -1,5 +1,5 @@
 ﻿#include "TencentOcr.h"
-#include "../qaesencryption.h"
+#include "qaesencryption.h"
 
 #include <QApplication>
 #include <QSslSocket>

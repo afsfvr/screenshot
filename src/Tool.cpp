@@ -437,11 +437,14 @@ void Tool::lostFocus() {
     this->setDraw(ShapeEnum::Null);
     this->hide();
 }
-constexpr int Tool::getMaxWidth() {
+int Tool::getMaxWidth() {
     int width = 312;
 #ifdef OCR
     width += 26;
 #endif // OCR
+    if (! m_is_main) {
+        return width + 26; // opacity
+    }
 #ifdef LONG_SCREENSHOT
     width += 26;
 #endif // LONG_SCREENSHOT

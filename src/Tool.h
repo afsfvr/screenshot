@@ -65,7 +65,7 @@ signals:
 
 private:
     void lostFocus();
-    static constexpr int getMaxWidth();
+    int getMaxWidth();
 
     Ui::Tool *ui;
     QPen m_pen;
