@@ -1,4 +1,5 @@
-﻿#include "TopWidget.h"
+﻿#define NOMINMAX
+#include "TopWidget.h"
 #include "mainwindow.h"
 
 #include <QTimer>

@@ -260,8 +260,6 @@ void BaseWindow::clearStack()
 }
 
 void BaseWindow::drawTips(QPainter &painter) {
-    if (m_tips.isEmpty()) return;
-
     QPen backupPen = painter.pen();
     QFont backupFont = painter.font();
     QFont font = backupFont;
@@ -275,9 +273,6 @@ void BaseWindow::drawTips(QPainter &painter) {
     int y = this->height() - fm.height() / 2 - 10;
     qint64 time = QDateTime::currentMSecsSinceEpoch();
 
-    QTextOption option;
-    option.setAlignment(Qt::AlignLeft | Qt::AlignTop);
-    option.setWrapMode(QTextOption::WordWrap);
     for (auto iter = m_tips.begin(); iter < m_tips.end();) {
         if (time < iter->time + iter->duration) {
             QString text = iter->text;
@@ -287,7 +282,7 @@ void BaseWindow::drawTips(QPainter &painter) {
             QRect drawRect(x, y - textRect.height() + fm.ascent(), textRect.width(), textRect.height());
 
             painter.fillRect(drawRect, QColor(0, 0, 0, 150));
-            painter.drawText(drawRect, text, option);
+            painter.drawText(drawRect, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, text);
 
             y -= textRect.height() + 10;
             ++iter;
