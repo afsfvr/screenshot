@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(screenshot LANGUAGES CXX VERSION 1.0.0)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 string(ASCII 27 ESC)
@@ -21,6 +21,7 @@ message(STATUS "CMake build type: ${GREEN}${CMAKE_BUILD_TYPE}${NOCOLOR}")
 option(TENCENT_OCR "use tencent ocr" ON)
 option(RAPID_OCR "use rapid ocr" OFF)
 option(STATIC_LINK "Link all dependencies statically" OFF)
+option(ENABLE_ZXING "Enable ZXing QRCode reader" ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets)
@@ -45,10 +46,8 @@ add_executable(${PROJECT_NAME}
     src/Shape.cpp
     src/Tool.cpp
     src/TopWidget.cpp
-    src/gif.cpp
     src/main.cpp
     src/mainwindow.cpp
-    src/qaesencryption.cpp
     src/BaseWindow.h
     src/BlockQueue.h
     src/GifWidget.h
@@ -57,12 +56,14 @@ add_executable(${PROJECT_NAME}
     src/Shape.h
     src/Tool.h
     src/TopWidget.h
-    src/gif.h
     src/mainwindow.h
-    src/qaesencryption.h
-    src/SettingWidget.ui
-    src/Tool.ui
+    src/ui/SettingWidget.ui
+    src/ui/Tool.ui
     res.qrc
+)
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY AUTOUIC_SEARCH_PATHS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ui"
 )
 
 if (STATIC_LINK)
@@ -97,6 +98,25 @@ if(OCR)
     target_sources(${PROJECT_NAME} PRIVATE src/Ocr.cpp)
 endif()
 
+# GIF
+add_library(giflib STATIC
+    third_party/gif/gif.cpp
+    third_party/gif/gif.h
+)
+target_include_directories(giflib PUBLIC third_party/gif)
+target_link_libraries(${PROJECT_NAME} PRIVATE giflib)
+
+# QAES encryption
+if (TENCENT_OCR)
+    add_library(qaesencryption STATIC
+        third_party/qaesencryption/qaesencryption.cpp
+        third_party/qaesencryption/qaesencryption.h
+    )
+    target_include_directories(qaesencryption PUBLIC third_party/qaesencryption)
+    target_link_libraries(qaesencryption PUBLIC Qt::Core)
+    target_link_libraries(${PROJECT_NAME} PRIVATE qaesencryption)
+endif(TENCENT_OCR)
+
 # opencv
 find_package(OpenCV QUIET COMPONENTS core imgproc imgcodecs)
 if(NOT OpenCV_FOUND)
@@ -107,12 +127,36 @@ else()
     target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
 endif()
 
+if(ENABLE_ZXING)
+    # ZXing 配置
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(ZXING_READERS ON CACHE BOOL "" FORCE)
+    set(ZXING_WRITERS OFF CACHE STRING "" FORCE)
+    set(ZXING_C_API OFF CACHE BOOL "" FORCE)
+    set(ZXING_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(ZXING_EXAMPLES_QT OFF CACHE BOOL "" FORCE)
+    set(ZXING_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+    set(ZXING_BLACKBOX_TESTS OFF CACHE BOOL "" FORCE)
+
+    include(FetchContent)
+    FetchContent_Declare(
+        ZXing
+        URL https://github.com/zxing-cpp/zxing-cpp/releases/download/v3.1.0/zxing-cpp-3.1.0.zip
+        URL_HASH SHA256=2f879b1758dc5aa0bd8bc33b9f5db1d84340548a65c9869c7c8c74f7b95411ff
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_MakeAvailable(ZXing)
+    target_link_libraries(ZXing PUBLIC Qt::Core Qt::Gui)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ZXing::ZXing)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_ZXING)
+endif()
+
 if(UNIX)
     target_sources(${PROJECT_NAME} PRIVATE src/KeyMouseEvent.cpp src/KeyMouseEvent.h)
-if(QT_VERSION_MAJOR LESS 6)
-    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS X11Extras)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Qt::X11Extras)
-endif()
+    if(QT_VERSION_MAJOR LESS 6)
+        find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS X11Extras)
+        target_link_libraries(${PROJECT_NAME} PRIVATE Qt::X11Extras)
+    endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE X11 Xext Xtst xcb)
 elseif(WIN32)
     find_package(OpenCV QUIET COMPONENTS core imgproc imgcodecs)

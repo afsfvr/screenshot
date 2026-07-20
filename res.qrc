@@ -20,5 +20,6 @@
         <file>images/ocr.png</file>
         <file>images/long_screenshot.png</file>
         <file>images/transparency.png</file>
+        <file>images/qr_code.png</file>
     </qresource>
 </RCC>
