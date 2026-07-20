@@ -15,7 +15,7 @@ BaseWindow::BaseWindow(QWidget *parent): QWidget{parent}, m_press{false}, m_shap
     m_edit->setAttribute(Qt::WA_TranslucentBackground);
     m_edit->setContextMenuPolicy(Qt::NoContextMenu);
     m_edit->installEventFilter(this);
-    connect(m_edit, &QLineEdit::textEdited, this, [=](const QString &text) {
+    connect(m_edit, &QLineEdit::textEdited, this, [this](const QString &text) {
         int width = m_edit->fontMetrics().horizontalAdvance(text) + 20;
         m_edit->setMinimumWidth(qMin(width, m_edit->maximumWidth()));
     });

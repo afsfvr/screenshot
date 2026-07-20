@@ -62,6 +62,9 @@ signals:
 #ifdef OCR
     void ocr();
 #endif // OCR
+#ifdef QRCODE
+    void qrCode();
+#endif // QRCODE
 
 private:
     void lostFocus();
@@ -77,6 +80,9 @@ private:
 #ifdef OCR
     QPushButton *m_ocr = nullptr;
 #endif // OCR
+#ifdef QRCODE
+    QPushButton *m_qrcode = nullptr;
+#endif // QRCODE
 };
 
 #endif // TOOL_H

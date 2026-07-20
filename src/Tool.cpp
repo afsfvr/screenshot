@@ -28,26 +28,26 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     connect(ui->btn_redo,   SIGNAL(clicked()),         this, SIGNAL(redo()));
     connect(ui->opacity,    SIGNAL(valueChanged(int)), this, SIGNAL(opacityChanged(int)));
 
-    connect(ui->btn_rectangle, &QPushButton::clicked, this, [=](){
+    connect(ui->btn_rectangle, &QPushButton::clicked, this, [this]() {
         setDraw(! ui->btn_rectangle->isFlat() ? ShapeEnum::Rectangle : ShapeEnum::Null);
     });
-    connect(ui->btn_ellipse, &QPushButton::clicked, this, [=](){
+    connect(ui->btn_ellipse, &QPushButton::clicked, this, [this]() {
         setDraw(! ui->btn_ellipse->isFlat() ? ShapeEnum::Ellipse : ShapeEnum::Null);
     });
-    connect(ui->btn_straightline, &QPushButton::clicked, this, [=](){
+    connect(ui->btn_straightline, &QPushButton::clicked, this, [this]() {
         setDraw(! ui->btn_straightline->isFlat() ? ShapeEnum::StraightLine : ShapeEnum::Null);
     });
-    connect(ui->btn_line, &QPushButton::clicked, this, [=](){
+    connect(ui->btn_line, &QPushButton::clicked, this, [this]() {
         setDraw(! ui->btn_line->isFlat() ? ShapeEnum::Line : ShapeEnum::Null);
     });
-    connect(ui->btn_arrow, &QPushButton::clicked, this, [=](){
+    connect(ui->btn_arrow, &QPushButton::clicked, this, [this]() {
         setDraw(! ui->btn_arrow->isFlat() ? ShapeEnum::Arrow : ShapeEnum::Null);
     });
-    connect(ui->btn_text, &QPushButton::clicked, this, [=](){
+    connect(ui->btn_text, &QPushButton::clicked, this, [this]() {
         setDraw(! ui->btn_text->isFlat() ? ShapeEnum::Text : ShapeEnum::Null);
     });
 
-    connect(ui->bold, &QPushButton::clicked, this, [=]() {
+    connect(ui->bold, &QPushButton::clicked, this, [this]() {
         if (ui->bold->isFlat()) {
             ui->bold->setFlat(false);
             m_font.setBold(false);
@@ -56,7 +56,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
             m_font.setBold(true);
         }
     });
-    connect(ui->italic, &QPushButton::clicked, this, [=]() {
+    connect(ui->italic, &QPushButton::clicked, this, [this]() {
         if (ui->italic->isFlat()) {
             ui->italic->setFlat(false);
             m_font.setItalic(false);
@@ -65,7 +65,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
             m_font.setItalic(true);
         }
     });
-    connect(ui->underline, &QPushButton::clicked, this, [=]() {
+    connect(ui->underline, &QPushButton::clicked, this, [this]() {
         if (ui->underline->isFlat()) {
             ui->underline->setFlat(false);
             m_font.setUnderline(false);
@@ -74,7 +74,7 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
             m_font.setUnderline(true);
         }
     });
-    connect(ui->strikeout, &QPushButton::clicked, this, [=]() {
+    connect(ui->strikeout, &QPushButton::clicked, this, [this]() {
         if (ui->strikeout->isFlat()) {
             ui->strikeout->setFlat(false);
             m_font.setStrikeOut(false);
@@ -117,6 +117,14 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
     ui->btns_layout->insertWidget(6, m_ocr);
     connect(m_ocr, SIGNAL(clicked()), this, SIGNAL(ocr()));
 #endif // OCR
+#ifdef QRCODE
+    m_qrcode = new QPushButton(this);
+    m_qrcode->setFixedSize(24, 24);
+    m_qrcode->setToolTip("识别二维码");
+    m_qrcode->setIcon(QIcon(":/images/qr_code.png"));
+    ui->btns_layout->insertWidget(6, m_qrcode);
+    connect(m_qrcode, SIGNAL(clicked()), this, SIGNAL(qrCode()));
+#endif // QRCODE
 }
 
 Tool::~Tool() {
@@ -191,6 +199,9 @@ void Tool::setEditShow(bool show) {
 #ifdef OCR
     m_ocr->setVisible(show);
 #endif // OCR
+#ifdef QRCODE
+    m_qrcode->setVisible(show);
+#endif // QRCODE
     if (show) {
         this->setFixedWidth(getMaxWidth());
         ui->btn_rectangle->setVisible(true);
@@ -442,6 +453,9 @@ int Tool::getMaxWidth() {
 #ifdef OCR
     width += 26;
 #endif // OCR
+#ifdef QRCODE
+    width += 26;
+#endif // QRCODE
     if (! m_is_main) {
         return width + 26; // opacity
     }

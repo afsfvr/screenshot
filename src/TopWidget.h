@@ -9,7 +9,15 @@
 #include "BaseWindow.h"
 #ifdef OCR
 #include "Ocr.h"
-#endif
+#endif // OCR
+#ifdef QRCODE
+#include "ZXingQt.h"
+struct QrCodeResult {
+    QPainterPath path;
+    QString text;
+};
+
+#endif // QRCODE
 
 class TopWidget : public BaseWindow {
     Q_OBJECT
@@ -25,15 +33,18 @@ public slots:
 #ifdef OCR
     void ocrStart();
     void ocrEnd(const QVector<Ocr::OcrResult> &result);
-#endif
+#endif // OCR
+#ifdef QRCODE
+    void onQrCode();
+#endif // QRCODE
 #ifdef Q_OS_LINUX
     void mouseRelease(QSharedPointer<QMouseEvent> event);
-#endif
+#endif // Q_OS_LINUX
 
 protected:
-#ifdef OCR
+#if defined (OCR) || defined (QRCODE)
     bool eventFilter(QObject *watched, QEvent *event) override;
-#endif
+#endif 
     void timerEvent(QTimerEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
@@ -57,10 +68,12 @@ private slots:
     void updateOpacity(int value);
     void copyImage();
     void copyWidget();
-#ifdef OCR
+#if defined (OCR) || defined (QRCODE)
     void copyText();
+#endif // defined (OCR) || defined (QRCODE)
+#ifdef OCR
     void editText();
-#endif
+#endif // OCR
 
 private:
     void init();
@@ -68,6 +81,9 @@ private:
     void scaleWidget(int delta);
     void scaleWidget(float ratio);
     void scrollWidget(int delta);
+#if defined (OCR) || defined (QRCODE)
+    void hideWidget();
+#endif // defined (OCR) || defined (QRCODE)
 
 private:
     QMenu *tray_menu;
@@ -75,20 +91,27 @@ private:
     QSize m_screen_size;
 
 #ifdef OCR
-    void hideWidget(bool clearTip = true);
     int m_ocr_timer = -1;
     QPoint m_center;
     int m_radius, m_radius1, m_angle;
     QVector<Ocr::OcrResult> m_ocr;
-    QWidget *m_widget = nullptr;
-    QTextEdit *m_text = nullptr;
     QLabel *m_label = nullptr;
     QPushButton *m_button = nullptr;
-#endif
+#endif // OCR
+
+#ifdef QRCODE
+    QVector<QrCodeResult> m_codes;
+#endif // QRCODE
+
+#if defined (OCR) || defined (QRCODE)
+    QWidget *m_widget = nullptr;
+    QTextEdit *m_text = nullptr;
+    quintptr m_current_ptr = 0;
+#endif // defined (OCR) || defined (QRCODE)
 
 #ifdef Q_OS_LINUX
     bool m_move = false;
-#endif
+#endif // Q_OS_LINUX
 
     int m_offsetY = 0;
     const int m_max_offset = 0;

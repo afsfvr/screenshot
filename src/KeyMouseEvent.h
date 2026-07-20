@@ -13,6 +13,7 @@
 #undef Bool
 #undef max
 #undef min
+#undef None
 
 class KeyMouseEvent : public QThread
 {

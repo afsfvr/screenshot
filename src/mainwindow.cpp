@@ -35,6 +35,9 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent),
 #ifdef OCR
     connect(m_tool, &Tool::ocr, this, &MainWindow::ocrStart);
 #endif // OCR
+#ifdef QRCODE
+    connect(m_tool, &Tool::qrCode, this, &MainWindow::onQrCode);
+#endif // QRCODE
     setMouseTracking(true);
 
     m_tool->setInMainWindow(true);
@@ -45,7 +48,7 @@ MainWindow::MainWindow(QWidget *parent): BaseWindow(parent),
     connect(m_setting, &SettingWidget::autoSaveChanged, this, &MainWindow::updateAutoSave);
     connect(m_setting, &SettingWidget::captureChanged, this, &MainWindow::updateCapture);
     connect(m_setting, &SettingWidget::recordChanged, this, &MainWindow::updateRecord);
-    QTimer::singleShot(500, this, [=](){ m_setting->readConfig(); });
+    QTimer::singleShot(200, this, [this]() { m_setting->readConfig(); });
 }
 
 MainWindow::~MainWindow() {
@@ -876,6 +879,15 @@ void MainWindow::ocrStart() {
     }
 }
 #endif // OCR
+
+#ifdef QRCODE
+void MainWindow::onQrCode() {
+    auto *t = top();
+    if (t) {
+        t->onQrCode();
+    }
+}
+#endif // QRCODE
 
 #ifdef LONG_SCREENSHOT
 void MainWindow::longScreenshot() {

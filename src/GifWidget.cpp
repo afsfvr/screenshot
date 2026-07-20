@@ -250,7 +250,7 @@ void GifWidget::init() {
     m_label->setVisible(false);
     m_layout->addWidget(m_label);
 
-    connect(m_widget, &QWidget::destroyed, this, [=](){
+    connect(m_widget, &QWidget::destroyed, this, [this]() {
         m_widget = nullptr;
         this->close();
     });

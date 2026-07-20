@@ -104,6 +104,9 @@ private slots:
 #ifdef OCR
     void ocrStart();
 #endif // OCR
+#ifdef QRCODE
+    void onQrCode();
+#endif // QRCODE
 #ifdef LONG_SCREENSHOT
     void longScreenshot();
 #endif //LONG_SCREENSHOT

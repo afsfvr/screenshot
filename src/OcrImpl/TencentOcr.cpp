@@ -174,7 +174,7 @@ QWidget *TencentOcr::settingWidget() {
     QObject::connect(cancel, &QPushButton::clicked, id, &QLineEdit::clear);
     QObject::connect(cancel, &QPushButton::clicked, key, &QLineEdit::clear);
     QPushButton *ok = new QPushButton{"确定", widget};
-    QObject::connect(ok, &QPushButton::clicked, widget, [=](){
+    QObject::connect(ok, &QPushButton::clicked, widget, [=, this]() {
         QString s1 = id->text().trimmed(), s2 = key->text().trimmed();
         if (s1.isEmpty() || s2.isEmpty()) {
             QMessageBox::warning(widget, "错误", "id或key为空");
