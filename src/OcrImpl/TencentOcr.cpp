@@ -159,46 +159,6 @@ bool TencentOcr::init() {
     return true;
 }
 
-QWidget *TencentOcr::settingWidget() {
-    QWidget *widget = new QWidget;
-    widget->setWindowTitle("腾讯云Ocr");
-
-    QLineEdit *id = new QLineEdit{widget};
-    QLineEdit *key = new QLineEdit{widget};
-    QFormLayout *flayout = new QFormLayout;
-    flayout->addRow(new QLabel{"SECRET_ID", widget}, id);
-    flayout->addRow(new QLabel{"SECRET_KEY", widget}, key);
-
-    QPushButton *cancel = new QPushButton{"取消", widget};
-    QObject::connect(cancel, &QPushButton::clicked, widget, &QWidget::hide);
-    QObject::connect(cancel, &QPushButton::clicked, id, &QLineEdit::clear);
-    QObject::connect(cancel, &QPushButton::clicked, key, &QLineEdit::clear);
-    QPushButton *ok = new QPushButton{"确定", widget};
-    QObject::connect(ok, &QPushButton::clicked, widget, [=, this]() {
-        QString s1 = id->text().trimmed(), s2 = key->text().trimmed();
-        if (s1.isEmpty() || s2.isEmpty()) {
-            QMessageBox::warning(widget, "错误", "id或key为空");
-        } else {
-            m_id = s1;
-            m_key = s2;
-            id->clear();
-            key->clear();
-            widget->hide();
-        }
-    });
-    QHBoxLayout *hlayout = new QHBoxLayout;
-    hlayout->addItem(new QSpacerItem{40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum});
-    hlayout->addWidget(cancel);
-    hlayout->addWidget(ok);
-    hlayout->addItem(new QSpacerItem{40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum});
-
-    QVBoxLayout *vlayout = new QVBoxLayout(widget);
-    vlayout->addLayout(flayout);
-    vlayout->addLayout(hlayout);
-
-    return widget;
-}
-
 void TencentOcr::restore(QByteArray array) {
     if (array.size() <= 16) return;
     QAESEncryption aes{QAESEncryption::AES_256, QAESEncryption::CBC, QAESEncryption::PKCS7};
@@ -241,6 +201,15 @@ QByteArray TencentOcr::save() {
         .append(b2);
 
     return aes.encode(raw, key, iv).append(iv);
+}
+
+void TencentOcr::showSettingWidget(QWidget *parent) {
+    if (! m_widget) {
+        initWidget(parent);
+    }
+    m_idEdit->setText(m_id);
+    m_keyEdit->setText(QString{m_key.size(), '*'});
+    m_widget->show();
 }
 
 QByteArray TencentOcr::sendRequest(const QString &action, const QByteArray &payload) {
@@ -290,4 +259,43 @@ QByteArray TencentOcr::getRandomByteArray(quint32 count) const {
         array.append(static_cast<char>(QRandomGenerator::global()->generate() % 256));
     }
     return array;
+}
+
+void TencentOcr::initWidget(QWidget *parent) {
+    if (m_widget) return;
+    m_widget = new QWidget{parent};
+    m_widget->setWindowTitle("腾讯云Ocr");
+    m_widget->setWindowModality(Qt::WindowModal);
+    m_widget->setAttribute(Qt::WA_ShowModal, true);
+    m_widget->setWindowFlag(Qt::Dialog, true);
+
+    m_idEdit = new QLineEdit{m_widget};
+    m_keyEdit = new QLineEdit{m_widget};
+    QFormLayout *flayout = new QFormLayout;
+    flayout->addRow(new QLabel{"SECRET_ID", m_widget}, m_idEdit);
+    flayout->addRow(new QLabel{"SECRET_KEY", m_widget}, m_keyEdit);
+
+    QPushButton *cancel = new QPushButton{"取消", m_widget};
+    QObject::connect(cancel, &QPushButton::clicked, m_widget, &QWidget::hide);
+    QPushButton *ok = new QPushButton{"确定", m_widget};
+    QObject::connect(ok, &QPushButton::clicked, m_widget, [=, this]() {
+        QString s1 = m_idEdit->text().trimmed(), s2 = m_keyEdit->text().trimmed();
+        if (s1.isEmpty() || s2.isEmpty()) {
+            QMessageBox::warning(m_widget, "错误", "id或key为空");
+        } else {
+            m_id = s1;
+            m_key = s2;
+            m_widget->hide();
+        }
+    });
+
+    QHBoxLayout *hlayout = new QHBoxLayout;
+    hlayout->addItem(new QSpacerItem{40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum});
+    hlayout->addWidget(cancel);
+    hlayout->addWidget(ok);
+    hlayout->addItem(new QSpacerItem{40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum});
+
+    QVBoxLayout *vlayout = new QVBoxLayout(m_widget);
+    vlayout->addLayout(flayout);
+    vlayout->addLayout(hlayout);
 }

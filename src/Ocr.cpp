@@ -6,12 +6,11 @@
 #include "OcrImpl/TencentOcr.h"
 #endif
 
-Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr}, m_setting{nullptr} {
+Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr} {
     moveToThread(this);
 }
 
 Ocr::~Ocr() {
-    m_setting = nullptr;
     if (m_ocr) {
         delete m_ocr;
         m_ocr = nullptr;
@@ -62,23 +61,6 @@ void Ocr::cancel(const TopWidget *t) {
     m_mutex.unlock();
 }
 
-QWidget *Ocr::getSettingWidget() {
-    if (! m_ocr) return nullptr;
-    if (m_setting) return m_setting;
-    if (QThread::currentThread() == qApp->thread()) {
-        m_setting = m_ocr->settingWidget();
-    } else {
-        QWidget *widget = nullptr;
-        QMetaObject::invokeMethod(qApp, [&](){ widget = m_ocr->settingWidget(); }, Qt::BlockingQueuedConnection);
-        m_setting = widget;
-    }
-
-    if (m_setting) {
-        connect(m_setting, &QWidget::destroyed, this, &Ocr::clearWidget);
-    }
-    return m_setting;
-}
-
 void Ocr::restore(const QByteArray &array) {
     if (m_ocr) m_ocr->restore(array);
 }
@@ -86,6 +68,19 @@ void Ocr::restore(const QByteArray &array) {
 QByteArray Ocr::save() {
     if (m_ocr) return m_ocr->save();
     return {};
+}
+
+bool Ocr::hasSettingWidget() {
+    return m_ocr && m_ocr->hasSettingWidget();
+}
+
+void Ocr::showSettingWidget(QWidget *parent) {
+    if (! m_ocr) return;
+    if (QThread::currentThread() == qApp->thread()) {
+        m_ocr->showSettingWidget(parent);
+    } else {
+        QMetaObject::invokeMethod(qApp, [=, this]() { if (m_ocr) m_ocr->showSettingWidget(parent); }, Qt::QueuedConnection);
+    }
 }
 
 void Ocr::run() {
@@ -119,8 +114,4 @@ void Ocr::_ocr(TopWidget *t, const QImage &img) {
         }
     }
     m_mutex.unlock();
-}
-
-void Ocr::clearWidget() {
-    this->m_setting = nullptr;
 }

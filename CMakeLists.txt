@@ -72,11 +72,11 @@ if(TENCENT_OCR)
     set(OCR ON CACHE BOOL "Enable OCR support")
     set(OCR_STATUS "TENCENT")
 elseif(RAPID_OCR)
-    set(MODELS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/rapidocr/models")
+    set(MODELS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/rapidocr/models")
     set(MODELS_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
     file(COPY ${MODELS_SOURCE_DIR} DESTINATION ${MODELS_OUTPUT_DIR})
-    target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/rapidocr/include)
-    target_link_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/rapidocr/lib)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/rapidocr/include)
+    target_link_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/rapidocr/lib)
     target_sources(${PROJECT_NAME} PRIVATE src/OcrImpl/RapidOcr.cpp)
     target_compile_definitions(${PROJECT_NAME} PRIVATE RAPID_OCR OCR)
     set(OCR ON CACHE BOOL "Enable OCR support")
@@ -175,11 +175,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE
         -ffile-prefix-map=${PROJECT_SOURCE_DIR}/=
     >
 )
+target_compile_definitions(${PROJECT_NAME} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:NOMINMAX>)
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Core Qt::Gui Qt::Widgets)
-
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /utf-8)
-endif()
 
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
 if(DEFINED ENV{GITHUB_VERSION})
