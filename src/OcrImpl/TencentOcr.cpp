@@ -1,8 +1,8 @@
 ﻿#include "TencentOcr.h"
 #include "../qaesencryption.h"
-
+#include <iostream>
 #include <QApplication>
-#include <QSslSocket>
+#include <qsslsocket.h>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QCryptographicHash>
@@ -21,6 +21,7 @@
 #include <QMessageBox>
 #include <QFormLayout>
 #include <QRandomGenerator>
+#include <ocr_lib.h>
 
 QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
     QVector<Ocr::OcrResult> vector;
@@ -35,127 +36,16 @@ QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
     }
     buffer.close();
 
-    QByteArray payload = "{ \"ImageBase64\": \"";
-    payload.append(bytes.toBase64()).append("\"} ");
+    const char* res = OcrPredictFromMemory(reinterpret_cast<const unsigned char*>(bytes.constData()), bytes.size());
 
-    bytes = sendRequest("GeneralAccurateOCR", payload);
-    QJsonObject object = QJsonDocument::fromJson(bytes).object();
-    QJsonObject response = object.value("Response").toObject();
-    QJsonObject error = response.value("Error").toObject();
-    if (! error.isEmpty()) {
-        QString code = error.value("Code").toString();
-        if (code == "ResourcesSoldOut.ChargeStatusException" ||
-            code == "ResourceUnavailable.ResourcePackageRunOut" ||
-            code == "ResourceUnavailable.InArrears") {
-            object = QJsonDocument::fromJson(sendRequest("GeneralBasicOCR", payload)).object();
-            response = object.value("Response").toObject();
-            error = response.value("Error").toObject();
-            if (! error.isEmpty()) {
-                QString message = error.value("Message").toString();
-                qWarning() << "ocr fail: " << message;
-                vector.push_back({{}, error.value("Message").toString(), -1});
-                return vector;
-            }
-        } else {
-            QString message = error.value("Message").toString();
-            qWarning() << "ocr fail: " << message;
-            vector.push_back({{}, message, -1});
-            return vector;
-        }
-    }
+	//std::cout << std::string(res) << std::endl;
+	qDebug() << "ocr result: " << res;
 
-    QJsonArray texts = response.value("TextDetections").toArray();
-    for (auto iter = texts.cbegin(); iter != texts.cend(); ++iter) {
-        QJsonObject obj = (*iter).toObject();
-        QString txt = obj.value("DetectedText").toString();
-        double score = obj.value("Confidence").toDouble(-1);
-        if (txt.isEmpty()) continue;
-        QPainterPath path;
-        QJsonArray arr = obj.value("Polygon").toArray();
-        for (auto iter1 = arr.cbegin(); iter1 != arr.cend(); ++iter1) {
-            QJsonObject o = (*iter1).toObject();
-            QJsonValue vx = o.value("X");
-            QJsonValue vy = o.value("Y");
-            if (vx.isDouble() && vy.isDouble()) {
-                if (path.elementCount() == 0) {
-                    path.moveTo(vx.toDouble(), vy.toDouble());
-                } else {
-                    path.lineTo(vx.toDouble(), vy.toDouble());
-                }
-            }
-        }
-        path.closeSubpath();
-        vector.push_back({path, txt, score});
-    }
     return vector;
 }
 
 bool TencentOcr::init() {
-    if (! m_manager.supportedSchemes().contains("https")) {
-#ifndef QT_NO_SSL
-        if (QSslSocket::supportsSsl()) {
-            qWarning() << "HTTPS不可用，SSL运行环境异常。Qt构建时使用SSL版本:"
-                << QSslSocket::sslLibraryBuildVersionString()
-                << "，当前运行时SSL版本:"
-                << QSslSocket::sslLibraryVersionString();
-        } else {
-            qWarning() << "HTTPS不可用，因为缺少SSL支持";
-        }
-#else
-        qWarning() << "HTTPS不可用，当前Qt版本编译时未启用SSL支持";
-#endif // QT_NO_SSL
-        return false;
-    }
-    if (! m_id.isEmpty() && ! m_key.isEmpty()) return true;
 
-    QStringList list = QApplication::arguments();
-    for (auto iter = list.cbegin() + 1; iter != list.cend();) {
-        const QString &text = *iter;
-        if (text.startsWith("SECRET_ID", Qt::CaseInsensitive)) {
-            if (text.length() == 9) {
-                ++ iter;
-                if (iter != list.cend()) {
-                    m_id = *iter;
-                    ++ iter;
-                }
-            } else {
-                if (text[9] == '=') {
-                    m_id = text.mid(10);
-                }
-                ++ iter;
-            }
-        } else if (text.startsWith("SECRET_KEY", Qt::CaseInsensitive)) {
-            if (text.length() == 10) {
-                ++ iter;
-                if (iter != list.cend()) {
-                    m_key = *iter;
-                    ++ iter;
-                }
-            } else {
-                if (text[10] == '=') {
-                    m_key = text.mid(11);
-                }
-                ++ iter;
-            }
-        } else {
-            ++ iter;
-        }
-    }
-    if (m_id.isEmpty()) {
-        m_id = qgetenv("SECRET_ID");
-    }
-    if (m_key.isEmpty()) {
-        m_key = qgetenv("SECRET_KEY");
-    }
-
-    if (m_id.isEmpty()) {
-        qCritical() << "SECRET_ID is empty";
-        return false;
-    }
-    if (m_key.isEmpty()) {
-        qCritical() << "SECRET_KEY is empty";
-        return false;
-    }
     return true;
 }
 
@@ -265,7 +155,7 @@ QByteArray TencentOcr::sendRequest(const QString &action, const QByteArray &payl
         .append("/ocr/tc3_request, SignedHeaders=content-type;host;x-tc-action, Signature=").append(key);
 
     QNetworkRequest request;
-    request.setUrl(QUrl("https://ocr.tencentcloudapi.com"));
+    request.setUrl(QUrl("http://ocr.tencentcloudapi.com"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json; charset=utf-8");
     request.setRawHeader("Authorization", authorization);
     request.setRawHeader("X-TC-Action", action.toUtf8());

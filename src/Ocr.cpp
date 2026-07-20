@@ -1,4 +1,5 @@
 ﻿#include "Ocr.h"
+#include <ocr_lib.h>
 #include "TopWidget.h"
 #if defined(RAPID_OCR)
 #include "OcrImpl/RapidOcr.h"
@@ -24,6 +25,12 @@ Ocr* Ocr::instance() {
 }
 
 bool Ocr::init() {
+    if(OcrInit("models/PP-OCRv5_server_det_infer",
+       "models/PP-OCRv5_server_rec_infer",
+       "gpu:0") != 0) {
+        printf("OCR init failed!\n");
+        return 1;
+    }
     if (m_ocr && m_ocr->init()) {
             return true;
     }

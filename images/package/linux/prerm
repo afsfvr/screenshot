@@ -1,0 +1,20 @@
+#! /bin/sh
+
+pids=$(ps -eo pid,comm | awk '$2=="screenshot" {print $1}')
+
+if [ -n "$pids" ]; then
+    kill $pids 2>/dev/null
+
+    timeout=5
+    while [ $timeout -gt 0 ] && ps -eo comm | grep -q '[s]creenshot'; do
+        sleep 1
+        timeout=$((timeout - 1))
+    done
+
+    pids=$(ps -eo pid,comm | awk '$2=="screenshot" {print $1}')
+    if [ -n "$pids" ]; then
+        kill -9 $pids 2>/dev/null
+    fi
+fi
+
+exit 0
