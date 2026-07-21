@@ -11,6 +11,7 @@
 #include <QSpacerItem>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <opencv2/opencv.hpp>
 
 RapidOcr::~RapidOcr() {
     m_mutex.lock();
@@ -31,6 +32,7 @@ QVector<Ocr::OcrResult> RapidOcr::ocr(const QImage &img) {
     }
     QVector<Ocr::OcrResult> v;
     QImage image = img.convertToFormat(QImage::Format_BGR888);
+    cv::Mat mat(image.height(), image.width(), CV_8UC3, image.bits(), image.bytesPerLine());
 
     int shortSide = qMin(image.width(), image.height());
     int longSide = qMax(image.width(), image.height());
@@ -41,8 +43,7 @@ QVector<Ocr::OcrResult> RapidOcr::ocr(const QImage &img) {
     float unClipRatio = (shortSide < 300) ? 2.5f : 2.0f;
     bool doAngle = false;
     bool mostAngle = doAngle;
-    ::OcrResult result = m_ocr->detectBitmap(image.bits(), image.width(), image.height(), 3, padding,
-                                             maxSideLen, boxScoreThresh, boxThresh, unClipRatio, doAngle, mostAngle);
+    ::OcrResult result = m_ocr->detect(mat, padding, maxSideLen, boxScoreThresh, boxThresh, unClipRatio, doAngle, mostAngle);
     m_mutex.unlock();
 
     for (auto iter = result.textBlocks.cbegin(); iter != result.textBlocks.cend(); ++iter) {
