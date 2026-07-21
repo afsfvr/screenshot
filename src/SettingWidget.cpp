@@ -508,7 +508,6 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
         if (! file.open(QFile::WriteOnly | QFile::Truncate)) {
             return file.errorString();
         }
-        QString imgPath = QDir::toNativeSeparators(getUserHomePath() + "/.config/screenshot/screenshot.png");
         QString content = QString("[Desktop Entry]\n"
                                   "Type=Application\n"
                                   "Name=截图工具\n"
@@ -519,7 +518,7 @@ QString SettingWidget::setSelfStart(bool start, bool allUser) {
                                   "X-GNOME-Autostart-Delay=3\n"
                                   "Categories=Utility;\n"
                                   "StartupNotify=false\n"
-                                  "NoDisplay=false\n").arg(QCoreApplication::applicationFilePath(), imgPath);
+                                  "NoDisplay=false\n").arg(QCoreApplication::applicationFilePath());
         file.write(content.toUtf8());
         file.close();
         file.setPermissions(file.permissions() | QFileDevice::ExeOwner);

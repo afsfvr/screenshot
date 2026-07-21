@@ -263,6 +263,7 @@ QByteArray TencentOcr::getRandomByteArray(quint32 count) const {
 
 void TencentOcr::initWidget(QWidget *parent) {
     if (m_widget) return;
+    Q_ASSERT(parent != nullptr);
     m_widget = new QWidget{parent};
     m_widget->setWindowTitle("腾讯云Ocr");
     m_widget->setWindowModality(Qt::WindowModal);
