@@ -36,6 +36,7 @@ public slots:
 #endif // OCR
 #ifdef QRCODE
     void onQrCode();
+    void onGenerateQRCode();
 #endif // QRCODE
 #ifdef Q_OS_LINUX
     void mouseRelease(QSharedPointer<QMouseEvent> event);
@@ -70,10 +71,8 @@ private slots:
     void copyWidget();
 #if defined (OCR) || defined (QRCODE)
     void copyText();
-#endif // defined (OCR) || defined (QRCODE)
-#ifdef OCR
     void editText();
-#endif // OCR
+#endif // defined (OCR) || defined (QRCODE)
 
 private:
     void init();
@@ -95,17 +94,17 @@ private:
     QPoint m_center;
     int m_radius, m_radius1, m_angle;
     QVector<Ocr::OcrResult> m_ocr;
-    QLabel *m_label = nullptr;
-    QPushButton *m_button = nullptr;
+    QLabel *m_score_label = nullptr;
 #endif // OCR
 
 #ifdef QRCODE
-    QVector<QrCodeResult> m_codes;
+    QVector<QrCodeResult> m_qrcodes;
 #endif // QRCODE
 
 #if defined (OCR) || defined (QRCODE)
     QWidget *m_widget = nullptr;
     QTextEdit *m_text = nullptr;
+    QPushButton *m_edit_button = nullptr;
     quintptr m_current_ptr = 0;
 #endif // defined (OCR) || defined (QRCODE)
 

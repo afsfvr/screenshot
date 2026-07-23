@@ -85,10 +85,11 @@ TopWidget::~TopWidget() {
     if (m_widget != nullptr) {
         delete m_widget;
         m_widget = nullptr;
+        m_text = nullptr;
+        m_edit_button = nullptr;
 
 #ifdef OCR
-        m_text = nullptr;
-        m_button = nullptr;
+        m_score_label = nullptr;
 #endif // OCR
 
     }
@@ -189,8 +190,8 @@ void TopWidget::ocrEnd(const QVector<Ocr::OcrResult> &result) {
 
 #ifdef QRCODE
 void TopWidget::onQrCode() {
-    if (m_codes.empty()) {
-        m_codes.clear();
+    if (m_qrcodes.empty()) {
+        m_qrcodes.clear();
         QList<ZXingQt::Barcode> codes = ZXingQt::ReadBarcodes(m_image);
         for (auto iter = codes.cbegin(); iter != codes.cend(); ++iter) {
             if (iter->error().type() != ZXingQt::Error::Type::None) {
@@ -206,15 +207,33 @@ void TopWidget::onQrCode() {
                 }
                 path.closeSubpath();
             }
-            m_codes.push_back({path, iter->text()});
+            m_qrcodes.push_back({path, iter->text()});
         }
-        if (m_codes.size() == 0) {
+        if (m_qrcodes.size() == 0) {
             addTip("无结果");
         }
     } else {
-        m_codes.clear();
+        m_qrcodes.clear();
     }
     update();
+}
+
+void TopWidget::onGenerateQRCode() {
+    QString text = m_text->toPlainText();
+    try {
+        auto barcode = ZXingQt::Barcode::fromText(text, ZXingQt::BarcodeFormat::QRCode, QStringLiteral("ecLevel=Q, eci=UTF-8"));
+        QImage image = barcode.toImage(ZXingQt::WriterOptions().scale(4));
+        QClipboard *clipboard = QApplication::clipboard();
+        if (clipboard) {
+            clipboard->setImage(image);
+            addTip("成功保存到剪贴板");
+        } else {
+            addTip("保存失败");
+        }
+    } catch (const std::exception &e) {
+        addTip(e.what());
+        qWarning().noquote() << "生成二维码抛出异常: " << e.what();
+    }
 }
 #endif // QRCODE
 
@@ -249,7 +268,9 @@ void TopWidget::mouseRelease(QSharedPointer<QMouseEvent> event) {
 bool TopWidget::eventFilter(QObject *watched, QEvent *event) {
     if (watched == m_widget) {
         if (event->type() == QEvent::Leave) {
-            hideWidget();
+            if (m_text->isReadOnly()) {
+                hideWidget();
+            }
         } else if (event->type() == QEvent::KeyPress){
             QKeyEvent *e = dynamic_cast<QKeyEvent*>(event);
             if (e && e->key() == Qt::Key_Escape) {
@@ -349,7 +370,7 @@ void TopWidget::paintEvent(QPaintEvent *event) {
     painter.setPen(Qt::red);
 
 #ifdef QRCODE
-    for (auto iter = m_codes.cbegin(); iter != m_codes.cend(); ++iter) {
+    for (auto iter = m_qrcodes.cbegin(); iter != m_qrcodes.cend(); ++iter) {
         painter.drawPath(iter->path);
     }
 #endif // QRCODE
@@ -538,17 +559,16 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
             }
 
 #ifdef QRCODE
-            for (auto iter = m_codes.cbegin(); iter != m_codes.cend(); ++iter) {
+            for (auto iter = m_qrcodes.cbegin(); iter != m_qrcodes.cend(); ++iter) {
                 if (iter->path.contains(point)) {
                     quintptr ptr = reinterpret_cast<quintptr>(std::addressof(*iter));
                     if (ptr != m_current_ptr) {
                         QRect rect = iter->path.boundingRect().toRect();
                         m_text->setReadOnly(true);
                         m_text->setText(iter->text);
-                        m_widget->setFixedWidth(qMax(95, rect.width()));
+                        m_widget->setFixedWidth(qMax(125, rect.width()));
 #ifdef OCR
-                        m_label->hide();
-                        m_button->hide();
+                        m_score_label->hide();
 #endif // OCR
                         m_widget->show();
                         if (m_max_offset > 0) {
@@ -558,6 +578,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                         } else {
                             m_widget->move(mapToGlobal(rect.bottomLeft() * m_scale_ratio));
                         }
+                        m_current_ptr = ptr;
                     }
                     hide = false;
                     break;
@@ -574,10 +595,9 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                             QRect rect = iter->path.boundingRect().toRect();
                             m_text->setReadOnly(true);
                             m_text->setText(iter->text);
-                            m_label->setText(iter->score >= 0 ? QString("%1%").arg(iter->score, 0, 'f', 0) : "");
-                            m_label->show();
-                            m_button->show();
-                            m_widget->setFixedWidth(qMax(95, rect.width()));
+                            m_score_label->setText(iter->score >= 0 ? QString("%1%").arg(iter->score, 0, 'f', 0) : "");
+                            m_score_label->show();
+                            m_widget->setFixedWidth(qMax(125, rect.width()));
                             m_widget->show();
                             if (m_max_offset > 0) {
                                 QPoint bottomLeft = rect.bottomLeft();
@@ -586,6 +606,7 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
                             } else {
                                 m_widget->move(mapToGlobal(rect.bottomLeft() * m_scale_ratio));
                             }
+                            m_current_ptr = ptr;
                         }
                         hide = false;
                         break;
@@ -724,8 +745,8 @@ void TopWidget::save(const QString &path) {
 #endif // OCR
 
 #ifdef QRCODE
-    if (! m_codes.isEmpty()) {
-        m_codes.clear();
+    if (! m_qrcodes.isEmpty()) {
+        m_qrcodes.clear();
     }
 #endif // QRCODE
 
@@ -837,34 +858,45 @@ void TopWidget::copyText() {
         }
     }
 }
-#endif // defined (OCR) || defined (QRCODE)
 
-#ifdef OCR
 void TopWidget::editText() {
     if (m_text) {
         if (m_text->isReadOnly()) {
             m_text->setReadOnly(false);
             m_text->setFocus();
             m_text->moveCursor(QTextCursor::End);
-            if (m_button) {
-                m_button->setIcon(QIcon(":/images/ok.png"));
+            if (m_edit_button) {
+                m_edit_button->setIcon(QIcon(":/images/ok.png"));
+                m_edit_button->setToolTip("确认");
             }
         } else {
             m_text->setReadOnly(true);
-            if (m_button) {
-                m_button->setIcon(QIcon(":/images/pencil.png"));
+            if (m_edit_button) {
+                m_edit_button->setIcon(QIcon(":/images/pencil.png"));
+                m_edit_button->setToolTip("编辑");
             }
+#ifdef QRCODE
+            for (auto iter = m_qrcodes.begin(); iter != m_qrcodes.end(); ++iter) {
+                quintptr ptr = reinterpret_cast<quintptr>(std::addressof(*iter));
+                if (ptr == m_current_ptr) {
+                    iter->text = m_text->toPlainText();
+                    return;
+                }
+            }
+#endif // QRCODE
+#ifdef OCR
             for (auto iter = m_ocr.begin(); iter != m_ocr.end(); ++iter) {
                 quintptr ptr = reinterpret_cast<quintptr>(std::addressof(*iter));
                 if (ptr == m_current_ptr) {
                     iter->text = m_text->toPlainText();
-                    break;
+                    return;
                 }
             }
+#endif // OCR
         }
     }
 }
-#endif // OCR
+#endif // defined (OCR) || defined (QRCODE)
 
 void TopWidget::init() {
     setWindowFlag(Qt::Tool, false);
@@ -954,26 +986,33 @@ void TopWidget::init() {
     QHBoxLayout *btns = new QHBoxLayout;
     btns->addItem(new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum));
 
-    QPushButton *button = new QPushButton(m_widget);
-    button->setFixedSize(24, 24);
-    button->setIcon(QIcon(":/images/save.png"));
-    button->setToolTip("复制");
-    connect(button, &QPushButton::clicked, this, &TopWidget::copyText);
+    QPushButton *copyButton = new QPushButton(m_widget);
+    copyButton->setFixedSize(24, 24);
+    copyButton->setIcon(QIcon(":/images/save.png"));
+    copyButton->setToolTip("复制");
+    connect(copyButton, &QPushButton::clicked, this, &TopWidget::copyText);
+    m_edit_button = new QPushButton(m_widget);
+    m_edit_button->setFixedSize(24, 24);
+    m_edit_button->setIcon(QIcon(":/images/pencil.png"));
+    m_edit_button->setToolTip("编辑");
+    connect(m_edit_button, &QPushButton::clicked, this, &TopWidget::editText);
 
 #ifdef OCR
-    m_label = new QLabel(m_widget);
-    btns->addWidget(m_label);
-
-    m_button = new QPushButton(m_widget);
-    m_button->setFixedSize(24, 24);
-    m_button->setIcon(QIcon(":/images/pencil.png"));
-    m_button->setToolTip("编辑");
-    connect(m_button, &QPushButton::clicked, this, &TopWidget::editText);
-    btns->addWidget(button);
-    btns->addWidget(m_button);
-#else
-    btns->addWidget(button);
+    m_score_label = new QLabel(m_widget);
+    btns->addWidget(m_score_label);
 #endif // OCR
+
+    btns->addWidget(copyButton);
+    btns->addWidget(m_edit_button);
+
+#ifdef QRCODE
+    QPushButton *qrcodeButton = new QPushButton(m_widget);
+    qrcodeButton->setFixedSize(24, 24);
+    qrcodeButton->setIcon(QIcon(":/images/qr_code.png"));
+    qrcodeButton->setToolTip("生成二维码");
+    connect(qrcodeButton, &QPushButton::clicked, this, &TopWidget::onGenerateQRCode);
+    btns->addWidget(qrcodeButton);
+#endif // QRCODE
 
     layout->addLayout(btns);
 #endif // defined (OCR) || defined (QRCODE)
@@ -1034,11 +1073,10 @@ void TopWidget::hideWidget() {
     if (m_widget) {
         m_widget->hide();
         m_text->setReadOnly(true);
-#ifdef OCR
-        if (m_button) {
-            m_button->setIcon(QIcon(":/images/pencil.png"));
+        if (m_edit_button) {
+            m_edit_button->setIcon(QIcon(":/images/pencil.png"));
+            m_edit_button->setToolTip("编辑");
         }
-#endif // OCR
         m_text->clear();
     }
     m_current_ptr = 0;
