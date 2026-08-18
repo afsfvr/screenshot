@@ -10,9 +10,9 @@
 #include <QDoubleSpinBox>
 #include <QCheckBox>
 
-class RapidOcr: public OcrBase {
+class RapidOcrImpl: public OcrBase {
 public:
-    ~RapidOcr();
+    ~RapidOcrImpl();
     QVector<Ocr::OcrResult> ocr(const QImage &img) override;
     bool init() override;
     void restore(QByteArray array) override;

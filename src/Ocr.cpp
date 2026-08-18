@@ -1,9 +1,11 @@
 ﻿#include "Ocr.h"
 #include "TopWidget.h"
 #if defined(RAPID_OCR)
-#include "OcrImpl/RapidOcr.h"
+#include "OcrImpl/RapidOcrImpl.h"
 #elif defined(TENCENT_OCR)
-#include "OcrImpl/TencentOcr.h"
+#include "OcrImpl/TencentOcrImpl.h"
+#elif defined(PADDLE_OCR)
+#include "OcrImpl/PaddleOcrImpl.h"
 #endif
 
 Ocr::Ocr(QObject *parent): QThread{parent}, m_ocr{nullptr} {
@@ -85,9 +87,11 @@ void Ocr::showSettingWidget(QWidget *parent) {
 
 void Ocr::run() {
 #if defined(RAPID_OCR)
-    m_ocr = new RapidOcr;
+    m_ocr = new RapidOcrImpl;
 #elif defined(TENCENT_OCR)
-    m_ocr = new TencentOcr;
+    m_ocr = new TencentOcrImpl;
+#elif defined(PADDLE_OCR)
+    m_ocr = new PaddleOcrImpl;
 #endif
     QThread::sleep(1);
     init();

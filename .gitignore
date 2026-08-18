@@ -4,3 +4,6 @@
 
 /.vscode/
 /third_party/opencv/
+/third_party/PaddleOCR/deploy/cpp_infer/third_party/
+
+.*.swp

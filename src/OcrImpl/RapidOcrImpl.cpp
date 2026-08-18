@@ -1,4 +1,4 @@
-﻿#include "RapidOcr.h"
+﻿#include "RapidOcrImpl.h"
 
 #include <QApplication>
 #include <QDir>
@@ -13,7 +13,7 @@
 #include <QDataStream>
 #include <opencv2/opencv.hpp>
 
-RapidOcr::~RapidOcr() {
+RapidOcrImpl::~RapidOcrImpl() {
     QMutexLocker locker{&m_mutex};
     if (m_ocr) {
         delete m_ocr;
@@ -21,7 +21,7 @@ RapidOcr::~RapidOcr() {
     }
 }
 
-QVector<Ocr::OcrResult> RapidOcr::ocr(const QImage &img) {
+QVector<Ocr::OcrResult> RapidOcrImpl::ocr(const QImage &img) {
     QMutexLocker locker{&m_mutex};
     if (! m_ocr) {
         QVector<Ocr::OcrResult> v;
@@ -83,7 +83,7 @@ QVector<Ocr::OcrResult> RapidOcr::ocr(const QImage &img) {
     return v;
 }
 
-bool RapidOcr::init() {
+bool RapidOcrImpl::init() {
     if (m_init) return true;
 
     if (m_ocr) {
@@ -117,7 +117,7 @@ bool RapidOcr::init() {
     return m_init;
 }
 
-void RapidOcr::restore(QByteArray array) {
+void RapidOcrImpl::restore(QByteArray array) {
     if(array.isEmpty()) {
         qWarning()<<"配置为空";
         return;
@@ -151,7 +151,7 @@ void RapidOcr::restore(QByteArray array) {
     _init(det, cls, rec, key);
 }
 
-QByteArray RapidOcr::save() {
+QByteArray RapidOcrImpl::save() {
     QByteArray array;
     QDataStream stream{ &array, QIODevice::WriteOnly };
     stream.setByteOrder(QDataStream::LittleEndian);
@@ -164,7 +164,7 @@ QByteArray RapidOcr::save() {
     return array;
 }
 
-void RapidOcr::showSettingWidget(QWidget *parent) {
+void RapidOcrImpl::showSettingWidget(QWidget *parent) {
     if (!m_widget) {
         initWidget(parent);
     }
@@ -185,7 +185,7 @@ void RapidOcr::showSettingWidget(QWidget *parent) {
     m_widget->show();
 }
 
-void RapidOcr::_init(const QString &det, const QString &cls, const QString &rec, const QString &key) {
+void RapidOcrImpl::_init(const QString &det, const QString &cls, const QString &rec, const QString &key) {
     m_init = false;
     if (det.isEmpty() || ! QFile::exists(det) ||
         cls.isEmpty() || ! QFile::exists(cls) ||
@@ -217,7 +217,7 @@ void RapidOcr::_init(const QString &det, const QString &cls, const QString &rec,
     }
 }
 
-void RapidOcr::initWidget(QWidget *parent) {
+void RapidOcrImpl::initWidget(QWidget *parent) {
     if (m_widget) return;
     Q_ASSERT(parent != nullptr);
     m_widget = new QWidget{parent};

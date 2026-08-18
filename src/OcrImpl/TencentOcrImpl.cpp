@@ -1,4 +1,4 @@
-﻿#include "TencentOcr.h"
+﻿#include "TencentOcrImpl.h"
 #include "qaesencryption.h"
 
 #include <QApplication>
@@ -22,7 +22,7 @@
 #include <QFormLayout>
 #include <QRandomGenerator>
 
-QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
+QVector<Ocr::OcrResult> TencentOcrImpl::ocr(const QImage &img) {
     QVector<Ocr::OcrResult> vector;
     QByteArray bytes;
     QBuffer buffer{&bytes};
@@ -90,7 +90,7 @@ QVector<Ocr::OcrResult> TencentOcr::ocr(const QImage &img) {
     return vector;
 }
 
-bool TencentOcr::init() {
+bool TencentOcrImpl::init() {
     if (! m_manager.supportedSchemes().contains("https")) {
 #ifndef QT_NO_SSL
         if (QSslSocket::supportsSsl()) {
@@ -159,7 +159,7 @@ bool TencentOcr::init() {
     return true;
 }
 
-void TencentOcr::restore(QByteArray array) {
+void TencentOcrImpl::restore(QByteArray array) {
     if (array.size() <= 16) return;
     QAESEncryption aes{QAESEncryption::AES_256, QAESEncryption::CBC, QAESEncryption::PKCS7};
     QByteArray key = QCryptographicHash::hash("screenshot", QCryptographicHash::Sha256), iv = array.right(16);
@@ -185,7 +185,7 @@ void TencentOcr::restore(QByteArray array) {
     m_key = s2;
 }
 
-QByteArray TencentOcr::save() {
+QByteArray TencentOcrImpl::save() {
     QAESEncryption aes{QAESEncryption::AES_256, QAESEncryption::CBC, QAESEncryption::PKCS7};
     QByteArray raw, key = QCryptographicHash::hash("screenshot", QCryptographicHash::Sha256), iv = getRandomByteArray(16);
     QByteArray b1 = m_id.toUtf8(), b2 = m_key.toUtf8();
@@ -203,7 +203,7 @@ QByteArray TencentOcr::save() {
     return aes.encode(raw, key, iv).append(iv);
 }
 
-void TencentOcr::showSettingWidget(QWidget *parent) {
+void TencentOcrImpl::showSettingWidget(QWidget *parent) {
     if (! m_widget) {
         initWidget(parent);
     }
@@ -212,7 +212,7 @@ void TencentOcr::showSettingWidget(QWidget *parent) {
     m_widget->show();
 }
 
-QByteArray TencentOcr::sendRequest(const QString &action, const QByteArray &payload) {
+QByteArray TencentOcrImpl::sendRequest(const QString &action, const QByteArray &payload) {
     const QString date = QDateTime::currentDateTimeUtc().toString("yyyy-MM-dd");
     const QString timestamp = QString::number(QDateTime::currentSecsSinceEpoch());
 
@@ -248,12 +248,12 @@ QByteArray TencentOcr::sendRequest(const QString &action, const QByteArray &payl
     return reply->readAll();
 }
 
-QByteArray TencentOcr::sha256Hex(const QByteArray &array) {
+QByteArray TencentOcrImpl::sha256Hex(const QByteArray &array) {
     QByteArray hash = QCryptographicHash::hash(array, QCryptographicHash::Sha256);
     return hash.toHex();
 }
 
-QByteArray TencentOcr::getRandomByteArray(quint32 count) const {
+QByteArray TencentOcrImpl::getRandomByteArray(quint32 count) const {
     QByteArray array;
     for (quint32 i = 0; i < count; ++i) {
         array.append(static_cast<char>(QRandomGenerator::global()->generate() % 256));
@@ -261,7 +261,7 @@ QByteArray TencentOcr::getRandomByteArray(quint32 count) const {
     return array;
 }
 
-void TencentOcr::initWidget(QWidget *parent) {
+void TencentOcrImpl::initWidget(QWidget *parent) {
     if (m_widget) return;
     Q_ASSERT(parent != nullptr);
     m_widget = new QWidget{parent};

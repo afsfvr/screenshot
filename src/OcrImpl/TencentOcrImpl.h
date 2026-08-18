@@ -6,7 +6,7 @@
 #include <QNetworkAccessManager>
 #include <QLineEdit>
 
-class TencentOcr: public OcrBase {
+class TencentOcrImpl: public OcrBase {
 public:
     QVector<Ocr::OcrResult> ocr(const QImage &img) override;
     bool init() override;
