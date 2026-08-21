@@ -29,6 +29,9 @@ public:
   void Print() const override;
   void SaveToJson(const std::string &save_path) const override;
 
+  const OCRPipelineResult &GetPipelineResult() const { return pipeline_result_; }
+  OCRPipelineResult &GetPipelineResult() { return pipeline_result_; }
+
 #ifdef USE_FREETYPE
   static cv::Mat DrawBoxTextFine(const cv::Size &img_ize,
                                  const std::vector<cv::Point2f> &box,

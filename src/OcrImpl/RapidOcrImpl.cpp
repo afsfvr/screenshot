@@ -19,6 +19,8 @@ RapidOcrImpl::~RapidOcrImpl() {
         delete m_ocr;
         m_ocr = nullptr;
     }
+
+    m_widget = nullptr; // m_widget设置了parent，无需delete，而且析构不一定是在ui线程
 }
 
 QVector<Ocr::OcrResult> RapidOcrImpl::ocr(const QImage &img) {

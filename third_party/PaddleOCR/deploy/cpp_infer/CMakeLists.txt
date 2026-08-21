@@ -126,6 +126,8 @@ link_directories("${PADDLE_LIB}/third_party/install/protobuf/lib")
 link_directories("${PADDLE_LIB}/third_party/install/glog/lib")
 link_directories("${PADDLE_LIB}/third_party/install/gflags/lib")
 link_directories("${PADDLE_LIB}/third_party/install/xxhash/lib")
+link_directories("${PADDLE_LIB}/third_party/install/cryptopp/lib")
+link_directories("${PADDLE_LIB}/third_party/install/utf8proc/lib")
 link_directories("${PADDLE_LIB}/third_party/install/onnxruntime/lib")
 link_directories("${PADDLE_LIB}/third_party/install/paddle2onnx/lib")
 link_directories("${PADDLE_LIB}/third_party/install/yaml-cpp/lib")
@@ -206,6 +208,29 @@ endif(NOT WIN32)
 if (EXISTS "${PADDLE_LIB}/third_party/install/yaml-cpp/lib")
   set(DEPS ${DEPS} yaml-cpp)
 endif()
+# paddle_inference 静态库依赖 tbb/openvino/common/phi 等，必须显式加入 DEPS 且放在 libpaddle_inference 之后
+if (EXISTS "${PADDLE_LIB}/third_party/install/tbb/lib")
+  set(DEPS ${DEPS} tbb)
+endif()
+if (EXISTS "${PADDLE_LIB}/third_party/install/openvino/intel64/libopenvino.so")
+  set(DEPS ${DEPS} openvino openvino_paddle_frontend)
+endif()
+# Paddle 3.x: libpaddle_inference.a 依赖 libcommon.so / libphi*.so
+if (EXISTS "${PADDLE_LIB}/paddle/lib/libcommon.so")
+  set(DEPS ${DEPS} ${PADDLE_LIB}/paddle/lib/libcommon.so)
+endif()
+if (EXISTS "${PADDLE_LIB}/paddle/lib/libphi_core.so")
+  set(DEPS ${DEPS} ${PADDLE_LIB}/paddle/lib/libphi_core.so)
+endif()
+if (EXISTS "${PADDLE_LIB}/paddle/lib/libphi.so")
+  set(DEPS ${DEPS} ${PADDLE_LIB}/paddle/lib/libphi.so)
+endif()
+if (EXISTS "${PADDLE_LIB}/third_party/install/cryptopp/lib/libcryptopp.a")
+  set(DEPS ${DEPS} cryptopp)
+endif()
+if (EXISTS "${PADDLE_LIB}/third_party/install/utf8proc/lib/libutf8proc.a")
+  set(DEPS ${DEPS} utf8proc)
+endif()
 
 if(WITH_GPU)
   if(NOT WIN32)
@@ -262,14 +287,16 @@ endif()
 
 file(GLOB_RECURSE SRC_LIST "./src/*.cc")
 set(SRCS cli.cc )
-add_library(${DEMO_NAME} ${SRC_LIST})
-target_link_libraries(${DEMO_NAME} PRIVATE ${DEPS})
+# add_executable(${DEMO_NAME} ${SRC_LIST} ${SRCS})
+add_library(${DEMO_NAME} STATIC ${SRC_LIST})
+target_link_libraries(${DEMO_NAME} PUBLIC ${DEPS})
 target_include_directories(${DEMO_NAME} PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/abseil-cpp"
     "${POLYCLIPPING_INCLUDE_DIR}"
     "${PADDLE_LIB}/paddle/include"
     "${PADDLE_LIB}/third_party/install/yaml-cpp/include"
+    "${PADDLE_LIB}/third_party/install/gflags/include"
 )
 
 if (WIN32 AND WITH_MKL)
