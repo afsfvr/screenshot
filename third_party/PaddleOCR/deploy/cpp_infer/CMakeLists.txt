@@ -3,7 +3,7 @@ project(ppocr CXX)
 
 set(DEMO_NAME "ppocr")
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(WITH_MKL        "Compile demo with MKL/OpenBlas support, default use MKL."       ON)
@@ -89,7 +89,7 @@ else()
     if(WITH_MKL)
         set(FLAG_OPENMP "-fopenmp")
     endif()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 ${FLAG_OPENMP} -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 ${FLAG_OPENMP}")
     set(CMAKE_STATIC_LIBRARY_PREFIX "")
     message("cmake cxx flags" ${CMAKE_CXX_FLAGS})
 endif()
