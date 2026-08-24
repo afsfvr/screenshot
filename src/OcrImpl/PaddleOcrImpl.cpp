@@ -133,41 +133,6 @@ bool PaddleOcrImpl::_init() {
         m_ocr = nullptr;
     }
     try {
-        qDebug() << "PaddleOcrImpl::init m_params dump:";
-        auto dumpOptStr = [](const char* name, const absl::optional<std::string>& opt){
-            qDebug() << name << "has" << opt.has_value();
-            if (opt.has_value()) {
-                const std::string &s = opt.value();
-                qDebug() << "  value len" << s.size() << "ptr" << (void*)s.data() << "val:" << QString::fromStdString(s);
-            }
-        };
-        dumpOptStr("doc_ori_name", m_params.doc_orientation_classify_model_name);
-        dumpOptStr("doc_ori_dir", m_params.doc_orientation_classify_model_dir);
-        dumpOptStr("doc_unwarp_name", m_params.doc_unwarping_model_name);
-        dumpOptStr("doc_unwarp_dir", m_params.doc_unwarping_model_dir);
-        dumpOptStr("text_det_name", m_params.text_detection_model_name);
-        dumpOptStr("text_det_dir", m_params.text_detection_model_dir);
-        dumpOptStr("textline_ori_name", m_params.textline_orientation_model_name);
-        dumpOptStr("textline_ori_dir", m_params.textline_orientation_model_dir);
-        qDebug() << " textline_ori_batch has" << m_params.textline_orientation_batch_size.has_value() << (m_params.textline_orientation_batch_size.has_value()? m_params.textline_orientation_batch_size.value():-1);
-        dumpOptStr("text_rec_name", m_params.text_recognition_model_name);
-        dumpOptStr("text_rec_dir", m_params.text_recognition_model_dir);
-        qDebug() << " text_rec_batch has" << m_params.text_recognition_batch_size.has_value() << (m_params.text_recognition_batch_size.has_value()? m_params.text_recognition_batch_size.value():-1);
-        qDebug() << " use_doc_ori has" << m_params.use_doc_orientation_classify.has_value() << (m_params.use_doc_orientation_classify.has_value() ? m_params.use_doc_orientation_classify.value() : -1);
-        qDebug() << " use_doc_unwarp has" << m_params.use_doc_unwarping.has_value() << (m_params.use_doc_unwarping.has_value() ? m_params.use_doc_unwarping.value() : -1);
-        qDebug() << " use_textline has" << m_params.use_textline_orientation.has_value() << (m_params.use_textline_orientation.has_value() ? m_params.use_textline_orientation.value() : -1);
-        qDebug() << " text_det_limit_side has" << m_params.text_det_limit_side_len.has_value() << (m_params.text_det_limit_side_len.has_value()? m_params.text_det_limit_side_len.value():-1);
-        dumpOptStr("text_det_limit_type", m_params.text_det_limit_type);
-        qDebug() << " text_det_thresh has" << m_params.text_det_thresh.has_value() << (m_params.text_det_thresh.has_value()? m_params.text_det_thresh.value():-1);
-        qDebug() << " text_det_box has" << m_params.text_det_box_thresh.has_value() << (m_params.text_det_box_thresh.has_value()? m_params.text_det_box_thresh.value():-1);
-        qDebug() << " text_det_unclip has" << m_params.text_det_unclip_ratio.has_value() << (m_params.text_det_unclip_ratio.has_value()? m_params.text_det_unclip_ratio.value():-1);
-        qDebug() << " text_rec_score has" << m_params.text_rec_score_thresh.has_value() << (m_params.text_rec_score_thresh.has_value()? m_params.text_rec_score_thresh.value():-1);
-        dumpOptStr("lang", m_params.lang);
-        dumpOptStr("ocr_version", m_params.ocr_version);
-        dumpOptStr("vis_font_dir", m_params.vis_font_dir);
-        dumpOptStr("device", m_params.device);
-        qDebug() << " enable_mkldnn" << m_params.enable_mkldnn << " mkldnn_cache" << m_params.mkldnn_cache_capacity << " precision" << QString::fromStdString(m_params.precision) << " cpu_threads" << m_params.cpu_threads << " thread_num" << m_params.thread_num;
-        qWarning() << " paddlex_config has" << m_params.paddlex_config.has_value();
         m_ocr = new PaddleOCR{ m_params };
         return true;
     } catch (const std::string &e) {
