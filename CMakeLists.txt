@@ -108,6 +108,12 @@ elseif(PADDLE_OCR)
     target_compile_definitions(${PROJECT_NAME} PRIVATE PADDLE_OCR OCR)
     set(OCR ON CACHE BOOL "Enable OCR support")
     message(STATUS "OCR backend: PaddleOcr")
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/PaddleOCR/deploy/cpp_infer/src/configs"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/configs"
+    )
 else()
     set(OCR OFF CACHE BOOL "Enable OCR support")
     message(STATUS "OCR backend: NONE")
