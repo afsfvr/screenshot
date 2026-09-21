@@ -7,6 +7,7 @@
 #include <QStandardPaths>
 #include <QFileDialog>
 #include <QImageWriter>
+#include <QSaveFile>
 #ifdef OCR
 #include "Ocr.h"
 #endif
@@ -15,6 +16,24 @@
 #elif defined(Q_OS_WINDOWS)
 #include <windows.h>
 #endif
+
+namespace {
+constexpr quint32 kConfigMagic = 0x53434647; // 'SCFG'
+constexpr quint32 kConfigVersion = 1;
+constexpr QDataStream::Version kStreamVersion = QDataStream::Qt_5_15;
+
+inline QString currentOcrBackendId() {
+#if defined(TENCENT_OCR)
+    return QStringLiteral("tencent");
+#elif defined(RAPID_OCR)
+    return QStringLiteral("rapid");
+#elif defined(PADDLE_OCR)
+    return QStringLiteral("paddle");
+#else
+    return QStringLiteral("none");
+#endif
+}
+} // namespace
 
 QDataStream& operator<<(QDataStream& stream, const HotKey &key) {
     stream << key.modifiers << key.key;
@@ -60,21 +79,24 @@ SettingWidget::~SettingWidget() {
 }
 
 void SettingWidget::readConfig() {
-    QFile file{getConfigPath()};
-    if (file.open(QFile::ReadOnly)) {
-        QDataStream stream{&file};
-        QString format;
-        stream >> m_auto_save_key >> m_auto_save_path >> format >> m_full_screen;
-        stream >> m_capture >> m_record >> m_scale_ctrl;
-#ifdef OCR
-        QByteArray ocrArray;
-        stream >> ocrArray;
-        OcrInstance->restore(ocrArray);
-#endif
+    const QString path = getConfigPath();
+    QFile file{path};
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "打开配置文件失败：" << file.errorString() << path;
+        return;
+    }
+    const QByteArray data = file.readAll();
+    file.close();
+    if (data.isEmpty()) {
+        qWarning() << "配置文件为空：" << path;
+        return;
+    }
+
+    auto applyConfig = [this](const QString &format) {
         checkData(m_auto_save_key);
         checkData(m_capture);
         checkData(m_record);
-        if (m_auto_save_path.length() == 0) {
+        if (m_auto_save_path.isEmpty()) {
             m_auto_save_key.modifiers = Qt::NoModifier;
             m_auto_save_key.key = 'A';
         }
@@ -98,31 +120,117 @@ void SettingWidget::readConfig() {
             updateKey3();
         }
         ui->radioButton->setChecked(m_scale_ctrl);
-        ui->radioButton_2->setChecked(! m_scale_ctrl);
+        ui->radioButton_2->setChecked(!m_scale_ctrl);
         emit scaleKeyChanged(m_scale_ctrl);
-        file.close();
-    } else {
-        qWarning() << "打开配置文件失败：" << file.errorString();
+#ifdef OCR
+        const QString backend = currentOcrBackendId();
+        auto it = m_ocrMap.constFind(backend);
+        if (it != m_ocrMap.constEnd() && !it->isEmpty()) {
+            OcrInstance->restore(*it);
+            qDebug() << "恢复 OCR 配置：" << backend << "bytes:" << it->size();
+        }
+#else
+        Q_UNUSED(format);
+#endif
+    };
+
+    QDataStream stream{data};
+    stream.setVersion(kStreamVersion);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    quint32 magic = 0, version = 0;
+    stream >> magic >> version;
+    if (stream.status() != QDataStream::Ok || magic != kConfigMagic) {
+        qWarning() << "配置文件已损坏，将使用默认配置：" << path << "magic:" << QString::number(magic, 16);
+        return;
     }
+    if (version != kConfigVersion) {
+        qWarning() << "配置文件版本不匹配：" << version << "当前支持：" << kConfigVersion << "将使用默认配置";
+        return;
+    }
+    QString format;
+    stream >> m_auto_save_key >> m_auto_save_path >> format >> m_full_screen;
+    stream >> m_capture >> m_record >> m_scale_ctrl;
+    if (stream.status() != QDataStream::Ok) {
+        qWarning() << "配置文件已损坏(主配置解析失败)：" << path;
+        return;
+    }
+
+    QMap<QString, QByteArray> ocrMap;
+    if (!stream.atEnd()) {
+        stream >> ocrMap;
+        if (stream.status() != QDataStream::Ok) {
+            qWarning() << "OCR 配置解析失败，忽略 OCR 配置：" << path;
+            ocrMap.clear();
+            stream.setStatus(QDataStream::Ok);
+        }
+    }
+    m_ocrMap = ocrMap;
+    if (stream.status() != QDataStream::Ok) {
+        qWarning() << "配置文件已损坏：" << path;
+        return;
+    }
+    applyConfig(format);
+    qDebug() << "读取配置文件成功：" << path << "version:" << version << "ocr backends:" << m_ocrMap.keys();
 }
 
 void SettingWidget::saveConfig() {
     qDebug() << "save config";
-    QFile file{getConfigPath()};
-    if (file.open(QFile::WriteOnly | QFile::Truncate)) {
-        QDataStream stream{&file};
+#ifdef OCR
+    const QString backend = currentOcrBackendId();
+    if (backend != QStringLiteral("none")) {
+        QByteArray curBlob = OcrInstance->save();
+        // 即使为空也保存，以覆盖旧值
+        m_ocrMap[backend] = curBlob;
+    }
+#endif
+    QByteArray buffer;
+    buffer.reserve(1024);
+    {
+        QDataStream stream{&buffer, QIODevice::WriteOnly};
+        stream.setVersion(kStreamVersion);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream << kConfigMagic << kConfigVersion;
         stream << m_auto_save_key << m_auto_save_path << m_save_format << m_full_screen;
         stream << m_capture << m_record << m_scale_ctrl;
-#ifdef OCR
-        QByteArray ocrArray = OcrInstance->save();
-        stream << ocrArray;
-#endif
-        file.flush();
-        file.close();
-    } else {
-        QString error = QString("write config failed: %1").arg(file.errorString());
-        qWarning() << error;
+        stream << m_ocrMap;
+        if (stream.status() != QDataStream::Ok) {
+            qWarning() << "序列化配置失败";
+            return;
+        }
     }
+
+    const QString path = getConfigPath();
+    {
+        QFile oldFile{path};
+        if (oldFile.exists() && oldFile.open(QIODevice::ReadOnly)) {
+            const QByteArray oldData = oldFile.readAll();
+            oldFile.close();
+            if (oldData == buffer) {
+                qDebug() << "配置文件无更改，跳过保存" << path;
+                return;
+            }
+        }
+    }
+
+    QSaveFile file{path};
+    const QString dir = QFileInfo{path}.absolutePath();
+    if (!QFile::exists(dir)) {
+        QDir{}.mkpath(dir);
+    }
+    if (!file.open(QIODevice::WriteOnly)) {
+        qWarning() << QString("write config failed: %1 (%2)").arg(file.errorString(), path);
+        return;
+    }
+    if (file.write(buffer) != buffer.size()) {
+        qWarning() << "写入配置长度不匹配" << file.errorString();
+        file.cancelWriting();
+        return;
+    }
+    if (!file.commit()) {
+        qWarning() << QString("commit config failed: %1 (%2)").arg(file.errorString(), path);
+        return;
+    }
+    qDebug() << "save config success" << path << "bytes:" << buffer.size();
 }
 
 const QString& SettingWidget::getConfigPath() const {

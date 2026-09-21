@@ -6,6 +6,7 @@
 #include <QDataStream>
 #include <QProcess>
 #include <QCheckBox>
+#include <QMap>
 
 namespace Ui {
 class SettingWidget;
@@ -80,6 +81,7 @@ private:
     HotKey m_capture;
     HotKey m_record;
     bool m_scale_ctrl;
+    QMap<QString, QByteArray> m_ocrMap;
 
     QPoint m_pos;
 };

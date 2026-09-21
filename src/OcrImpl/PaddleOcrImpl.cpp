@@ -151,6 +151,7 @@ void PaddleOcrImpl::restore(QByteArray array) {
         return;
     }
     QDataStream stream{&array, QIODevice::ReadOnly};
+    stream.setVersion(QDataStream::Qt_5_15);
     stream.setByteOrder(QDataStream::LittleEndian);
 
     QString rec, recDir, det, detDir, docOri, docOriDir, docUw, docUwDir, lineOri, lineOriDir, precisionValue;
@@ -238,7 +239,9 @@ void PaddleOcrImpl::restore(QByteArray array) {
 
 QByteArray PaddleOcrImpl::save() {
     QByteArray array;
+    array.reserve(512);
     QDataStream stream{ &array, QIODevice::WriteOnly };
+    stream.setVersion(QDataStream::Qt_5_15);
     stream.setByteOrder(QDataStream::LittleEndian);
 
     QMutexLocker locker(&m_mutex);

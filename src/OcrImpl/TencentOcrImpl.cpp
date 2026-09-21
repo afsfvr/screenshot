@@ -189,6 +189,7 @@ QByteArray TencentOcrImpl::save() {
     QAESEncryption aes{QAESEncryption::AES_256, QAESEncryption::CBC, QAESEncryption::PKCS7};
     QByteArray raw, key = QCryptographicHash::hash("screenshot", QCryptographicHash::Sha256), iv = getRandomByteArray(16);
     QByteArray b1 = m_id.toUtf8(), b2 = m_key.toUtf8();
+    raw.reserve(8 + b1.size() + b2.size());
     raw.append(static_cast<char>(b1.size() & 0xFF))
         .append(static_cast<char>((b1.size() >> 8) & 0xFF))
         .append(static_cast<char>((b1.size() >> 16) & 0xFF))

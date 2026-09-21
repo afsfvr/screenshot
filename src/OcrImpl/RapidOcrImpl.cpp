@@ -125,6 +125,7 @@ void RapidOcrImpl::restore(QByteArray array) {
         return;
     }
     QDataStream stream{&array, QIODevice::ReadOnly};
+    stream.setVersion(QDataStream::Qt_5_15);
     stream.setByteOrder(QDataStream::LittleEndian);
     QString det, cls, rec, key;
     int gpuIndex, numThread, padding, maxSideLen;
@@ -155,7 +156,9 @@ void RapidOcrImpl::restore(QByteArray array) {
 
 QByteArray RapidOcrImpl::save() {
     QByteArray array;
+    array.reserve(256);
     QDataStream stream{ &array, QIODevice::WriteOnly };
+    stream.setVersion(QDataStream::Qt_5_15);
     stream.setByteOrder(QDataStream::LittleEndian);
 
     stream << m_det << m_cls << m_rec << m_key << m_gpuIndexValue
