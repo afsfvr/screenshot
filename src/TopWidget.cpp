@@ -751,17 +751,25 @@ void TopWidget::save(const QString &path) {
 #endif // QRCODE
 
     QPainter painter(&m_image);
+    painter.setRenderHint(QPainter::Antialiasing, true);
     if (! m_path.isEmpty()) {
-        painter.setClipPath(m_path);
+        if (m_ratio != 1.0) {
+            QTransform transform;
+            transform.scale(m_ratio, m_ratio);
+            painter.setClipPath(transform.map(m_path));
+        } else {
+            painter.setClipPath(m_path);
+        }
     }
+    painter.save();
+    painter.scale(m_ratio, m_ratio);
     for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
-        (*iter)->scale(m_ratio, m_ratio);
         (*iter)->draw(painter);
     }
     if (m_shape != nullptr) {
-        m_shape->scale(m_ratio, m_ratio);
         m_shape->draw(painter);
     }
+    painter.restore();
     painter.end();
     if (path.isEmpty()) {
         QClipboard *clipboard = QApplication::clipboard();
@@ -805,8 +813,15 @@ void TopWidget::updateOpacity(int value){
 void TopWidget::copyImage() {
     QImage image = m_image.copy();
     QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing, true);
     if (! m_path.isEmpty()) {
-        painter.setClipPath(m_path);
+        if (m_ratio != 1.0) {
+            QTransform transform;
+            transform.scale(m_ratio, m_ratio);
+            painter.setClipPath(transform.map(m_path));
+        } else {
+            painter.setClipPath(m_path);
+        }
     }
     painter.save();
     painter.scale(m_ratio, m_ratio);
@@ -820,7 +835,7 @@ void TopWidget::copyImage() {
     painter.end();
     QClipboard *clipboard = QApplication::clipboard();
     if (clipboard) {
-        clipboard->setImage(m_image);
+        clipboard->setImage(image);
         addTip("复制成功");
     }
 }

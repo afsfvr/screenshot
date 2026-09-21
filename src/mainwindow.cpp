@@ -1097,8 +1097,9 @@ void MainWindow::save(const QString &path) {
             QRect rect = m_path.boundingRect().toRect();
             if (rect.width() <= 0 || rect.height() <= 0) return;
             image = QImage(rect.size() * m_ratio, QImage::Format_ARGB32);
+            image.fill(Qt::transparent);
             painter.begin(&image);
-            painter.fillRect(image.rect(), QColor(0, 0, 0, 0));
+            painter.setRenderHint(QPainter::Antialiasing, true);
             painter.translate(- rect.topLeft() * m_ratio);
             QTransform transform;
             transform.scale(m_ratio, m_ratio);
@@ -1158,8 +1159,9 @@ TopWidget *MainWindow::top() {
             (*iter)->translate(- point);
         }
         QImage image = QImage(rect.size() * m_ratio, QImage::Format_ARGB32);
+        image.fill(Qt::transparent);
         QPainter painter(&image);
-        painter.fillRect(image.rect(), QColor(0, 0, 0, 0));
+        painter.setRenderHint(QPainter::Antialiasing, true);
         painter.translate(- point * m_ratio);
         QTransform transform;
         transform.scale(m_ratio, m_ratio);
