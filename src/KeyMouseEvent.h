@@ -1,6 +1,8 @@
 ﻿#ifndef KEYMOUSEEVENT_H
 #define KEYMOUSEEVENT_H
 
+#include <atomic>
+
 #include <QSharedPointer>
 #include <QThread>
 #include <QMouseEvent>
@@ -40,11 +42,11 @@ signals:
     void keyPress(int code, Qt::KeyboardModifiers modifiers);
     void keyRelease(int code, Qt::KeyboardModifiers modifiers);
 private:
-    bool running;
-    Qt::KeyboardModifiers m_modifiers;
-    Qt::MouseButtons m_buttons;
-    Display *display;
-    XRecordContext context;
+    std::atomic_bool running{false};
+    Qt::KeyboardModifiers m_modifiers = Qt::NoModifier;
+    Qt::MouseButtons m_buttons = Qt::NoButton;
+    Display *display = nullptr;
+    XRecordContext context = 0;
 };
 
 #endif // KEYMOUSEEVENT_H

@@ -3,20 +3,25 @@
 #include <QStandardPaths>
 #include <QLockFile>
 #include <csignal>
+#if defined(Q_OS_LINUX)
+#include <QSocketNotifier>
+#include <cerrno>
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 #include "mainwindow.h"
 #include "TopWidget.h"
 
 #if defined(Q_OS_LINUX)
-static void signal_handler(int x) {
-    switch (x) {
-    case SIGINT:  qInfo().noquote() << QString("收到信号SIGINT，退出程序");    break;
-    case SIGQUIT: qInfo().noquote() << QString("收到信号SIGQUIT，退出程序");   break;
-    case SIGTERM: qInfo().noquote() << QString("收到信号SIGTERM，退出程序");   break;
-    default:      qInfo().noquote() << QString("收到信号%1，退出程序").arg(x); break;
-    }
+static int signalPipe[2] = {-1, -1};
 
-    QApplication::quit();
+static void signal_handler(int x) {
+    const unsigned char sig = static_cast<unsigned char>(x);
+    const int savedErrno = errno;
+    const ssize_t ignored = ::write(signalPipe[1], &sig, 1);
+    Q_UNUSED(ignored);
+    errno = savedErrno;
 }
 #elif defined(Q_OS_WINDOWS)
 static HHOOK hHook = nullptr;
@@ -135,6 +140,32 @@ int main(int argc, char *argv[])
         qCritical() << "不是Xorg";
         return 1;
     }
+
+    if (::pipe(signalPipe) != 0) {
+        qCritical() << "创建信号管道失败";
+        return 1;
+    }
+    for (int fd : signalPipe) {
+        const int flags = ::fcntl(fd, F_GETFL, 0);
+        if (flags != -1) {
+            ::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+        }
+    }
+
+    QSocketNotifier notifier{signalPipe[0], QSocketNotifier::Read};
+    QObject::connect(&notifier, &QSocketNotifier::activated, &a, [&a]() {
+        char sig = 0;
+        while (::read(signalPipe[0], &sig, sizeof(sig)) == sizeof(sig)) {
+            switch (sig) {
+            case SIGINT:  qInfo().noquote() << "收到信号SIGINT，退出程序";  break;
+            case SIGQUIT: qInfo().noquote() << "收到信号SIGQUIT，退出程序"; break;
+            case SIGTERM: qInfo().noquote() << "收到信号SIGTERM，退出程序"; break;
+            default:      qInfo().noquote() << QString("收到信号%1，退出程序").arg(static_cast<int>(sig)); break;
+            }
+        }
+        a.quit();
+    });
+
     signal(SIGINT, signal_handler);
     signal(SIGQUIT, signal_handler);
     signal(SIGTERM, signal_handler);

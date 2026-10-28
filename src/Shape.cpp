@@ -460,11 +460,12 @@ Shape *Arrow::clone() const {
 
 void Arrow::addPoint(const QPoint &point) {
     m_p2 = point;
+    m_has_p2 = true;
     m_path.clear();
 }
 
 bool Arrow::isNull() const {
-    return m_p2.isNull() || m_p1.isNull();
+    return ! m_has_p2 || m_p1 == m_p2;
 }
 
 void Arrow::scale(qreal sx, qreal sy) {
@@ -574,13 +575,16 @@ void Text::addPoint(const QPoint &point) {
 }
 
 bool Text::isNull() const {
-    return (! m_text.isNull() && m_text.isEmpty());
+    return m_text.isEmpty();
 }
 
 void Text::scale(qreal sx, qreal sy) {
     if (isNull()) return;
     m_point.rx() *= sx;
     m_point.ry() *= sy;
+    if (m_font.pixelSize() > 0) {
+        m_font.setPixelSize(qMax(1, qRound(m_font.pixelSize() * sy)));
+    }
 }
 
 void Text::translate(const QPoint &point) {

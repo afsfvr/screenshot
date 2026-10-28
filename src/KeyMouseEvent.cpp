@@ -11,7 +11,7 @@
 #define WheelRight		7
 
 KeyMouseEvent::KeyMouseEvent(QObject *parent)
-    : QThread{parent}, running{false}
+    : QThread{parent}
 {
     qRegisterMetaType<QSharedPointer<QMouseEvent>>("QSharedPointer<QMouseEvent>");
     qRegisterMetaType<QSharedPointer<QWheelEvent>>("QSharedPointer<QWheelEvent>");

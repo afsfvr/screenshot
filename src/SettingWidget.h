@@ -77,7 +77,7 @@ private:
     HotKey m_auto_save_key;
     QString m_auto_save_path;
     QString m_save_format;
-    bool m_full_screen;
+    bool m_full_screen = false;
     HotKey m_capture;
     HotKey m_record;
     bool m_scale_ctrl;

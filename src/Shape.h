@@ -157,6 +157,7 @@ protected:
 
 private:
     QPoint m_p1, m_p2;
+    bool m_has_p2 = false;
     QPainterPath m_path;
     QPen m_pen2;
     Target m_target = Target::None;

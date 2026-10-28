@@ -210,7 +210,7 @@ void TencentOcrImpl::showSettingWidget(QWidget *parent) {
         initWidget(parent);
     }
     m_idEdit->setText(m_id);
-    m_keyEdit->setText(QString{m_key.size(), '*'});
+    m_keyEdit->setText(m_key);
     m_widget->show();
 }
 
@@ -296,6 +296,7 @@ void TencentOcrImpl::initWidget(QWidget *parent) {
 
     m_idEdit = new QLineEdit{m_widget};
     m_keyEdit = new QLineEdit{m_widget};
+    m_keyEdit->setEchoMode(QLineEdit::Password);
     QFormLayout *flayout = new QFormLayout;
     flayout->addRow(new QLabel{"SECRET_ID", m_widget}, m_idEdit);
     flayout->addRow(new QLabel{"SECRET_KEY", m_widget}, m_keyEdit);

@@ -1210,10 +1210,14 @@ void MainWindow::openSaveDir() {
     QString path = m_setting->autoSavePath();
     if (path.isEmpty()) {
         QMessageBox::warning(this, "打开目录失败", "未设置自动保存路径");
+        return;
     }
     QFileInfo info{path};
     if (! info.exists()) {
-        QDir{path}.mkpath(path);
+        if (! QDir{path}.mkpath(path)) {
+            QMessageBox::warning(this, "打开目录失败", QString("无法创建目录：%1").arg(path));
+        }
+        info.refresh();
     }
     if (! info.isDir()) {
         path = QDir::toNativeSeparators(info.path());
