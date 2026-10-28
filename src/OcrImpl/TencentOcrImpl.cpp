@@ -21,6 +21,7 @@
 #include <QMessageBox>
 #include <QFormLayout>
 #include <QRandomGenerator>
+#include <QTimer>
 
 QVector<Ocr::OcrResult> TencentOcrImpl::ocr(const QImage &img) {
     QVector<Ocr::OcrResult> vector;
@@ -243,10 +244,32 @@ QByteArray TencentOcrImpl::sendRequest(const QString &action, const QByteArray &
     request.setRawHeader("X-TC-Version", "2018-11-19");
     QNetworkReply *reply = m_manager.post(request, payload);
     QEventLoop loop;
+    QTimer timer;
+    timer.setSingleShot(true);
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    QObject::connect(&timer, &QTimer::timeout, &loop, [reply, &loop]() {
+        reply->abort();
+        loop.quit();
+    });
+    timer.start(20000);
     loop.exec();
+    timer.stop();
 
-    return reply->readAll();
+    if (reply->error() != QNetworkReply::NoError) {
+        QJsonObject error{
+            {"Response", QJsonObject{
+                {"Error", QJsonObject{
+                    {"Message", QString("网络请求失败: %1").arg(reply->errorString())}
+                }}
+            }}
+        };
+        reply->deleteLater();
+        return QJsonDocument(error).toJson(QJsonDocument::Compact);
+    }
+
+    const QByteArray data = reply->readAll();
+    reply->deleteLater();
+    return data;
 }
 
 QByteArray TencentOcrImpl::sha256Hex(const QByteArray &array) {

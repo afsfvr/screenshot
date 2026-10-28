@@ -74,8 +74,8 @@ TopWidget::~TopWidget() {
         m_ratio_timer = -1;
     }
 #ifdef OCR
+    OcrInstance->cancel(this);
     if (m_ocr_timer != -1) {
-        OcrInstance->cancel(this);
         killTimer(m_ocr_timer);
         m_ocr_timer = -1;
     }
@@ -165,15 +165,16 @@ void TopWidget::ocrEnd(const QVector<Ocr::OcrResult> &result) {
         m_ocr.clear();
         addTip(result[0].text, 3000);
     } else {
-        if (result.size() == 0) {
+        if (result.isEmpty()) {
             addTip("无结果");
         }
-        m_ocr = result;
+        m_ocr.clear();
         if (m_ratio != 1) {
-            for (auto iter = result.begin(); iter != result.end(); ++iter) {
-                QTransform transform;
-                transform.scale(1 / m_ratio, 1 / m_ratio);
-                m_ocr.push_back({transform.map(iter->path), iter->text, iter->score});
+            QTransform transform;
+            transform.scale(1 / m_ratio, 1 / m_ratio);
+            m_ocr.reserve(result.size());
+            for (const auto &item : result) {
+                m_ocr.push_back({transform.map(item.path), item.text, item.score});
             }
         } else {
             m_ocr = result;
@@ -550,7 +551,10 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
             if (! isSet) setCursorShape(Qt::SizeAllCursor);
         }
 #if defined (OCR) || defined (QRCODE)
-        bool contain = m_widget->geometry().contains(gpos);
+        if (m_widget == nullptr) {
+            return;
+        }
+        const bool contain = m_widget->frameGeometry().contains(gpos);
         if (m_widget->isHidden() || ! contain) {
             bool hide = true;
             QPoint point = event->pos() / m_scale_ratio;
