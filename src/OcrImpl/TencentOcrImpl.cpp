@@ -173,14 +173,14 @@ void TencentOcrImpl::restore(QByteArray array) {
               (static_cast<unsigned char>(data[1]) << 8) |
               (static_cast<unsigned char>(data[2]) << 16) |
               (static_cast<unsigned char>(data[3]) << 24);
-    if (array.size() < 8 + len1) return;
+    if (len1 < 0 || array.size() - 8 < len1) return;
     QString s1 = QString::fromUtf8(data + 4, len1);
 
     int len2 = (static_cast<unsigned char>(data[len1 + 4])) |
           (static_cast<unsigned char>(data[len1 + 5]) << 8) |
           (static_cast<unsigned char>(data[len1 + 6]) << 16) |
           (static_cast<unsigned char>(data[len1 + 7]) << 24);
-    if (array.size() != 8 + len1 + len2) return;
+    if (len2 < 0 || static_cast<qint64>(len1) + len2 > array.size() - 8) return;
     QString s2 = QString::fromUtf8(data + len1 + 8, len2);
     m_id = s1;
     m_key = s2;

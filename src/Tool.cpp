@@ -128,6 +128,10 @@ Tool::Tool(QWidget *parent): QWidget(parent), ui(new Ui::Tool), m_shape(nullptr)
 }
 
 Tool::~Tool() {
+    if (m_shape) {
+        delete m_shape;
+        m_shape = nullptr;
+    }
     delete ui;
 }
 
@@ -437,13 +441,14 @@ void Tool::clickTransparency(){
 
 void Tool::lostFocus() {
     QObject *o = QApplication::focusObject();
-    if (o == this || o == this->parentWidget() || m_ignore) {
+    if (m_ignore) {
         return;
     }
-    while (o != nullptr && (o = o->parent()) != nullptr) {
+    while (o != nullptr) {
         if (o == this) {
             return;
         }
+        o = o->parent();
     }
     this->setDraw(ShapeEnum::Null);
     this->hide();

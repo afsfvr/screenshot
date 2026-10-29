@@ -141,6 +141,9 @@ bool PaddleOcrImpl::_init() {
     } catch (const std::exception &e) {
         qWarning() << "paddle ocr初始化失败" << e.what();
         if (m_ocr) { delete m_ocr; m_ocr = nullptr; }
+    } catch (...) {
+        qWarning() << "paddle ocr初始化失败 未知异常";
+        if (m_ocr) { delete m_ocr; m_ocr = nullptr; }
     }
     return false;
 }

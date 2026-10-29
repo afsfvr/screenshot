@@ -6,6 +6,7 @@
 #include <QThread>
 #include <QDebug>
 #include <opencv2/opencv.hpp>
+#include <stdexcept>
 
 #include "LongWidget.h"
 #include "TopWidget.h"
@@ -13,7 +14,8 @@
 
 // 向下匹配（bigImage底部 和 新图顶部）
 static int downMerge(const cv::Mat &grayBig, const cv::Mat &grayNew) {
-    const int matchHeight = grayNew.rows <= 300 ? grayNew.rows / 2 : 200;
+    if (grayBig.rows < grayNew.rows) return grayNew.rows;
+    const int matchHeight = qMax(1, grayNew.rows <= 300 ? grayNew.rows / 2 : 200);
     cv::Mat bottomResult;
     cv::Mat matchNew = grayNew(cv::Rect(0, 0, grayNew.cols, matchHeight));
 
@@ -35,7 +37,8 @@ static int downMerge(const cv::Mat &grayBig, const cv::Mat &grayNew) {
 
 // 向上匹配（bigImage顶部 和 新图底部）
 static int upMerge(const cv::Mat &grayBig, const cv::Mat &grayNew) {
-    const int matchHeight = grayNew.rows <= 300 ? grayNew.rows / 2 : 200;
+    if (grayBig.rows < grayNew.rows) return grayNew.rows;
+    const int matchHeight = qMax(1, grayNew.rows <= 300 ? grayNew.rows / 2 : 200);
     cv::Mat topResult;
     cv::Mat matchNew = grayNew(cv::Rect(0, grayNew.rows - matchHeight, grayNew.cols, matchHeight));
 
@@ -58,60 +61,75 @@ static void mergePicture(LongWidget *w, QImage *bigImage, QReadWriteLock *lock, 
     LongWidget::Data data;
     cv::Mat grayBig;
     lock->lockForRead();
-    cv::cvtColor(cv::Mat(bigImage->height(), bigImage->width(), CV_8UC3, bigImage->bits(), bigImage->bytesPerLine()), grayBig, cv::COLOR_BGR2GRAY);
+    bool ok = false;
+    try {
+        cv::cvtColor(cv::Mat(bigImage->height(), bigImage->width(), CV_8UC3, bigImage->bits(), bigImage->bytesPerLine()), grayBig, cv::COLOR_BGR2GRAY);
+        ok = true;
+    } catch (const std::exception &e) {
+        qWarning() << "长截图初始处理异常:" << e.what();
+    }
     lock->unlock();
+    if (! ok) return;
     while (queue->dequeue(&data)) {
         QImage &image = data.image;
 
-        cv::Mat matNew(image.height(), image.width(), CV_8UC3, image.bits(), image.bytesPerLine());
-        cv::Mat grayNew;
-        cv::cvtColor(matNew, grayNew, cv::COLOR_BGR2GRAY);
+        if (image.isNull() || image.width() <= 0 || image.height() <= 0) continue;
 
-        QImage resultImg;
-        if (data.down) {
-            int downOverlap = downMerge(grayBig, grayNew);
-            if (downOverlap < grayNew.rows) {
-                resultImg = QImage(QSize(grayBig.cols, grayBig.rows + grayNew.rows - downOverlap), QImage::Format_BGR888);
-                QPainter painter(&resultImg);
-                lock->lockForRead();
-                painter.drawImage(QRect{0, 0, grayBig.cols, grayBig.rows - downOverlap}, *bigImage, QRect{0, 0, grayBig.cols, grayBig.rows - downOverlap});
-                lock->unlock();
-                painter.drawImage(QRect{0, grayBig.rows - downOverlap, grayNew.cols, grayNew.rows}, image, QRect{0, 0, grayNew.cols, grayNew.rows});
-                painter.end();
+        try {
+            cv::Mat matNew(image.height(), image.width(), CV_8UC3, image.bits(), image.bytesPerLine());
+            cv::Mat grayNew;
+            cv::cvtColor(matNew, grayNew, cv::COLOR_BGR2GRAY);
 
-                cv::Mat tmp;
-                cv::vconcat(
-                    grayBig(cv::Rect(0, 0, grayBig.cols, grayBig.rows - downOverlap)),
-                    grayNew(cv::Rect(0, 0, grayNew.cols, grayNew.rows)),
-                    tmp);
-                grayBig = tmp;
+            QImage resultImg;
+            if (data.down) {
+                int downOverlap = downMerge(grayBig, grayNew);
+                if (downOverlap < grayNew.rows) {
+                    resultImg = QImage(QSize(grayBig.cols, grayBig.rows + grayNew.rows - downOverlap), QImage::Format_BGR888);
+                    QPainter painter(&resultImg);
+                    lock->lockForRead();
+                    painter.drawImage(QRect{0, 0, grayBig.cols, grayBig.rows - downOverlap}, *bigImage, QRect{0, 0, grayBig.cols, grayBig.rows - downOverlap});
+                    lock->unlock();
+                    painter.drawImage(QRect{0, grayBig.rows - downOverlap, grayNew.cols, grayNew.rows}, image, QRect{0, 0, grayNew.cols, grayNew.rows});
+                    painter.end();
+
+                    cv::Mat tmp;
+                    cv::vconcat(
+                        grayBig(cv::Rect(0, 0, grayBig.cols, grayBig.rows - downOverlap)),
+                        grayNew(cv::Rect(0, 0, grayNew.cols, grayNew.rows)),
+                        tmp);
+                    grayBig = tmp;
+                }
+            } else {
+                int upOverlap = upMerge(grayBig, grayNew);
+                if (upOverlap < grayNew.rows) {
+                    resultImg = QImage(QSize(grayBig.cols, grayBig.rows + grayNew.rows - upOverlap), QImage::Format_BGR888);
+                    QPainter painter(&resultImg);
+                    painter.drawImage(image.rect(), image);
+                    lock->lockForRead();
+                    painter.drawImage(QRect{0, grayNew.rows, grayBig.cols, grayBig.rows - upOverlap},
+                                      *bigImage,
+                                      QRect{0, upOverlap, grayBig.cols, grayBig.rows - upOverlap});
+                    lock->unlock();
+                    painter.end();
+
+                    cv::Mat tmp;
+                    cv::vconcat(grayNew,
+                                grayBig(cv::Rect(0, upOverlap, grayBig.cols, grayBig.rows - upOverlap)),
+                                tmp);
+                    grayBig = tmp;
+                }
             }
-        } else {
-            int upOverlap = upMerge(grayBig, grayNew);
-            if (upOverlap < grayNew.rows) {
-                resultImg = QImage(QSize(grayBig.cols, grayBig.rows + grayNew.rows - upOverlap), QImage::Format_BGR888);
-                QPainter painter(&resultImg);
-                painter.drawImage(image.rect(), image);
-                lock->lockForRead();
-                painter.drawImage(QRect{0, grayNew.rows, grayBig.cols, grayBig.rows - upOverlap},
-                                  *bigImage,
-                                  QRect{0, upOverlap, grayBig.cols, grayBig.rows - upOverlap});
+
+            if (! resultImg.isNull()) {
+                lock->lockForWrite();
+                bigImage->swap(resultImg);
                 lock->unlock();
-                painter.end();
-
-                cv::Mat tmp;
-                cv::vconcat(grayNew,
-                            grayBig(cv::Rect(0, upOverlap, grayBig.cols, grayBig.rows - upOverlap)),
-                            tmp);
-                grayBig = tmp;
+                QMetaObject::invokeMethod(w, "updateLabel", Qt::QueuedConnection);
             }
-        }
-
-        if (! resultImg.isNull()) {
-            lock->lockForWrite();
-            bigImage->swap(resultImg);
-            lock->unlock();
-            QMetaObject::invokeMethod(w, "updateLabel", Qt::QueuedConnection);
+        } catch (const std::exception &e) {
+            qWarning() << "长截图合并异常:" << e.what();
+        } catch (...) {
+            qWarning() << "长截图合并异常: 未知错误";
         }
     }
 }

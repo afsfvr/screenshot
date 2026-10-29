@@ -163,11 +163,11 @@ void Rectangle::paint(QPainter &painter) {
     int height = p2.y() - y + 1;
     if (width < 0) {
         x = p2.x();
-        width = -width;
+        width = -width + 2;
     }
     if (height < 0) {
         y = p2.y();
-        height = -height;
+        height = -height + 2;
     }
     if (m_fill) {
         painter.fillRect(x, y, width, height, m_pen.color());
@@ -291,11 +291,11 @@ void Ellipse::paint(QPainter &painter) {
     int height = p2.y() - y + 1;
     if (width < 0) {
         x = p2.x();
-        width = -width;
+        width = -width + 2;
     }
     if (height < 0) {
         y = p2.y();
-        height = -height;
+        height = -height + 2;
     }
     if (m_fill) {
         painter.setClipRegion({x, y, width, height, QRegion::Ellipse});
@@ -402,7 +402,7 @@ void Line::addPoint(const QPoint &point) {
 }
 
 bool Line::isNull() const {
-    return m_path.elementCount() <= 2;
+    return m_path.elementCount() < 2;
 }
 
 void Line::scale(qreal sx, qreal sy) {

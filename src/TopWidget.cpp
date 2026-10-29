@@ -413,7 +413,7 @@ void TopWidget::paintEvent(QPaintEvent *event) {
         int h = m_origin.height();
 
         int sliderHeight = qMax<int>(static_cast<float>(h) / maxH * h, 20); // 最小高度为20
-        float offsetRatio = static_cast<float>(m_offsetY) / m_max_offset;
+        float offsetRatio = m_max_offset > 0 ? static_cast<float>(m_offsetY) / m_max_offset : 0;
         int sliderY = static_cast<int>((h - sliderHeight) * offsetRatio);
 
         QRect sliderRect(m_origin.width() - 10, sliderY, 10, sliderHeight);
@@ -708,7 +708,7 @@ void TopWidget::wheelEvent(QWheelEvent *event) {
     if (event->modifiers() == Qt::ControlModifier) {
         if (m_scale_ctrl) {
             scaleWidget(event->angleDelta().y());
-        } else if (m_max_offset) {
+        } else if (m_max_offset > 0) {
             scrollWidget(event->angleDelta().y());
         } else {
             BaseWindow::wheelEvent(event);
@@ -716,7 +716,7 @@ void TopWidget::wheelEvent(QWheelEvent *event) {
     } else {
         if (! m_scale_ctrl) {
             scaleWidget(event->angleDelta().y());
-        } else if (m_max_offset) {
+        } else if (m_max_offset > 0) {
             scrollWidget(event->angleDelta().y());
         } else {
             BaseWindow::wheelEvent(event);
@@ -852,7 +852,7 @@ void TopWidget::copyWidget() {
         QImage image = m_image.copy();
         QVector<Shape*> v;
         t = new TopWidget{image, QPainterPath{m_path}, v, {geometry().topLeft(), m_origin}, tray_menu, m_ratio};
-    } else if (m_max_offset) {
+    } else if (m_max_offset > 0) {
         QImage image = m_image.copy();
         t = new TopWidget{image, {geometry().topLeft(), m_origin}, tray_menu, m_ratio};
     } else {

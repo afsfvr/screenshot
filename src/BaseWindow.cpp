@@ -92,11 +92,11 @@ QRect BaseWindow::getRect(const QPoint &p1, const QPoint &p2) {
     int height = p2.y() - y + 1;
     if (width < 0) {
         x = p2.x();
-        width = -width;
+        width = -width + 2;
     }
     if (height < 0) {
         y = p2.y();
-        height = -height;
+        height = -height + 2;
     }
     return QRect(x, y, width, height);
 }
@@ -185,9 +185,14 @@ void BaseWindow::redo() {
 
 void BaseWindow::saveColor() {
     if (! m_image.isNull()) {
+        const QPoint pos = m_mouse_pos * m_ratio;
+        if (! m_image.rect().contains(pos)) {
+            addTip("指针不在截图区域内");
+            return;
+        }
         QClipboard *clipboard = QApplication::clipboard();
         if (clipboard) {
-            clipboard->setText(m_image.pixelColor(m_mouse_pos * m_ratio).name().toUpper());
+            clipboard->setText(m_image.pixelColor(pos).name().toUpper());
             addTip("复制颜色成功");
         } else {
             addTip("复制颜色失败");
@@ -243,6 +248,10 @@ bool BaseWindow::removeTip(const QString &text) {
 
 void BaseWindow::clearDraw()
 {
+    if (m_move_shape != nullptr) {
+        m_move_shape->moveEnd();
+        m_move_shape = nullptr;
+    }
     for (auto iter = m_vector.begin(); iter != m_vector.end(); ++iter) {
         delete (*iter);
     }

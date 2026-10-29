@@ -12,6 +12,7 @@
 #include <QTimer>
 #include <QComboBox>
 #include <QtMath>
+#include <QMessageBox>
 #include <malloc.h>
 
 static void writeGIF(BlockQueue<GifFrameData> *queue) {
@@ -148,7 +149,24 @@ void GifWidget::buttonClicked() {
         m_delay = 100 / value;
         memset(m_writer, 0, sizeof(GifWriter));
         m_startTime = QDateTime::currentMSecsSinceEpoch();
-        GifBegin(m_writer, m_tmp.toUtf8().data(), qCeil(m_screen.width() * m_ratio), qCeil(m_screen.height() * m_ratio), m_delay);
+        m_preTime = m_startTime;
+        if (! GifBegin(m_writer, m_tmp.toUtf8().data(), qCeil(m_screen.width() * m_ratio), qCeil(m_screen.height() * m_ratio), m_delay)) {
+            if (m_timerId != -1) {
+                killTimer(m_timerId);
+                m_timerId = -1;
+            }
+            if (m_updateTimerId != -1) {
+                killTimer(m_updateTimerId);
+                m_updateTimerId = -1;
+            }
+            m_button->setText("开始");
+            m_action->setText("开始");
+            m_label->setVisible(false);
+            delete m_writer;
+            m_writer = nullptr;
+            QMessageBox::warning(this, "录制失败", "GIF初始化失败, 无法创建临时文件");
+            return;
+        }
         updateGIF();
     } else {
         if (m_timerId != -1) {

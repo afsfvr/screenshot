@@ -309,11 +309,11 @@ void SettingWidget::hideEvent(QHideEvent *event) {
 
 void SettingWidget::openFile(const QString &link) {
 #if defined(Q_OS_LINUX)
-    if (system(QString("nautilus %1 >/dev/null 2>&1 &").arg(link).toStdString().c_str()) != 0) {
-        if (system(QString("thunar %1 >/dev/null 2>&1 &").arg(link).toStdString().c_str()) != 0) {
+    if (system(QString("nautilus \"%1\" >/dev/null 2>&1 &").arg(link).toStdString().c_str()) != 0) {
+        if (system(QString("thunar \"%1\" >/dev/null 2>&1 &").arg(link).toStdString().c_str()) != 0) {
             QString path = QDir::toNativeSeparators(QFileInfo{link}.path());
-            if (system(QString("dolphin %1 >/dev/null 2>&1 &").arg(path).toStdString().c_str()) != 0) {
-                qDebug() << system(QString("xdg-open %1 >/dev/null 2>&1 &").arg(path).toStdString().c_str());
+            if (system(QString("dolphin \"%1\" >/dev/null 2>&1 &").arg(path).toStdString().c_str()) != 0) {
+                qDebug() << system(QString("xdg-open \"%1\" >/dev/null 2>&1 &").arg(path).toStdString().c_str());
             }
         }
     }
