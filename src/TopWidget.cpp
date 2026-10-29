@@ -5,6 +5,7 @@
 #include <QtMath>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QWindow>
 
 #ifdef Q_OS_LINUX
 #include <X11/Xlib.h>
@@ -653,42 +654,43 @@ void TopWidget::mouseMoveEvent(QMouseEvent *event) {
             update();
         } else {
 #if defined (Q_OS_LINUX)
-            m_move = true;
-
-            XEvent xevent;
-            memset(&xevent, 0, sizeof(XEvent));
-            Display *display = nullptr;
+            if (! m_move) {
+                m_move = true;
+                bool started = false;
+                if (QWindow *window = windowHandle())
+                    started = window->startSystemMove();
+                if (! started) {
+                    XEvent xevent;
+                    memset(&xevent, 0, sizeof(XEvent));
+                    Display *display = nullptr;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-            xcb_window_t root_window = 0;
-            if (auto *x11Application = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
-                display = x11Application->display();
-                xcb_connection_t *connection = x11Application->connection();
-                xcb_screen_t* screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
-                root_window = screen->root;
-            }
+                    xcb_window_t root_window = 0;
+                    if (auto *x11Application = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
+                        display = x11Application->display();
+                        xcb_connection_t *connection = x11Application->connection();
+                        xcb_screen_t* screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
+                        root_window = screen->root;
+                    }
 #else
-            display = QX11Info::display();
-            xcb_window_t root_window = QX11Info::appRootWindow(QX11Info::appScreen());
+                    display = QX11Info::display();
+                    xcb_window_t root_window = QX11Info::appRootWindow(QX11Info::appScreen());
 #endif // #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            if (! display) return;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-            QPoint gpos = event->globalPosition().toPoint();
-#else
-            QPoint gpos = event->globalPos();
-#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-            xevent.xclient.type = ClientMessage;
-            xevent.xclient.message_type = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
-            xevent.xclient.display = display;
-            xevent.xclient.window = this->winId();
-            xevent.xclient.format = 32;
-            xevent.xclient.data.l[0] = gpos.x();
-            xevent.xclient.data.l[1] = gpos.y();
-            xevent.xclient.data.l[2] = 8;
-            xevent.xclient.data.l[3] = Button1;
-            xevent.xclient.data.l[4] = 1;
-            XUngrabPointer(display, CurrentTime);
-            XSendEvent(display, root_window, False, SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
-            XFlush(display);
+                    if (! display) return;
+                    xevent.xclient.type = ClientMessage;
+                    xevent.xclient.message_type = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
+                    xevent.xclient.display = display;
+                    xevent.xclient.window = this->winId();
+                    xevent.xclient.format = 32;
+                    xevent.xclient.data.l[0] = gpos.x();
+                    xevent.xclient.data.l[1] = gpos.y();
+                    xevent.xclient.data.l[2] = 8;
+                    xevent.xclient.data.l[3] = Button1;
+                    xevent.xclient.data.l[4] = 0;
+                    XUngrabPointer(display, CurrentTime);
+                    XSendEvent(display, root_window, False, SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+                    XFlush(display);
+                }
+            }
 #elif defined (Q_OS_WINDOWS)
             move(gpos - m_point);
 #endif
