@@ -441,14 +441,13 @@ void Tool::clickTransparency(){
 
 void Tool::lostFocus() {
     QObject *o = QApplication::focusObject();
-    if (m_ignore) {
+    if (o == this || o == this->parentWidget() || m_ignore) {
         return;
     }
-    while (o != nullptr) {
+    while (o != nullptr && (o = o->parent()) != nullptr) {
         if (o == this) {
             return;
         }
-        o = o->parent();
     }
     this->setDraw(ShapeEnum::Null);
     this->hide();
