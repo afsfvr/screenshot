@@ -40,16 +40,29 @@ jobs:
           sudo apt-get install -y libqt5core5a libqt5gui5 libqt5widgets5 libqt5network5 libqt5x11extras5-dev
           sudo apt-get install -y build-essential libopencv-dev libxtst-dev libxrandr-dev libx11-dev
           sudo apt-get install -y cmake
+          sudo apt-get install -y wget 7z
+          wget https://github.com/RapidAI/RapidOcrOnnx/releases/download/1.2.2/linux-clib.7z
+          wget https://github.com/RapidAI/OnnxruntimeBuilder/releases/download/1.15.1/onnxruntime-v1.15.1-ubuntu-22.04-amd64-static.7z
+          7z x linux-clib.7z
+          7z x onnxruntime-v1.15.1-ubuntu-22.04-amd64-static.7z
+          cp RapidOcrConfig.cmake linux-clib/Linux-CLIB-CPU
+          sed -i 's|/../../onnxruntime-static/linux/OnnxRuntimeConfig.cmake|/../../linux/OnnxRuntimeConfig.cmake|g' linux-clib/Linux-CLIB-CPU/RapidOcrConfig.cmake
+          find linux-clib/Linux-CLIB-CPU/include -type f -name '*.h' -exec sed -i 's|#include <onnxruntime/core/session/onnxruntime_cxx_api.h>|#include <onnxruntime_cxx_api.h>|g' {} +
 
       - name: Build and Package
         run: |
           ARCH=$(dpkg --print-architecture)
           BASE="screenshot-${GITHUB_VERSION}-${{ matrix.os }}-${ARCH}"
-          cmake -Bbuild -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
-          cmake --build build -j$(nproc)
-          cmake --build build --target package
-          mv build/screenshot.deb "${BASE}.deb"
-          mv build/screenshot.deb.sha256 "${BASE}.deb.sha256"
+          cmake -Bbuild-tencent -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DTENCENT_OCR=ON
+          cmake --build build-tencent -j$(nproc)
+          cmake --build build-tencent --target package
+          mv build-tencent/screenshot.deb "${BASE}-tencent.deb"
+          mv build-tencent/screenshot.deb.sha256 "${BASE}-tencent.deb.sha256"
+          cmake -Bbuild-tencent-rapid -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DTENCENT_OCR=ON -DRAPID_OCR=ON -DRapidOcr_DIR=./linux-clib/Linux-CLIB-CPU
+          cmake --build build-tencent-rapid -j$(nproc)
+          cmake --build build-tencent-rapid --target package
+          mv build-tencent-rapid/screenshot.deb "${BASE}-tencent-rapid.deb"
+          mv build-tencent-rapid/screenshot.deb.sha256 "${BASE}-tencent-rapid.deb.sha256"
           echo "DEB_BASE=${BASE}" >>$GITHUB_ENV
           ls
 
@@ -58,6 +71,6 @@ jobs:
         with:
           name: ${{ env.DEB_BASE }}
           path: |
-            ${{ env.DEB_BASE }}.deb
-            ${{ env.DEB_BASE }}.deb.sha256
+            screenshot-*.deb
+            screenshot-*.deb.sha256
 

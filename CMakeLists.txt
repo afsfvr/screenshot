@@ -86,6 +86,16 @@ if(RAPID_OCR)
     target_compile_definitions(${PROJECT_NAME} PRIVATE RAPID_OCR OCR)
     set(OCR ON)
     message(STATUS "OCR backend: RapidOcr")
+
+    set_property(TARGET ${PROJECT_NAME} PROPERTY INSTALL_RPATH "$ORIGIN/../lib/${PROJECT_NAME}")
+    install(FILES ${RapidOcr_LIBRARY} DESTINATION lib/${PROJECT_NAME})
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/rapidocr/models/ DESTINATION share/${PROJECT_NAME}/models)
+    get_filename_component(RapidOcr_LIB_DIR "${RapidOcr_LIBRARY}" DIRECTORY)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/rapidocr/models"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/models"
+    )
 endif()
 
 if(PADDLE_OCR)
@@ -183,6 +193,12 @@ if(ENABLE_ZXING)
     target_link_libraries(ZXing PUBLIC Qt::Core Qt::Gui)
     target_link_libraries(${PROJECT_NAME} PRIVATE ZXing::ZXing)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QRCODE)
+    install(CODE "
+        file(REMOVE_RECURSE
+            \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/include/\"
+            \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/lib/x86_64-linux-gnu/\"
+        )
+    ")
 endif()
 
 if(UNIX)
@@ -237,6 +253,9 @@ if(UNIX AND NOT APPLE)
     set(CPACK_DEBIAN_FILE_NAME "${PROJECT_NAME}.deb")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    if(RAPID_OCR)
+        set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS "${RapidOcr_LIB_DIR}")
+    endif()
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/afsfvr/screenshot")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "afsfvr <2461519090@qq.com>")
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")

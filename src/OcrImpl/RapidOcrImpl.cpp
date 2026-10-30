@@ -11,6 +11,8 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QDataStream>
+#include <QStringList>
+#include <algorithm>
 #include <opencv2/opencv.hpp>
 
 RapidOcrImpl::~RapidOcrImpl() {
@@ -99,22 +101,31 @@ bool RapidOcrImpl::init() {
         m_ocr = nullptr;
     }
     if (m_det.isEmpty() || m_cls.isEmpty() || m_rec.isEmpty() || m_key.isEmpty()) {
-        // 首次（未应用过配置）：填入默认模型路径
+        // 首次（未应用过配置）：填入默认模型路径，依次探测 exe 旁目录和 Linux 安装的 share 目录
         m_det = m_cls = m_rec = m_key = "";
-        QString path = QApplication::applicationDirPath() + "/models";
-        QString det = QDir::toNativeSeparators(path + "/det.onnx");
-        QString cls = QDir::toNativeSeparators(path + "/cls.onnx");
-        QString rec = QDir::toNativeSeparators(path + "/rec.onnx");
-        QString key = QDir::toNativeSeparators(path + "/keys.txt");
-        if (! QFile::exists(det) || ! QFile::exists(cls) || ! QFile::exists(rec) || ! QFile::exists(key)) {
-            qCritical() << "RapidOCR 模型文件不完整：" << path;
+        QString path;
+        const QStringList dirs = {
+            QApplication::applicationDirPath() + "/models",
+            QApplication::applicationDirPath() + "/../share/screenshot/models",
+        };
+        const QStringList names = {"/det.onnx", "/cls.onnx", "/rec.onnx", "/keys.txt"};
+        for (const QString &dir : dirs) {
+            if (std::all_of(names.cbegin(), names.cend(), [&dir](const QString &n) {
+                    return QFile::exists(QDir::toNativeSeparators(dir + n));
+                })) {
+                path = dir;
+                break;
+            }
+        }
+        if (path.isEmpty()) {
+            qCritical() << "RapidOCR 模型文件不完整：" << dirs;
             m_rebuilding.storeRelease(0);
             return false;
         }
-        m_det = det;
-        m_cls = cls;
-        m_rec = rec;
-        m_key = key;
+        m_det = QDir::toNativeSeparators(path + "/det.onnx");
+        m_cls = QDir::toNativeSeparators(path + "/cls.onnx");
+        m_rec = QDir::toNativeSeparators(path + "/rec.onnx");
+        m_key = QDir::toNativeSeparators(path + "/keys.txt");
     }
     // 钥匙由 _init 结束（含失败路径）统一释放
     _init(m_det, m_cls, m_rec, m_key);
