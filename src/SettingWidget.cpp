@@ -8,6 +8,8 @@
 #include <QFileDialog>
 #include <QImageWriter>
 #include <QSaveFile>
+#include <QSignalBlocker>
+#include <algorithm>
 #ifdef OCR
 #include "Ocr.h"
 #endif
@@ -19,20 +21,8 @@
 
 namespace {
 constexpr quint32 kConfigMagic = 0x53434647; // 'SCFG'
-constexpr quint32 kConfigVersion = 1;
+constexpr quint32 kConfigVersion = 2;
 constexpr QDataStream::Version kStreamVersion = QDataStream::Qt_5_15;
-
-inline QString currentOcrBackendId() {
-#if defined(TENCENT_OCR)
-    return QStringLiteral("tencent");
-#elif defined(RAPID_OCR)
-    return QStringLiteral("rapid");
-#elif defined(PADDLE_OCR)
-    return QStringLiteral("paddle");
-#else
-    return QStringLiteral("none");
-#endif
-}
 } // namespace
 
 QDataStream& operator<<(QDataStream& stream, const HotKey &key) {
@@ -70,7 +60,19 @@ SettingWidget::SettingWidget(QWidget *parent): QWidget(parent), ui(new Ui::Setti
     }
     ui->format->setCurrentIndex(index);
     m_save_format = ui->format->currentText();
+    ui->ocr_label->setVisible(false);
+    ui->ocr_backend->setVisible(false);
     ui->ocr_setting->setVisible(false);
+    ui->ocr_release->setVisible(false);
+#ifdef OCR
+    connect(ui->ocr_setting, &QPushButton::clicked, this, [this]() {
+        QString id = ui->ocr_backend->currentData().toString();
+        if (id.isEmpty()) {
+            id = OcrInstance->backendId();
+        }
+        OcrInstance->showSettingWidget(id, this);
+    });
+#endif
 }
 
 SettingWidget::~SettingWidget() {
@@ -80,14 +82,25 @@ SettingWidget::~SettingWidget() {
 
 void SettingWidget::readConfig() {
     const QString path = getConfigPath();
+    if (! QFile::exists(path)) {
+        // 全新环境：按默认配置运行，允许后续保存
+        m_configLoaded = true;
+#ifdef OCR
+        OcrInstance->resetConfig(m_ocrMap);
+#endif
+        return;
+    }
     QFile file{path};
     if (!file.open(QFile::ReadOnly)) {
+        // 文件存在但读不了：保持未加载状态，禁止写盘覆盖
         qWarning() << "打开配置文件失败：" << file.errorString() << path;
         return;
     }
     const QByteArray data = file.readAll();
     file.close();
     if (data.isEmpty()) {
+        // 损坏/空文件：允许写盘修复（否则永远改不回来），旧内容已由 saveConfig 备份为 .bak
+        m_configLoaded = true;
         qWarning() << "配置文件为空：" << path;
         return;
     }
@@ -123,11 +136,24 @@ void SettingWidget::readConfig() {
         ui->radioButton_2->setChecked(!m_scale_ctrl);
         emit scaleKeyChanged(m_scale_ctrl);
 #ifdef OCR
-        const QString backend = currentOcrBackendId();
-        auto it = m_ocrMap.constFind(backend);
-        if (it != m_ocrMap.constEnd() && !it->isEmpty()) {
-            OcrInstance->restore(*it);
-            qDebug() << "恢复 OCR 配置：" << backend << "bytes:" << it->size();
+        // 释放开关：界面状态与 Ocr 侧生效值同步
+        ui->ocr_release->setChecked(m_ocr_release);
+        OcrInstance->setAutoRelease(m_ocr_release);
+        // 总是回填（含空 map），同步 Ocr 侧“配置已加载”状态；restore 由创建实现时完成
+        OcrInstance->resetConfig(m_ocrMap);
+        // 校验记录的后端 id 是否仍编译启用，失效则回退第一个可用后端
+        QString backend = m_ocr_active;
+        const auto backends = OcrInstance->listBackends();
+        if (backends.isEmpty()) {
+            backend.clear();
+        } else if (! std::any_of(backends.cbegin(), backends.cend(),
+                                 [&backend](const auto &b) { return b.first == backend; })) {
+            backend = backends.first().first;
+        }
+        m_ocr_active = backend;
+        if (! backend.isEmpty()) {
+            OcrInstance->setBackend(backend);
+            qDebug() << "启用 OCR 后端：" << backend;
         }
 #else
         Q_UNUSED(format);
@@ -140,17 +166,22 @@ void SettingWidget::readConfig() {
     quint32 magic = 0, version = 0;
     stream >> magic >> version;
     if (stream.status() != QDataStream::Ok || magic != kConfigMagic) {
+        // 损坏：允许写盘修复，旧内容已备份为 .bak
+        m_configLoaded = true;
         qWarning() << "配置文件已损坏，将使用默认配置：" << path << "magic:" << QString::number(magic, 16);
         return;
     }
-    if (version != kConfigVersion) {
-        qWarning() << "配置文件版本不匹配：" << version << "当前支持：" << kConfigVersion << "将使用默认配置";
+    if (version > kConfigVersion) {
+        // 高版本配置文件：旧程序不识别新格式，禁止写盘降级覆盖
+        qWarning() << "配置文件版本过高：" << version << "当前支持：" << kConfigVersion << "禁止写盘覆盖";
         return;
     }
     QString format;
     stream >> m_auto_save_key >> m_auto_save_path >> format >> m_full_screen;
     stream >> m_capture >> m_record >> m_scale_ctrl;
     if (stream.status() != QDataStream::Ok) {
+        // 损坏：允许写盘修复（否则永远改不回来），旧内容已备份为 .bak
+        m_configLoaded = true;
         qWarning() << "配置文件已损坏(主配置解析失败)：" << path;
         return;
     }
@@ -165,22 +196,44 @@ void SettingWidget::readConfig() {
         }
     }
     m_ocrMap = ocrMap;
-    if (stream.status() != QDataStream::Ok) {
-        qWarning() << "配置文件已损坏：" << path;
-        return;
+    // v2 新增：当前选中的 OCR 后端 id（v1 配置无此字段，沿第一个可用后端）
+    if (!stream.atEnd()) {
+        stream >> m_ocr_active;
     }
+    // v2 尾部可选：切换离开后是否自动释放非激活后端模型内存（旧 v2 文件无此字段，沿默认值）
+    if (!stream.atEnd()) {
+        stream >> m_ocr_release;
+        if (stream.status() != QDataStream::Ok) {
+            qWarning() << "OCR 释放开关解析失败，使用默认值：" << path;
+            m_ocr_release = true;
+            stream.setStatus(QDataStream::Ok);
+        }
+    }
+    if (stream.status() != QDataStream::Ok) {
+        // 尾部损坏：主字段已解析成功，仍应用并允许写盘修复，旧内容已备份为 .bak
+        qWarning() << "配置文件尾部损坏(OCR 后端 id 解析失败)：" << path;
+    }
+    // 解析成功（尾部损坏也视为可修复）才允许后续写盘
+    m_configLoaded = true;
     applyConfig(format);
     qDebug() << "读取配置文件成功：" << path << "version:" << version << "ocr backends:" << m_ocrMap.keys();
 }
 
 void SettingWidget::saveConfig() {
+    if (! m_configLoaded) {
+        // 配置未成功读入（文件损坏/版本不兼容等），禁止写盘，避免覆盖用户数据
+        return;
+    }
     qDebug() << "save config";
 #ifdef OCR
-    const QString backend = currentOcrBackendId();
-    if (backend != QStringLiteral("none")) {
-        QByteArray curBlob = OcrInstance->save();
-        // 即使为空也保存，以覆盖旧值
-        m_ocrMap[backend] = curBlob;
+    // 合并所有启用后端的配置（未激活的后端沿用磁盘上已保存的配置），不整体替换
+    const QMap<QString, QByteArray> ocrConfigs = OcrInstance->takeConfig();
+    for (auto it = ocrConfigs.constBegin(); it != ocrConfigs.constEnd(); ++it) {
+        m_ocrMap[it.key()] = it.value();
+    }
+    const QString backend = OcrInstance->backendId();
+    if (! backend.isEmpty()) {
+        m_ocr_active = backend;
     }
 #endif
     QByteArray buffer;
@@ -193,6 +246,8 @@ void SettingWidget::saveConfig() {
         stream << m_auto_save_key << m_auto_save_path << m_save_format << m_full_screen;
         stream << m_capture << m_record << m_scale_ctrl;
         stream << m_ocrMap;
+        stream << m_ocr_active;
+        stream << m_ocr_release; // v2 尾部可选字段，旧版程序按版本不匹配整体拒绝此文件
         if (stream.status() != QDataStream::Ok) {
             qWarning() << "序列化配置失败";
             return;
@@ -209,6 +264,17 @@ void SettingWidget::saveConfig() {
                 qDebug() << "配置文件无更改，跳过保存" << path;
                 return;
             }
+        }
+    }
+
+    // 覆盖前把旧文件备份为 .bak，误操作可回滚；首次保存无需备份
+    if (QFile::exists(path)) {
+        QFile bak{path + ".bak"};
+        if (bak.exists()) {
+            bak.remove();
+        }
+        if (! QFile::copy(path, path + ".bak")) {
+            qWarning() << "备份配置文件失败：" << path;
         }
     }
 
@@ -288,12 +354,29 @@ void SettingWidget::showEvent(QShowEvent *event) {
         ui->all_user->setChecked(false);
     }
 #ifdef OCR
-    if (! ui->ocr_setting->isVisible()) {
-        if (OcrInstance->hasSettingWidget()) {
-            ui->ocr_setting->setVisible(true);
-            connect(ui->ocr_setting, &QPushButton::clicked, this, [this]() {
-                OcrInstance->showSettingWidget(this);
-            });
+    const auto backends = OcrInstance->listBackends();
+    const QString active = OcrInstance->backendId();
+    if (backends.isEmpty()) {
+        ui->ocr_label->setVisible(false);
+        ui->ocr_backend->setVisible(false);
+        ui->ocr_setting->setVisible(false);
+        ui->ocr_release->setVisible(false);
+    } else {
+        ui->ocr_label->setVisible(true);
+        ui->ocr_backend->setVisible(true);
+        ui->ocr_setting->setVisible(true);
+        ui->ocr_release->setVisible(true);
+        {
+            QSignalBlocker blocker{ui->ocr_backend};
+            ui->ocr_backend->clear();
+            int current = 0;
+            for (int i = 0; i < backends.size(); ++i) {
+                ui->ocr_backend->addItem(backends[i].second, backends[i].first);
+                if (backends[i].first == active) {
+                    current = i;
+                }
+            }
+            ui->ocr_backend->setCurrentIndex(current);
         }
     }
 #endif
@@ -525,6 +608,20 @@ void SettingWidget::confirm() {
         m_scale_ctrl = ui->radioButton->isChecked();
         emit scaleKeyChanged(m_scale_ctrl);
     }
+
+#ifdef OCR
+    const QString backend = ui->ocr_backend->currentData().toString();
+    if (! backend.isEmpty() && backend != m_ocr_active) {
+        save = true;
+        m_ocr_active = backend;
+        OcrInstance->setBackend(backend);
+    }
+    if (m_ocr_release != ui->ocr_release->isChecked()) {
+        save = true;
+        m_ocr_release = ui->ocr_release->isChecked();
+        OcrInstance->setAutoRelease(m_ocr_release);
+    }
+#endif
 
     if (save) {
         saveConfig();

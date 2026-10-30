@@ -31,16 +31,16 @@ QVector<Ocr::OcrResult> PaddleOcrImpl::ocr(const QImage &img) {
         v.push_back({{}, "ocr未初始化", -1});
         return v;
     }
-
-    // QImage -> 临时文件，PaddleOCR 的 Predict 接受文件路径
-    QString path = QDir::toNativeSeparators(
-        QStandardPaths::writableLocation(QStandardPaths::TempLocation)
-        + "/" + QUuid::createUuid().toString(QUuid::WithoutBraces) + ".png");
-
+    locker.unlock();
     if (img.isNull()) {
         v.push_back({{}, "图像为空", -1});
         return v;
     }
+
+    // QImage -> 临时文件，PaddleOCR 的 Predict 接受文件路径；锁只覆盖 Predict
+    QString path = QDir::toNativeSeparators(
+        QStandardPaths::writableLocation(QStandardPaths::TempLocation)
+        + "/" + QUuid::createUuid().toString(QUuid::WithoutBraces) + ".png");
 
     if (!img.save(path, "PNG")) {
         v.push_back({{}, "保存临时图片失败", -1});
@@ -49,7 +49,14 @@ QVector<Ocr::OcrResult> PaddleOcrImpl::ocr(const QImage &img) {
 
     std::vector<std::unique_ptr<BaseCVResult>> results;
     try {
+        locker.relock();
+        if (! m_ocr) {
+            QFile::remove(path);
+            v.push_back({{}, "ocr未初始化", -1});
+            return v;
+        }
         results = m_ocr->Predict(path.toStdString());
+        locker.unlock();
     } catch (const std::string &e) {
         QFile::remove(path);
         qWarning() << "PaddleOCR Predict 异常" << QString::fromStdString(e);
@@ -148,10 +155,10 @@ bool PaddleOcrImpl::_init() {
     return false;
 }
 
-void PaddleOcrImpl::restore(QByteArray array) {
+bool PaddleOcrImpl::restore(QByteArray array) {
     if(array.isEmpty()) {
         qWarning()<<"配置为空";
-        return;
+        return false;
     }
     QDataStream stream{&array, QIODevice::ReadOnly};
     stream.setVersion(QDataStream::Qt_5_15);
@@ -171,7 +178,7 @@ void PaddleOcrImpl::restore(QByteArray array) {
 
     if (stream.status() != QDataStream::Ok) {
         qWarning() << "PaddleOCR配置数据格式错误";
-        return;
+        return false;
     }
 
     QMutexLocker locker(&m_mutex);
@@ -238,6 +245,12 @@ void PaddleOcrImpl::restore(QByteArray array) {
     if (m_params.precision.empty()) m_params.precision = "fp32";
     m_params.cpu_threads = threadsValue;
     m_params.thread_num = 1;
+    // 启动时引擎可能已用默认参数提前构建，由随后的 init() 重建；已持有锁，不能调 deleteOcr
+    if (m_ocr) {
+        delete m_ocr;
+        m_ocr = nullptr;
+    }
+    return true;
 }
 
 QByteArray PaddleOcrImpl::save() {
@@ -685,4 +698,8 @@ void PaddleOcrImpl::deleteOcr() {
         delete m_ocr;
         m_ocr = nullptr;
     }
+}
+
+void PaddleOcrImpl::release() {
+    deleteOcr();
 }

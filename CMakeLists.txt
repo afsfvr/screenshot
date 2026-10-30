@@ -16,6 +16,7 @@ option(RAPID_OCR "use rapid ocr" OFF)
 option(PADDLE_OCR "use paddle ocr" OFF)
 option(STATIC_LINK "Link all dependencies statically" OFF)
 option(ENABLE_ZXING "Enable ZXing QRCode reader" ON)
+# OCR 后端可任意组合启用，多个后端编译后在设置中切换
 
 SET(PADDLE_LIB "" CACHE PATH "paddle lib")
 
@@ -67,21 +68,27 @@ if (STATIC_LINK)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
 endif(STATIC_LINK)
 
+# OCR 后端（相互独立，可任意组合同时启用）
+set(OCR OFF)
 if(TENCENT_OCR)
     find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network)
     target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Network)
     target_sources(${PROJECT_NAME} PRIVATE src/OcrImpl/TencentOcrImpl.cpp)
     target_compile_definitions(${PROJECT_NAME} PRIVATE TENCENT_OCR OCR)
-    set(OCR ON CACHE BOOL "Enable OCR support")
+    set(OCR ON)
     message(STATUS "OCR backend: TencentOcr")
-elseif(RAPID_OCR)
+endif()
+
+if(RAPID_OCR)
     find_package(RapidOcr REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${RapidOcr_LIBS})
     target_sources(${PROJECT_NAME} PRIVATE src/OcrImpl/RapidOcrImpl.cpp)
     target_compile_definitions(${PROJECT_NAME} PRIVATE RAPID_OCR OCR)
-    set(OCR ON CACHE BOOL "Enable OCR support")
+    set(OCR ON)
     message(STATUS "OCR backend: RapidOcr")
-elseif(PADDLE_OCR)
+endif()
+
+if(PADDLE_OCR)
     if(NOT DEFINED PADDLE_LIB)
         message(FATAL_ERROR "please set PADDLE_LIB with -DPADDLE_LIB=/path/paddle/lib")
     endif()
@@ -106,7 +113,7 @@ elseif(PADDLE_OCR)
     target_link_libraries(${PROJECT_NAME} PRIVATE ppocr)
     target_sources(${PROJECT_NAME} PRIVATE src/OcrImpl/PaddleOcrImpl.cpp)
     target_compile_definitions(${PROJECT_NAME} PRIVATE PADDLE_OCR OCR)
-    set(OCR ON CACHE BOOL "Enable OCR support")
+    set(OCR ON)
     message(STATUS "OCR backend: PaddleOcr")
 
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -114,8 +121,9 @@ elseif(PADDLE_OCR)
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/PaddleOCR/deploy/cpp_infer/src/configs"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/configs"
     )
-else()
-    set(OCR OFF CACHE BOOL "Enable OCR support")
+endif()
+
+if(NOT OCR)
     message(STATUS "OCR backend: NONE")
 endif()
 

@@ -43,19 +43,21 @@ jobs:
 
       - name: Build and Package
         run: |
+          ARCH=$(dpkg --print-architecture)
+          BASE="screenshot-${GITHUB_VERSION}-${{ matrix.os }}-${ARCH}"
           cmake -Bbuild -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
           cmake --build build -j$(nproc)
           cmake --build build --target package
-          mv build/screenshot.deb screenshot-${{ matrix.os }}.deb
-          mv build/screenshot.deb.sha256 screenshot-${{ matrix.os }}.deb.sha256
+          mv build/screenshot.deb "${BASE}.deb"
+          mv build/screenshot.deb.sha256 "${BASE}.deb.sha256"
+          echo "DEB_BASE=${BASE}" >>$GITHUB_ENV
           ls
-
 
       - name: Upload deb
         uses: actions/upload-artifact@v6
         with:
-          name: screenshot-${{ github.job }}-${{ matrix.os }}
+          name: ${{ env.DEB_BASE }}
           path: |
-            screenshot-${{ matrix.os }}.deb
-            screenshot-${{ matrix.os }}.deb.sha256
+            ${{ env.DEB_BASE }}.deb
+            ${{ env.DEB_BASE }}.deb.sha256
 

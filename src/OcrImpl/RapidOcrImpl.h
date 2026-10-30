@@ -4,6 +4,7 @@
 #include "../Ocr.h"
 
 #include <OcrLite.h>
+#include <QAtomicInt>
 #include <QMutex>
 #include <QLineEdit>
 #include <QSpinBox>
@@ -15,8 +16,9 @@ public:
     ~RapidOcrImpl();
     QVector<Ocr::OcrResult> ocr(const QImage &img) override;
     bool init() override;
-    void restore(QByteArray array) override;
+    bool restore(QByteArray array) override;
     QByteArray save() override;
+    void release() override;
     virtual bool hasSettingWidget() override { return true; }
     virtual void showSettingWidget(QWidget *parent) override;
 
@@ -41,6 +43,7 @@ private:
     bool m_mostAngleValue = false;
 
     bool m_init = false;
+    QAtomicInt m_rebuilding = false; // 重建中标志，init() 据此快速失败避免 GUI 阻塞
     QMutex m_mutex;
 
     QWidget *m_widget = nullptr;

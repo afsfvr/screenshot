@@ -16,8 +16,9 @@ public:
     ~PaddleOcrImpl();
     QVector<Ocr::OcrResult> ocr(const QImage &img) override;
     bool init() override;
-    void restore(QByteArray array) override;
+    bool restore(QByteArray array) override;
     QByteArray save() override;
+    void release() override;
     virtual bool hasSettingWidget() override { return true; }
     virtual void showSettingWidget(QWidget *parent) override;
 

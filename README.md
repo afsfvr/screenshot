@@ -12,7 +12,7 @@
 - **图片编辑**：矩形、椭圆、直线、画笔、箭头、文字等绘制工具，支持填充、颜色、透明度、描边样式，可撤销/恢复编辑
 - **保存与复制**：保存到文件或剪贴板，支持 QImageWriter 全部格式（默认 png）；截图时按快捷键可直接保存到指定目录
 - **取色**：截图时显示放大镜并实时预览鼠标处像素 RGB，按 `C` 复制到剪贴板
-- **OCR**：三种后端可选——RapidOCR（本地 Onnx）、PaddleOCR（本地 PP-OCRv5）、腾讯云 OCR；识别结果可框选、编辑、复制
+- **OCR**：多后端支持——RapidOCR（本地 Onnx）、PaddleOCR（本地 PP-OCRv5）、腾讯云 OCR 可同时编译，在设置界面下拉切换；识别结果可框选、编辑、复制
 - **二维码**：识别图中二维码/条形码，或将输入文字生成为二维码
 - **其他**：托盘常驻、自定义全局热键、开机自启动（用户/全用户）、单实例运行、DPI 缩放适配
 
@@ -54,10 +54,11 @@ cmake --build build -j
 | `ENABLE_ZXING` | ON | 启用二维码识别与生成 |
 | `STATIC_LINK` | OFF | 静态链接运行时库（`-static`，便于分发） |
 
-三个 OCR 选项互斥，最多启用其一；全部关闭时 OCR 功能不可用。示例：
+三个 OCR 选项相互独立、可任意组合同时启用；多个后端编译进同一程序后，在设置界面通过下拉框切换使用哪一个，各后端的参数独立保存。全部关闭时 OCR 功能不可用。示例：
 
 ```bash
-cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DTENCENT_OCR=ON
+# 同时启用腾讯云与 RapidOCR（需要准备 RapidOcr 库）
+cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DTENCENT_OCR=ON -DRAPID_OCR=ON
 ```
 
 ### 打包

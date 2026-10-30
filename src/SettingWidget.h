@@ -82,6 +82,9 @@ private:
     HotKey m_record;
     bool m_scale_ctrl;
     QMap<QString, QByteArray> m_ocrMap;
+    QString m_ocr_active;
+    bool m_ocr_release = true;  // 切换离开后释放非激活后端模型内存（v2 尾部可选字段，默认开）
+    bool m_configLoaded = false; // 配置读入成功或全新环境为 true；文件损坏/版本不兼容保持 false（禁止写盘）
 
     QPoint m_pos;
 };

@@ -160,30 +160,31 @@ bool TencentOcrImpl::init() {
     return true;
 }
 
-void TencentOcrImpl::restore(QByteArray array) {
-    if (array.size() <= 16) return;
+bool TencentOcrImpl::restore(QByteArray array) {
+    if (array.size() <= 16) return false;
     QAESEncryption aes{QAESEncryption::AES_256, QAESEncryption::CBC, QAESEncryption::PKCS7};
     QByteArray key = QCryptographicHash::hash("screenshot", QCryptographicHash::Sha256), iv = array.right(16);
     array.remove(array.size() - 16, 16);
     array = aes.removePadding(aes.decode(array, key, iv));
 
-    if (array.size() < 8) return;
+    if (array.size() < 8) return false;
     const char *data = array.constData();
     int len1 = (static_cast<unsigned char>(data[0])) |
               (static_cast<unsigned char>(data[1]) << 8) |
               (static_cast<unsigned char>(data[2]) << 16) |
               (static_cast<unsigned char>(data[3]) << 24);
-    if (len1 < 0 || array.size() - 8 < len1) return;
+    if (len1 < 0 || array.size() - 8 < len1) return false;
     QString s1 = QString::fromUtf8(data + 4, len1);
 
     int len2 = (static_cast<unsigned char>(data[len1 + 4])) |
           (static_cast<unsigned char>(data[len1 + 5]) << 8) |
           (static_cast<unsigned char>(data[len1 + 6]) << 16) |
           (static_cast<unsigned char>(data[len1 + 7]) << 24);
-    if (len2 < 0 || static_cast<qint64>(len1) + len2 > array.size() - 8) return;
+    if (len2 < 0 || static_cast<qint64>(len1) + len2 > array.size() - 8) return false;
     QString s2 = QString::fromUtf8(data + len1 + 8, len2);
     m_id = s1;
     m_key = s2;
+    return true;
 }
 
 QByteArray TencentOcrImpl::save() {

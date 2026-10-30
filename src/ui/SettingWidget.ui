@@ -665,11 +665,51 @@
     </layout>
    </item>
    <item>
-    <widget class="QPushButton" name="ocr_setting">
-     <property name="text">
-      <string>Ocr设置</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_ocr">
+     <item>
+      <widget class="QLabel" name="ocr_label">
+       <property name="text">
+        <string>OCR后端</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="ocr_backend"/>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="ocr_release">
+       <property name="toolTip">
+        <string>切换离开后释放其他后端占用的模型内存</string>
+       </property>
+       <property name="text">
+        <string>释放后端内存</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="ocr_spacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="ocr_setting">
+       <property name="text">
+        <string>Ocr设置</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">

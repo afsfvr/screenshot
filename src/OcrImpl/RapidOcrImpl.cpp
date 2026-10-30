@@ -87,42 +87,58 @@ QVector<Ocr::OcrResult> RapidOcrImpl::ocr(const QImage &img) {
 
 bool RapidOcrImpl::init() {
     if (m_init) return true;
+    // CAS 抢占重建钥匙：并发的 init/restore 只有一个执行主体，其余快速失败
+    if (! m_rebuilding.testAndSetOrdered(0, 1)) {
+        qWarning() << "RapidOCR 正在重建，本次 init 跳过";
+        return false;
+    }
 
     if (m_ocr) {
         QMutexLocker locker{&m_mutex};
         delete m_ocr;
         m_ocr = nullptr;
     }
-    m_det = m_cls = m_rec = m_key = "";
-    QString path = QApplication::applicationDirPath() + "/models";
-    QString det = QDir::toNativeSeparators(path + "/det.onnx");
-    QString cls = QDir::toNativeSeparators(path + "/cls.onnx");
-    QString rec = QDir::toNativeSeparators(path + "/rec.onnx");
-    QString key = QDir::toNativeSeparators(path + "/keys.txt");
-    if (! QFile::exists(det)) {
-        qCritical() << "det.onnx不存在";
-        return false;
+    if (m_det.isEmpty() || m_cls.isEmpty() || m_rec.isEmpty() || m_key.isEmpty()) {
+        // 首次（未应用过配置）：填入默认模型路径
+        m_det = m_cls = m_rec = m_key = "";
+        QString path = QApplication::applicationDirPath() + "/models";
+        QString det = QDir::toNativeSeparators(path + "/det.onnx");
+        QString cls = QDir::toNativeSeparators(path + "/cls.onnx");
+        QString rec = QDir::toNativeSeparators(path + "/rec.onnx");
+        QString key = QDir::toNativeSeparators(path + "/keys.txt");
+        if (! QFile::exists(det) || ! QFile::exists(cls) || ! QFile::exists(rec) || ! QFile::exists(key)) {
+            qCritical() << "RapidOCR 模型文件不完整：" << path;
+            m_rebuilding.storeRelease(0);
+            return false;
+        }
+        m_det = det;
+        m_cls = cls;
+        m_rec = rec;
+        m_key = key;
     }
-    if (! QFile::exists(cls)) {
-        qCritical() << "cls.onnx不存在";
-        return false;
-    }
-    if (! QFile::exists(rec)) {
-        qCritical() << "rec.onnx不存在";
-        return false;
-    }
-    if (! QFile::exists(key)) {
-        qCritical() << "keys.txt不存在";
-        return false;
-    }
-    _init(det, cls, rec, key);
+    // 钥匙由 _init 结束（含失败路径）统一释放
+    _init(m_det, m_cls, m_rec, m_key);
     return m_init;
 }
 
-void RapidOcrImpl::restore(QByteArray array) {
+void RapidOcrImpl::release() {
+    QMutexLocker locker{&m_mutex};
+    if (m_ocr) {
+        delete m_ocr;
+        m_ocr = nullptr;
+    }
+    m_init = false;
+}
+
+bool RapidOcrImpl::restore(QByteArray array) {
     if(array.isEmpty()) {
         qWarning()<<"配置为空";
-        return;
+        return false;
+    }
+    // CAS 抢占重建钥匙，与并发的 init/restore 互斥；失败只是延迟回填，Ocr 侧后续会重试
+    if (! m_rebuilding.testAndSetOrdered(0, 1)) {
+        qWarning() << "RapidOCR 正在重建，本次 restore 跳过";
+        return false;
     }
     QDataStream stream{&array, QIODevice::ReadOnly};
     stream.setVersion(QDataStream::Qt_5_15);
@@ -138,33 +154,44 @@ void RapidOcrImpl::restore(QByteArray array) {
 
     if (stream.status() != QDataStream::Ok) {
         qWarning() << "数据格式错误";
-        return;
+        m_rebuilding.storeRelease(0);
+        return false;
     }
 
-    m_gpuIndexValue = gpuIndex;
-    m_numThreadValue = numThread;
-    m_paddingValue = padding;
-    m_maxSideLenValue = maxSideLen;
-    m_boxScoreThreshValue = boxScoreThresh;
-    m_boxThreshValue = boxThresh;
-    m_unClipRatioValue = unClipRatio;
-    m_doAngleValue = doAngle;
-    m_mostAngleValue = mostAngle;
+    // 字段写入持锁（GUI 线程的 save/initWidget 并发读写）
+    {
+        QMutexLocker locker{&m_mutex};
+        m_gpuIndexValue = gpuIndex;
+        m_numThreadValue = numThread;
+        m_paddingValue = padding;
+        m_maxSideLenValue = maxSideLen;
+        m_boxScoreThreshValue = boxScoreThresh;
+        m_boxThreshValue = boxThresh;
+        m_unClipRatioValue = unClipRatio;
+        m_doAngleValue = doAngle;
+        m_mostAngleValue = mostAngle;
+    }
 
     _init(det, cls, rec, key);
+    // 引擎重建成败决定是否计入已就绪，失败时 takeConfig 沿用磁盘配置
+    return m_init;
 }
 
 QByteArray RapidOcrImpl::save() {
     QByteArray array;
     array.reserve(256);
-    QDataStream stream{ &array, QIODevice::WriteOnly };
-    stream.setVersion(QDataStream::Qt_5_15);
-    stream.setByteOrder(QDataStream::LittleEndian);
+    {
+        // 字段写入在 Ocr 线程的 restore 中，持锁保证读取一致
+        QMutexLocker locker{&m_mutex};
+        QDataStream stream{ &array, QIODevice::WriteOnly };
+        stream.setVersion(QDataStream::Qt_5_15);
+        stream.setByteOrder(QDataStream::LittleEndian);
 
-    stream << m_det << m_cls << m_rec << m_key << m_gpuIndexValue
-        << m_numThreadValue << m_paddingValue << m_maxSideLenValue
-        << m_boxScoreThreshValue << m_boxThreshValue << m_unClipRatioValue
-        << m_doAngleValue << m_mostAngleValue;
+        stream << m_det << m_cls << m_rec << m_key << m_gpuIndexValue
+            << m_numThreadValue << m_paddingValue << m_maxSideLenValue
+            << m_boxScoreThreshValue << m_boxThreshValue << m_unClipRatioValue
+            << m_doAngleValue << m_mostAngleValue;
+    }
 
     return array;
 }
@@ -173,29 +200,35 @@ void RapidOcrImpl::showSettingWidget(QWidget *parent) {
     if (!m_widget) {
         initWidget(parent);
     }
-    m_detEdit->setText(m_det);
-    m_clsEdit->setText(m_cls);
-    m_recEdit->setText(m_rec);
-    m_keyEdit->setText(m_key);
-    m_gpuIndex->setValue(m_gpuIndexValue);
-    m_numThread->setValue(m_numThreadValue);
-    m_padding->setValue(m_paddingValue);
-    m_maxSideLen->setValue(m_maxSideLenValue);
-    m_boxScoreThresh->setValue(m_boxScoreThreshValue);
-    m_boxThresh->setValue(m_boxThreshValue);
-    m_unClipRatio->setValue(m_unClipRatioValue);
-    m_doAngle->setChecked(m_doAngleValue);
-    m_mostAngle->setEnabled(m_doAngleValue);
-    m_mostAngle->setChecked(m_mostAngleValue);
+    {
+        // 字段可能同时被 Ocr 线程的 restore 写入，读取持锁
+        QMutexLocker locker{&m_mutex};
+        m_detEdit->setText(m_det);
+        m_clsEdit->setText(m_cls);
+        m_recEdit->setText(m_rec);
+        m_keyEdit->setText(m_key);
+        m_gpuIndex->setValue(m_gpuIndexValue);
+        m_numThread->setValue(m_numThreadValue);
+        m_padding->setValue(m_paddingValue);
+        m_maxSideLen->setValue(m_maxSideLenValue);
+        m_boxScoreThresh->setValue(m_boxScoreThreshValue);
+        m_boxThresh->setValue(m_boxThreshValue);
+        m_unClipRatio->setValue(m_unClipRatioValue);
+        m_doAngle->setChecked(m_doAngleValue);
+        m_mostAngle->setEnabled(m_doAngleValue);
+        m_mostAngle->setChecked(m_mostAngleValue);
+    }
     m_widget->show();
 }
 
 void RapidOcrImpl::_init(const QString &det, const QString &cls, const QString &rec, const QString &key) {
     m_init = false;
+    m_rebuilding.storeRelease(1);
     if (det.isEmpty() || ! QFile::exists(det) ||
         cls.isEmpty() || ! QFile::exists(cls) ||
         rec.isEmpty() || ! QFile::exists(rec) ||
         key.isEmpty() || ! QFile::exists(key)) {
+        m_rebuilding.storeRelease(0);
         return;
     }
 
@@ -220,6 +253,7 @@ void RapidOcrImpl::_init(const QString &det, const QString &cls, const QString &
         m_ocr = nullptr;
         m_det = m_cls = m_rec = m_key = "";
     }
+    m_rebuilding.storeRelease(0);
 }
 
 void RapidOcrImpl::initWidget(QWidget *parent) {
@@ -305,19 +339,28 @@ void RapidOcrImpl::initWidget(QWidget *parent) {
             s4.isEmpty() || ! QFile::exists(s4)) {
             QMessageBox::warning(m_widget, "错误", "部分路径未选择");
         } else {
-            m_gpuIndexValue = m_gpuIndex->value();
-            m_numThreadValue = m_numThread->value();
-            m_paddingValue = m_padding->value();
-            m_maxSideLenValue = m_maxSideLen->value();
-            m_boxScoreThreshValue = m_boxScoreThresh->value();
-            m_boxThreshValue = m_boxThresh->value();
-            m_unClipRatioValue = m_unClipRatio->value();
-            m_doAngleValue = m_doAngle->isChecked();
-            m_mostAngleValue = m_mostAngle->isChecked();
+            {
+                // 字段写入与 Ocr 线程的 restore/ocr 读并发，统一持锁
+                QMutexLocker locker{&m_mutex};
+                m_gpuIndexValue = m_gpuIndex->value();
+                m_numThreadValue = m_numThread->value();
+                m_paddingValue = m_padding->value();
+                m_maxSideLenValue = m_maxSideLen->value();
+                m_boxScoreThreshValue = m_boxScoreThresh->value();
+                m_boxThreshValue = m_boxThresh->value();
+                m_unClipRatioValue = m_unClipRatio->value();
+                m_doAngleValue = m_doAngle->isChecked();
+                m_mostAngleValue = m_mostAngle->isChecked();
+            }
             m_widget->hide();
-            _init(s1, s2, s3, s4);
-            if (! m_init) {
-                QMessageBox::warning(m_widget, "错误", "初始化失败，请检查模型文件是否正确");
+            // 与并发的 init/restore 互斥（钥匙由 _init 结束时释放）
+            if (m_rebuilding.testAndSetOrdered(0, 1)) {
+                _init(s1, s2, s3, s4);
+                if (! m_init) {
+                    QMessageBox::warning(m_widget, "错误", "初始化失败，请检查模型文件是否正确");
+                }
+            } else {
+                QMessageBox::warning(m_widget, "错误", "RapidOCR 正在重建，请稍后重试");
             }
         }
     });
