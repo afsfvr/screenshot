@@ -66,6 +66,14 @@ jobs:
           echo "DEB_BASE=${BASE}" >>$GITHUB_ENV
           ls
 
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            screenshot-*.deb
+            screenshot-*.deb.sha256
+
       - name: Upload deb
         uses: actions/upload-artifact@v6
         with:
