@@ -1085,7 +1085,11 @@ void MainWindow::quit() {
         QWidget *w = nullptr;
         const auto list = QApplication::topLevelWidgets();
         for (QWidget *widget : list) {
+#ifdef LONG_SCREENSHOT
             if (qobject_cast<GifWidget*>(widget) != nullptr || qobject_cast<LongWidget*>(widget) != nullptr) {
+#else // LONG_SCREENSHOT
+            if (qobject_cast<GifWidget*>(widget) != nullptr) {
+#endif // LONG_SCREENSHOT
                 w = widget;
                 break;
             }
