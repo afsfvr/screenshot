@@ -40,7 +40,7 @@ jobs:
           sudo apt-get install -y libqt5core5a libqt5gui5 libqt5widgets5 libqt5network5 libqt5x11extras5-dev
           sudo apt-get install -y build-essential libopencv-dev libxtst-dev libxrandr-dev libx11-dev
           sudo apt-get install -y cmake
-          sudo apt-get install -y wget 7z
+          sudo apt-get install -y wget p7zip-full
           wget https://github.com/RapidAI/RapidOcrOnnx/releases/download/1.2.2/linux-clib.7z
           wget https://github.com/RapidAI/OnnxruntimeBuilder/releases/download/1.15.1/onnxruntime-v1.15.1-ubuntu-22.04-amd64-static.7z
           7z x linux-clib.7z
